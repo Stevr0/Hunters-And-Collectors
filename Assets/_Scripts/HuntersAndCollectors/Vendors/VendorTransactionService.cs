@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Players;
@@ -7,6 +8,11 @@ namespace HuntersAndCollectors.Vendors
 {
     /// <summary>
     /// Server-side atomic checkout validator and applier.
+    ///
+    /// SECURITY / ATOMICITY RULES:
+    /// - Validate everything before mutating anything.
+    /// - Never remove stock by ItemId (must remove from the exact slot index requested).
+    /// - Prevent duplicate SlotIndex lines from double-removing or double-pricing.
     /// </summary>
     public sealed class VendorTransactionService
     {
@@ -16,50 +22,121 @@ namespace HuntersAndCollectors.Vendors
             public PlayerNetworkRoot Seller;
         }
 
-        /// <summary>
-        /// Attempts an atomic checkout and returns success/failure details.
-        /// </summary>
         public TransactionResult TryCheckout(PlayerNetworkRoot buyer, VendorContext vendor, CheckoutRequest request)
         {
+            // Helper locals to build DTOs consistently
+            TransactionResult Fail(FailureReason reason, int total = 0) => new TransactionResult
+            {
+                Result = new ActionResult { Success = false, Reason = reason },
+                TotalPrice = total
+            };
+
+            TransactionResult Ok(int total) => new TransactionResult
+            {
+                Result = new ActionResult { Success = true, Reason = FailureReason.None },
+                TotalPrice = total
+            };
+
             if (buyer == null || vendor?.Chest == null || request.Lines == null || request.Lines.Length == 0)
-                return new TransactionResult { Success = false, Reason = FailureReason.InvalidRequest };
+                return Fail(FailureReason.InvalidRequest);
 
             var chestGrid = vendor.Chest.Grid;
-            if (chestGrid == null) return new TransactionResult { Success = false, Reason = FailureReason.VendorNotFound };
+            if (chestGrid == null)
+                return Fail(FailureReason.VendorNotFound);
 
+            // Aggregate quantities by SlotIndex to prevent duplicate-line exploits
+            var requestedBySlot = new Dictionary<int, int>();
+            foreach (var line in request.Lines)
+            {
+                if (line.Quantity <= 0)
+                    return Fail(FailureReason.InvalidRequest);
+
+                if (line.SlotIndex < 0 || line.SlotIndex >= chestGrid.Slots.Length)
+                    return Fail(FailureReason.OutOfRange);
+
+                if (requestedBySlot.TryGetValue(line.SlotIndex, out var existing))
+                    requestedBySlot[line.SlotIndex] = existing + line.Quantity;
+                else
+                    requestedBySlot[line.SlotIndex] = line.Quantity;
+            }
+
+            // 1) Validate stock + compute total price (use SELLER base prices)
             var totalPrice = 0;
-            foreach (var line in request.Lines)
+
+            foreach (var kvp in requestedBySlot)
             {
-                if (line.Quantity <= 0 || line.SlotIndex < 0 || line.SlotIndex >= chestGrid.Slots.Length) return new TransactionResult { Success = false, Reason = FailureReason.OutOfRange };
-                var slot = chestGrid.Slots[line.SlotIndex];
-                if (slot.IsEmpty || line.Quantity > slot.Stack.Quantity) return new TransactionResult { Success = false, Reason = FailureReason.OutOfStock };
-                totalPrice += buyer.KnownItems.GetBasePriceOrDefault(slot.Stack.ItemId, 1) * line.Quantity;
+                var slotIndex = kvp.Key;
+                var qty = kvp.Value;
+
+                var slot = chestGrid.Slots[slotIndex];
+                if (slot.IsEmpty || qty > slot.Stack.Quantity)
+                    return Fail(FailureReason.OutOfStock);
+
+                // Seller sets base price for items they sell (fallback = 1)
+                var basePrice = vendor.Seller != null
+                    ? vendor.Seller.KnownItems.GetBasePriceOrDefault(slot.Stack.ItemId, 1)
+                    : 1;
+
+                totalPrice += basePrice * qty;
             }
 
-            if (buyer.Wallet.Coins < totalPrice) return new TransactionResult { Success = false, Reason = FailureReason.NotEnoughCoins, TotalPrice = totalPrice };
+            // 2) Validate buyer can afford
+            if (buyer.Wallet.Coins < totalPrice)
+                return Fail(FailureReason.NotEnoughCoins, totalPrice);
 
-            // Validate inventory fit before mutation for atomicity.
-            foreach (var line in request.Lines)
+            // 3) Validate buyer inventory space (again by aggregated quantities)
+            foreach (var kvp in requestedBySlot)
             {
-                var slot = chestGrid.Slots[line.SlotIndex];
-                if (!buyer.Inventory.Grid.CanAdd(slot.Stack.ItemId, line.Quantity, out _)) return new TransactionResult { Success = false, Reason = FailureReason.NotEnoughInventorySpace, TotalPrice = totalPrice };
+                var slot = chestGrid.Slots[kvp.Key];
+                var qty = kvp.Value;
+
+                if (!buyer.Inventory.Grid.CanAdd(slot.Stack.ItemId, qty, out _))
+                    return Fail(FailureReason.NotEnoughInventorySpace, totalPrice);
             }
 
-            if (!buyer.Wallet.TrySpend(totalPrice)) return new TransactionResult { Success = false, Reason = FailureReason.NotEnoughCoins, TotalPrice = totalPrice };
+            // 4) Apply mutations (atomic apply phase)
+            // Spend first is OK now that we validated space + stock.
+            if (!buyer.Wallet.TrySpend(totalPrice))
+                return Fail(FailureReason.NotEnoughCoins, totalPrice);
+
             vendor.Seller?.Wallet.AddCoins(totalPrice);
 
-            foreach (var line in request.Lines)
+            // Remove stock from the exact slot index requested, then add to buyer
+            foreach (var kvp in requestedBySlot)
             {
-                var slot = chestGrid.Slots[line.SlotIndex];
-                chestGrid.Remove(slot.Stack.ItemId, line.Quantity);
-                buyer.Inventory.AddItemServer(slot.Stack.ItemId, line.Quantity);
+                var slotIndex = kvp.Key;
+                var qty = kvp.Value;
+
+                var slot = chestGrid.Slots[slotIndex];
+
+                // Defensive: re-check slot is still valid at apply time
+                if (slot.IsEmpty || qty > slot.Stack.Quantity)
+                    return Fail(FailureReason.OutOfStock, totalPrice);
+
+                // Slot-specific decrement (do NOT call Remove(itemId, qty)!)
+                slot.Stack.Quantity -= qty;
+
+                if (slot.Stack.Quantity <= 0)
+                {
+                    chestGrid.Slots[slotIndex] = new InventorySlot { IsEmpty = true };
+                }
+                else
+                {
+                    chestGrid.Slots[slotIndex] = slot;
+                }
+
+                buyer.Inventory.AddItemServer(slot.Stack.ItemId, qty);
                 buyer.KnownItems.EnsureKnown(slot.Stack.ItemId);
             }
 
+            // 5) XP awards (MVP)
             buyer.Skills.AddXp(SkillId.Negotiation, 1);
             vendor.Seller?.Skills.AddXp(SkillId.Sales, 1);
+
+            // 6) Broadcast vendor chest update (so all shoppers see stock change)
             vendor.Chest.ForceBroadcastSnapshot();
-            return new TransactionResult { Success = true, Reason = FailureReason.None, TotalPrice = totalPrice };
+
+            return Ok(totalPrice);
         }
     }
 }
