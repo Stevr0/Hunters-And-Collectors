@@ -1,48 +1,89 @@
-using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace HuntersAndCollectors.Players
 {
     /// <summary>
-    /// Tracks known item ids and negotiable base prices on the authoritative server.
+    /// Server-authoritative replicated known item registry.
     /// </summary>
     public sealed class KnownItemsNet : NetworkBehaviour
     {
-        // Editor wiring checklist: attach to Player prefab with PlayerNetworkRoot.
-        private readonly Dictionary<string, int> known = new();
+        private readonly NetworkList<KnownItemEntry> known = new();
 
         /// <summary>
-        /// Returns true when item id already exists in known-item registry.
+        /// Returns true if item is already known.
         /// </summary>
-        public bool IsKnown(string itemId) => known.ContainsKey(itemId ?? string.Empty);
+        public bool IsKnown(string itemId)
+        {
+            var key = new FixedString64Bytes(itemId);
+
+            foreach (var k in known)
+                if (k.ItemId.Equals(key))
+                    return true;
+
+            return false;
+        }
 
         /// <summary>
-        /// Gets configured base price or default fallback for unknown item ids.
+        /// Gets base price or default fallback.
         /// </summary>
         public int GetBasePriceOrDefault(string itemId, int defaultPrice = 1)
         {
-            return known.TryGetValue(itemId ?? string.Empty, out var value) ? value : defaultPrice;
+            var key = new FixedString64Bytes(itemId);
+
+            foreach (var k in known)
+                if (k.ItemId.Equals(key))
+                    return k.BasePrice;
+
+            return defaultPrice;
         }
 
         /// <summary>
-        /// Ensures item id exists with default base price when first discovered.
+        /// Adds item to known list with default base price.
         /// </summary>
         public void EnsureKnown(string itemId)
         {
-            if (!IsServer || string.IsNullOrWhiteSpace(itemId) || known.ContainsKey(itemId)) return;
-            known[itemId] = 1;
+            if (!IsServer || string.IsNullOrWhiteSpace(itemId))
+                return;
+
+            var key = new FixedString64Bytes(itemId);
+
+            foreach (var k in known)
+                if (k.ItemId.Equals(key))
+                    return;
+
+            known.Add(new KnownItemEntry
+            {
+                ItemId = key,
+                BasePrice = 1
+            });
         }
 
         /// <summary>
-        /// Sets base price when value is non-negative.
+        /// Sets base price (server only).
         /// </summary>
         public bool TrySetBasePrice(string itemId, int basePrice)
         {
-            if (!IsServer || string.IsNullOrWhiteSpace(itemId) || basePrice < 0) return false;
+            if (!IsServer || string.IsNullOrWhiteSpace(itemId) || basePrice < 0)
+                return false;
+
+            var key = new FixedString64Bytes(itemId);
+
+            for (int i = 0; i < known.Count; i++)
+            {
+                if (!known[i].ItemId.Equals(key))
+                    continue;
+
+                var entry = known[i];
+                entry.BasePrice = basePrice;
+                known[i] = entry; // IMPORTANT: triggers replication
+                return true;
+            }
+
+            // If not known yet
             EnsureKnown(itemId);
-            known[itemId] = basePrice;
-            return true;
+            return TrySetBasePrice(itemId, basePrice);
         }
 
         /// <summary>
