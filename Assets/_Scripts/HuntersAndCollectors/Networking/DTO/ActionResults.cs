@@ -19,20 +19,29 @@ namespace HuntersAndCollectors.Networking.DTO
         NodeNotHarvestable,
         OnCooldown,
     }
+        public struct ActionResult : INetworkSerializable
+    {
+        public bool Success;
+        public FailureReason Reason;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref Success);
+            serializer.SerializeValue(ref Reason);
+        }
+    }
 
     /// <summary>
     /// Result payload for checkout transactions.
     /// </summary>
     public struct TransactionResult : INetworkSerializable
     {
-        public bool Success;
-        public FailureReason Reason;
+        public ActionResult Result;
         public int TotalPrice;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
-            serializer.SerializeValue(ref Success);
-            serializer.SerializeValue(ref Reason);
+            Result.NetworkSerialize(serializer);
             serializer.SerializeValue(ref TotalPrice);
         }
     }
@@ -42,13 +51,11 @@ namespace HuntersAndCollectors.Networking.DTO
     /// </summary>
     public struct HarvestResult : INetworkSerializable
     {
-        public bool Success;
-        public FailureReason Reason;
+        public ActionResult Result;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
-            serializer.SerializeValue(ref Success);
-            serializer.SerializeValue(ref Reason);
+            Result.NetworkSerialize(serializer);
         }
     }
 
@@ -57,13 +64,11 @@ namespace HuntersAndCollectors.Networking.DTO
     /// </summary>
     public struct CraftResult : INetworkSerializable
     {
-        public bool Success;
-        public FailureReason Reason;
+        public ActionResult Result;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
-            serializer.SerializeValue(ref Success);
-            serializer.SerializeValue(ref Reason);
+            Result.NetworkSerialize(serializer);
         }
     }
 }
