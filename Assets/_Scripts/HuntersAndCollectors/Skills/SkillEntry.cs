@@ -1,12 +1,19 @@
+using Unity.Collections;
+using Unity.Netcode;
+
 namespace HuntersAndCollectors.Skills
 {
-    /// <summary>
-    /// Serializable skill state entry for id, level, and xp.
-    /// </summary>
-    public struct SkillEntry
+    public struct SkillEntry : INetworkSerializable
     {
-        public string Id;
+        public FixedString64Bytes Id;
         public int Level;
         public int Xp;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref Id);
+            serializer.SerializeValue(ref Level);
+            serializer.SerializeValue(ref Xp);
+        }
     }
 }
