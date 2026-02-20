@@ -1,7 +1,6 @@
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
-using HuntersAndCollectors.Players;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -9,8 +8,8 @@ using UnityEngine;
 namespace HuntersAndCollectors.Vendors
 {
     /// <summary>
-    /// Server-owned vendor chest inventory replicated to all clients.
-    /// Also handles checkout requests via ServerRpc.
+    /// Server-owned vendor chest inventory replicated to all clients as snapshots.
+    /// NOTE: Checkout is handled by VendorInteractable (RPC entry point).
     /// </summary>
     public sealed class VendorChestNet : NetworkBehaviour
     {
@@ -23,81 +22,35 @@ namespace HuntersAndCollectors.Vendors
         [SerializeField] private int height = 4;
 
         private InventoryGrid grid;
-        private readonly VendorTransactionService transactionService = new();
+
+        // Client-side shadow snapshot (optional but useful for UI)
+        private InventorySnapshot lastSnapshot;
 
         public string VendorId => vendorId;
         public InventoryGrid Grid => grid;
+        public InventorySnapshot LastSnapshot => lastSnapshot;
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
+            {
                 grid = new InventoryGrid(width, height, itemDatabase);
+                ForceBroadcastSnapshot(); // initial state
+            }
         }
 
-        // =========================================================
-        // CHECKOUT ENTRY POINT
-        // =========================================================
-
-        [ServerRpc(RequireOwnership = false)]
-        public void RequestCheckoutServerRpc(CheckoutRequest request, ServerRpcParams rpcParams = default)
-        {
-            if (!IsServer || grid == null)
-                return;
-
-            var buyerClientId = rpcParams.Receive.SenderClientId;
-
-            if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(buyerClientId, out var buyerClient))
-                return;
-
-            var buyerRoot = buyerClient.PlayerObject.GetComponent<PlayerNetworkRoot>();
-            var sellerRoot = OwnerClientId == NetworkManager.ServerClientId
-                ? null
-                : NetworkManager.Singleton.ConnectedClients[OwnerClientId].PlayerObject.GetComponent<PlayerNetworkRoot>();
-
-            var context = new VendorTransactionService.VendorContext
-            {
-                Chest = this,
-                Seller = sellerRoot
-            };
-
-            var result = transactionService.TryCheckout(buyerRoot, context, request);
-
-            // Send result only to buyer
-            var toBuyer = new ClientRpcParams
-            {
-                Send = new ClientRpcSendParams { TargetClientIds = new[] { buyerClientId } }
-            };
-
-            ReceiveCheckoutResultClientRpc(result, toBuyer);
-
-            // Broadcast chest state update
-            ForceBroadcastSnapshot();
-        }
-
-        [ClientRpc]
-        private void ReceiveCheckoutResultClientRpc(TransactionResult result, ClientRpcParams rpcParams = default)
-        {
-            // UI hook:
-            // result.Result.Success
-            // result.Result.Reason
-            // result.TotalPrice
-        }
-
-        // =========================================================
-        // SNAPSHOT REPLICATION
-        // =========================================================
-
+        /// <summary>
+        /// Broadcasts authoritative chest snapshot to all connected clients.
+        /// </summary>
         public void ForceBroadcastSnapshot()
         {
-            if (!IsServer || grid == null)
-                return;
+            if (!IsServer || grid == null) return;
 
             var slots = new InventorySnapshot.SlotDto[grid.Slots.Length];
 
             for (var i = 0; i < slots.Length; i++)
             {
                 var s = grid.Slots[i];
-
                 slots[i] = s.IsEmpty
                     ? new InventorySnapshot.SlotDto { IsEmpty = true }
                     : new InventorySnapshot.SlotDto
@@ -108,18 +61,16 @@ namespace HuntersAndCollectors.Vendors
                     };
             }
 
-            ReceiveChestSnapshotClientRpc(new InventorySnapshot
-            {
-                W = grid.Width,
-                H = grid.Height,
-                Slots = slots
-            });
+            ReceiveChestSnapshotClientRpc(new InventorySnapshot { W = grid.Width, H = grid.Height, Slots = slots });
         }
 
         [ClientRpc]
         private void ReceiveChestSnapshotClientRpc(InventorySnapshot snapshot)
         {
-            // TODO: update chest UI
+            // Store snapshot for UI
+            lastSnapshot = snapshot;
+
+            // TODO: if you have a UI controller, notify it here
         }
     }
 }
