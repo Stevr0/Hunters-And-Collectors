@@ -30,9 +30,23 @@ namespace HuntersAndCollectors.Networking.DTO
         {
             serializer.SerializeValue(ref W);
             serializer.SerializeValue(ref H);
+
             var count = Slots == null ? 0 : Slots.Length;
             serializer.SerializeValue(ref count);
-            if (serializer.IsReader) Slots = new SlotDto[count];
+
+            if (serializer.IsReader)
+            {
+                // Validate count to prevent malformed packets
+                var expected = W * H;
+                if (count != expected)
+                {
+                    // Hard clamp to expected size
+                    count = expected;
+                }
+
+                Slots = new SlotDto[count];
+            }
+
             for (var i = 0; i < count; i++)
             {
                 var s = Slots[i];
