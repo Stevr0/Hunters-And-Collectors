@@ -1,375 +1,393 @@
-# HUNTERS AND COLLECTORS — GAME DESIGN DOCUMENT (GDD)
-Version: 0.3 (Structured Ecology Edition)
-Engine Target: Unity 6 (URP)
-Networking: Multiplayer, Server-Authoritative
-Core Philosophy: Skill Determines Everything
+# Hunters & Collectors — Game Design Document (Authoritative)
+Version: 1.0
+Status: DESIGN LOCKED (MVP + Full System Direction)
+Engine Target: Unity (Server-Authoritative, Host Mode MVP → Dedicated Server Later)
 
 ---
 
-# 1. HIGH CONCEPT
+# 1. Core Vision
 
-Hunters and Collectors is a multiplayer, skill-driven exploration and economy game where each player develops their own shard through gathering, crafting, building, ecological mastery, and trade.
+Hunters & Collectors is a skill-driven, player-shaped economic world where:
 
-The game is not combat-centric.
-Danger exists, but it is environmental.
-Creatures are not killed — they are managed, harvested responsibly, or worked around.
+• Every action is governed by a skill  
+• Every item can be sold  
+• Players define item value through Base Price  
+• World progression is shaped by crafting, ecology, and trade  
+• Infrastructure quality determines economic capability  
 
-Progression is determined entirely by skill capability.
-
----
-
-# 2. CORE DESIGN PILLARS
-
-1. Everything Requires a Skill  
-2. Skill Determines Access  
-3. Ecology Over Combat  
-4. Physical World Over UI Abstraction  
-5. Exploration Feeds Economy  
-6. Deterministic, Server-Authoritative Systems  
+The MVP validates the economic loop.  
+The full vision expands into a living skill-locked society.
 
 ---
 
-# 3. WORLD STRUCTURE
+# 2. Design Pillars
 
-Each player owns a shard.
+## 2.1 Skill Determines Everything
 
-Initial shard scenes:
-- SCN_Village (Safe zone, building allowed)
-- SCN_Wildlands (Exploration, renewable creatures, reactive hazards)
-- SCN_Cave (Layered territorial guardians and high-tier materials)
+Every system is governed by skill level:
 
-Players may visit other shards.
-Items must be physically transported.
-There is no global auction house.
+• Harvest yield  
+• Craft quality  
+• Vendor capacity  
+• Warehouse size  
+• Buildable structures  
+• Economic efficiency  
+• Ecology interaction  
 
----
-
-# 4. PLAYER START & EARLY LOOP
-
-Players spawn:
-- Naked
-- No tools
-- Empty land plot
-- No vendor present
-
-Early Gameplay Loop:
-1. Gather Tier 1 resources
-2. Craft primitive tools
-3. Build enclosed shelter
-4. Attract vendor NPC
-5. Begin trade and specialization
-
-If this loop works, the foundation of the game is validated.
+There are no hard character classes.
+Progression is entirely skill-based.
 
 ---
 
-# 5. SKILL SYSTEM (FOUNDATION)
+## 2.2 Player-Defined Economy
 
-No levels. No XP bars. Use-based growth.
+• Players set Base Price per Known Item  
+• Vendor listings use that Base Price  
+• Trade outcomes increase Sales / Negotiation skills  
+• Economic identity emerges from pricing decisions
 
-Every meaningful action performs a skill check.
-Skills improve through successful use.
-
-## 5.1 Skill Categories
-
-Gathering:
-- Foraging
-- Mining
-- Lumbering
-- Fishing
-- Trapping
-- Excavation
-
-Fieldcraft & Creature Skills:
-- Tracking
-- Animal Handling
-- Preservation
-- Herbalism
-- Trophy Preservation
-
-Crafting:
-- Carpentry
-- Smithing
-- Restoration
-- Decoration
-- Appraisal
-
-Commerce:
-- Negotiation (Player)
-- Sales (Vendor)
-- Warehouse (Vendor)
-
-## 5.2 Skill Determines
-
-- Safe passage through hazard zones
-- Aggro radius reduction
-- Harvest yield
-- Harvest quality
-- Access to higher-tier resources
-- Vendor container capacity
-- Trade price margins
-
-Skill is territorial access.
+The game does not dictate value — players do.
 
 ---
 
-# 6. RESOURCE TIERS
+## 2.3 Infrastructure Drives Capability
 
-Higher skill reveals and enables safe access to higher-tier resources.
+Better skills unlock:
 
-Example Visibility Thresholds:
-- Tier 1 → Skill 0
-- Tier 2 → Skill 20
-- Tier 3 → Skill 40
-- Tier 4 → Skill 70
-- Tier 5 → Skill 90
+• Larger vendor chests  
+• More vendor chest placements (Warehouse skill)  
+• Higher-tier build pieces  
+• Advanced crafting stations  
 
-Higher tiers are often protected by territorial guardians.
+Skill gates scale opportunity — not arbitrary level locks.
 
 ---
 
-# 7. CREATURE ECOLOGY SYSTEM
+# 3. MVP Vertical Slice (Locked Scope)
 
-Creatures are part of the ecosystem.
-They are never killed for progression.
+The MVP proves the foundational loop:
 
-## 7.1 Ecological Types
-
-### Type A — Renewable Harvest Creatures
-
-Examples:
-- Sheep (Wool)
-- Goats (Milk)
-- Bees (Honey)
-
-These creatures:
-- Are non-lethal
-- Regenerate resources over time
-- Require Animal Handling skill
-
-Low skill:
-- Reduced yield
-- Lower quality
-- Increased stress
-
-High skill:
-- Higher yield
-- Premium materials
-- Faster regeneration
-
-
-### Type B — Territorial Guardians
-
-Examples:
-- Spider (Silk Zone)
-- Snake (Venom Zone)
-- Boar (Root Territory)
-
-These creatures:
-- Anchor valuable resource zones
-- Must be suppressed or safely navigated
-- Do not drop loot directly
-
-They create Safe Work Zones when managed correctly.
+1. Harvest Tier‑1 resources  
+2. Craft tool + sellable item  
+3. Build shelter  
+4. Vendor spawns  
+5. List item via vendor chest  
+6. Player purchases item  
+7. Currency transfers  
+8. Skills increase  
+9. Save → Load restores state
 
 ---
 
-# 8. HOSTILITY MODEL
-
-Hostility defines temperament, not combat.
-
-## 8.1 Passive
-- Never hostile
-- May flee or become stressed
-- Yield affected by handling skill
-
-## 8.2 Reactive
-- Neutral unless provoked
-- Have Warning and Aggro zones
-- Can be safely bypassed with sufficient skill
-
-## 8.3 Aggressive
-- Always defend territory
-- Function as environmental progression gates
-- Require high skill or suppression to work nearby
+# 4. Core Systems (MVP + Expansion Direction)
 
 ---
 
-# 9. HAZARD & SAFE PASSAGE SYSTEM
+# 4.1 Currency System
 
-Hazards replace combat encounters.
+Currency: Coins  
+Integer values only  
+Player starts with 100 coins (MVP)
 
-Each hazard defines:
-- RequiredSkill
-- MinSafeSkill
-- BaseAggroRadius
-- WarningRadius
-- StatusEffect
+Future:
+• Coins enter economy via NPC demand, trade, services  
+• Economic scarcity influences price behavior  
 
-If PlayerSkill < MinSafeSkill:
-- Entering AggroRadius applies status
-
-If PlayerSkill >= MinSafeSkill:
-- Aggro radius reduced
-- Safe passage possible
-
-EffectiveAggroRadius = BaseAggroRadius × (1 - SkillScalingFactor)
-
-Higher skill physically reduces danger radius.
+Coins are stored per-player in Wallet.
 
 ---
 
-# 10. SAFE WORK ZONE SYSTEM
+# 4.2 Skill System
 
-To harvest within a territorial guardian’s zone:
+## MVP Skills
+• Sales  
+• Negotiation
 
-Requirements:
-- PlayerSkill >= MinSafeSkill
-- Suppression interaction performed
+Starting Level: 0  
+XP Curve: XP needed = 10 × (level + 1)  
+XP per successful transaction: +1
 
-Safe Work Zone:
-- Temporary radius
-- Duration scales with skill
-- Enables harvest nodes
+## Planned Skill Categories
 
-Failure may:
-- Collapse zone
-- Trigger status
-- Reduce yield
+Harvesting Skills:
+• Woodcutting  
+• Mining  
+• Foraging
 
-Creatures recover and regenerate.
+Crafting Skills:
+• Carpentry  
+• Smithing  
+• Tailoring  
+• Toolmaking
 
----
+Commerce Skills:
+• Sales  
+• Negotiation  
+• Warehouse Management
 
-# 11. STATUS EFFECT SYSTEM
+Building Skills:
+• Construction  
+• Engineering
 
-Hazards apply Conditions instead of combat damage.
+Ecology Skills (future):
+• Animal Handling  
+• Suppression  
+• Environmental Management
 
-Examples:
-- Venom
-- Infection
-- Hallucination
-- Fatigue
-- Reduced Vision
-- Reduced Carry Capacity
-
-Statuses impact:
-- Skill checks
-- Movement
-- Crafting quality
-- Negotiation outcomes
-
-Untreated statuses may escalate.
-
----
-
-# 12. KNOWN ITEM SYSTEM
-
-When a player:
-- Finds
-- Crafts
-- Identifies
-
-An item becomes Known.
-
-Registry stores:
-- ItemId
-- Player-defined BasePrice
-- TimesCrafted
-- TimesSold
-- Discovery Tier
-
-BasePrice is not final price.
+Skill effects scale:
+• Yield  
+• Craft efficiency  
+• Item quality (future)  
+• Vendor slot count  
+• Chest placement limit
 
 ---
 
-# 13. VENDOR & TRADE SYSTEM
+# 4.3 Items
 
-Vendor is attracted by valid shelter:
-- Enclosed space
-- Door
-- Light
-- Storage container
+Items use stable string IDs.
 
-Vendor Skills:
-- Sales
-- Warehouse
-- Appraisal (future)
+MVP Items:
+Resources:
+• IT_Wood  
+• IT_Stone  
+• IT_Fiber
 
-## 13.1 Vendor Chests
+Tool:
+• IT_StoneAxe
 
-- Crafted physical containers
-- Linked via Warehouse skill
-- Physical storage is source of truth
+Crafted:
+• IT_WoodenClub
 
-Items placed in linked containers appear automatically in shop UI.
+Future expansion:
+• Quality tiers  
+• Tool durability  
+• Material grades  
+• Crafted item variations
 
-No abstract inventory listing.
-
----
-
-# 14. TRADE FLOW
-
-1. Buyer interacts with vendor
-2. Adds items to cart
-3. Checkout triggers server validation
-
-Price Model:
-
-SkillDelta = VendorSales - BuyerNegotiation  
-FinalPrice = BasePrice × (1 + TradeModifier)
-
-Clamp:
-- 70% minimum
-- 150% maximum
-
-All calculations are server-authoritative.
+All items are sellable if placed in a vendor chest.
 
 ---
 
-# 15. SPECIALIZATION PATHS
+# 4.4 Inventory System
 
-Emergent roles include:
-- Master Carpenter
-- Merchant Tycoon
-- Master Animal Handler
-- Hazard Specialist
-- Deep-Cave Extractor
-- Silk Artisan
-- Venom Distiller
+Slot Grid system (locked).
 
-Skill investment defines identity.
+Transport rule:
+Only carried inventory transfers between shards.
 
----
-
-# 16. FAILURE STATES
-
-Failure does not primarily mean death.
-
-Possible consequences:
-- Status escalation
-- Forced retreat
-- Tool damage
-- Resource loss
-- Economic downtime
-
-Death is rare and meaningful.
+Future expansion:
+• Weight system  
+• Encumbrance  
+• Specialized storage containers
 
 ---
 
-# 17. CORE DESIGN LOCK
+# 4.5 Crafting System
 
-Creatures are not defeated.
+MVP:
+• Always succeeds  
+• Ingredient removal + output add
 
-Some provide.
-Some warn.
-Some defend their territory.
+Recipes (MVP):
+• Stone Axe  
+• Wooden Club
 
-The world does not become weaker.
-
-The player becomes more capable.
+Future expansion:
+• Skill-based success chance  
+• Quality tiers  
+• Craft speed scaling  
+• Workstation requirements  
+• Advanced recipe trees
 
 ---
 
-END OF VERSION 0.3
+# 5. Building System
+
+## MVP Build Pieces
+• Floor  
+• Wall  
+• Door  
+• Roof  
+• (Optional Light)
+
+ShelterComplete triggers vendor spawn.
+
+## Future Building Expansion
+• Structural tiers  
+• Multi-tile foundations  
+• Advanced housing  
+• Workshops  
+• Specialized vendor stalls  
+• Decorative value affecting NPC attraction
+
+Building skill unlocks:
+• Larger structures  
+• Improved efficiency  
+• Advanced economic buildings
+
+---
+
+# 6. Vendor & Commerce System
+
+## Vendor Behavior (MVP)
+• Spawns when shelter complete  
+• Linked to one Vendor Chest  
+• Lists all items in chest
+
+## Base Price System
+• Per itemId  
+• Default 1 coin  
+• Editable via Known Items UI
+
+## Checkout Rules
+Atomic transaction:
+• Validate stock  
+• Validate coins  
+• Validate inventory space  
+• Transfer coins + items  
+• Apply XP
+
+## Future Commerce Expansion
+• Buyer NPC AI  
+• Negotiation modifiers  
+• Market demand modifiers  
+• Supply scarcity  
+• Regional price variation  
+• Player-to-player trade UI
+
+---
+
+# 7. Known Item Registry
+
+Item becomes Known when first entering inventory.
+
+Per item stores:
+• itemId  
+• basePrice
+
+Future:
+• Knowledge tiers  
+• Appraisal skill  
+• Hidden value discovery  
+• Market intelligence systems
+
+---
+
+# 8. Ecology & Resource Systems
+
+## MVP
+• Fixed spawn points  
+• Simple respawn timers  
+• No stress system
+
+Respawn:
+• Tree 60s  
+• Rock 90s  
+• Plant 45s
+
+## Future Ecology Expansion
+• Overharvesting stress  
+• Yield reduction  
+• Regrowth cycles  
+• Guardian creatures  
+• Hazard zones  
+• Suppression mechanics  
+• Skill-based environmental mitigation
+
+Ecology is intended to become a strategic layer.
+
+---
+
+# 9. Infrastructure Scaling (Future Direction)
+
+Vendor capacity is determined by:
+• Warehouse skill  
+• Vendor chest tier  
+• Crafted container quality
+
+Carpentry skill unlocks:
+• Larger chests  
+• Improved storage  
+• Advanced structures
+
+Every upgrade path is skill-based — not arbitrary unlock-based.
+
+---
+
+# 10. Networking Model
+
+Authority: Server-authoritative
+
+MVP Runtime: Host (listen server)
+
+Future:
+• Dedicated shard servers  
+• Player-owned shards  
+• Cross-shard visitation  
+• Inventory-based trade transport
+
+Clients never write save data.
+
+---
+
+# 11. Persistence
+
+Player Save:
+• Coins  
+• Skills  
+• Known Items + Base Prices  
+• Inventory
+
+Shard Save:
+• ShelterComplete  
+• Placed Build Pieces  
+• Vendor Chest Contents
+
+Future:
+• Ecology states  
+• Vendor AI state  
+• Market conditions
+
+---
+
+# 12. Explicitly Out of MVP Scope
+
+• Guardian creatures  
+• Hazard systems  
+• Advanced negotiation math  
+• PvP systems  
+• Crime / theft systems  
+• Multi-vendor economies  
+• Dynamic markets
+
+These are expansion layers beyond v1.0.
+
+---
+
+# 13. MVP Completion Criteria
+
+MVP is complete when:
+
+1. Harvesting works  
+2. Crafting works  
+3. Shelter triggers vendor  
+4. Vendor chest lists items  
+5. Checkout transfers coins/items  
+6. Skills gain XP correctly  
+7. Save/Load restores full state
+
+---
+
+# 14. Long-Term Identity
+
+Hunters & Collectors is not just a crafting game.
+It is a skill-driven economic simulation where infrastructure, pricing decisions, and environmental stewardship determine prosperity.
+
+The MVP proves the engine.
+The expansion builds the society.
+
+---
+
+END OF GDD v1.0 (Authoritative)
 
