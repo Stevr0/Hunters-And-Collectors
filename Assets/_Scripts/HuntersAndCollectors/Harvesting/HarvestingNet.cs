@@ -6,36 +6,86 @@ using UnityEngine;
 
 namespace HuntersAndCollectors.Harvesting
 {
-    /// <summary>
-    /// Handles owner harvest requests and applies validated server rewards.
-    /// </summary>
     public sealed class HarvestingNet : NetworkBehaviour
     {
-        // Editor wiring checklist: attach to Player prefab and assign node registry in scene bootstrap.
+        [Header("Scene Wiring")]
         [SerializeField] private ResourceNodeRegistry nodeRegistry;
-        [SerializeField] private PlayerInventoryNet inventory;
-        [SerializeField] private KnownItemsNet knownItems;
+
+        private PlayerInventoryNet inventory;
+        private KnownItemsNet knownItems;
+
+        public override void OnNetworkSpawn()
+        {
+            inventory = GetComponent<PlayerInventoryNet>();
+            knownItems = GetComponent<KnownItemsNet>();
+        }
 
         [ServerRpc(RequireOwnership = true)]
         public void RequestHarvestServerRpc(string nodeId, ServerRpcParams rpcParams = default)
         {
-            if (!IsServer || nodeRegistry == null)
+            if (!IsServer)
+                return;
+
+            var toOwner = new ClientRpcParams
             {
-                HarvestResultClientRpc(new HarvestResult { Success = false, Reason = FailureReason.InvalidRequest });
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { OwnerClientId } }
+            };
+
+            if (nodeRegistry == null || inventory == null || knownItems == null)
+            {
+                HarvestResultClientRpc(Fail(FailureReason.InvalidRequest), toOwner);
                 return;
             }
 
-            if (!nodeRegistry.TryGet(nodeId, out var node)) { HarvestResultClientRpc(new HarvestResult { Success = false, Reason = FailureReason.NodeNotHarvestable }); return; }
-            if (!node.IsHarvestable()) { HarvestResultClientRpc(new HarvestResult { Success = false, Reason = FailureReason.OnCooldown }); return; }
+            if (string.IsNullOrWhiteSpace(nodeId) || !nodeRegistry.TryGet(nodeId, out var node) || node == null)
+            {
+                HarvestResultClientRpc(Fail(FailureReason.NodeNotHarvestable), toOwner);
+                return;
+            }
 
+            if (!node.IsHarvestable())
+            {
+                HarvestResultClientRpc(Fail(FailureReason.OnCooldown), toOwner);
+                return;
+            }
+
+            // Apply reward first
             var remainder = inventory.AddItemServer(node.DropItemId, node.DropQuantity);
-            if (remainder > 0) { HarvestResultClientRpc(new HarvestResult { Success = false, Reason = FailureReason.NotEnoughInventorySpace }); return; }
+
+            if (remainder > 0)
+            {
+                HarvestResultClientRpc(Fail(FailureReason.NotEnoughInventorySpace), toOwner);
+                return;
+            }
+
+            // Mark known + consume node
             knownItems.EnsureKnown(node.DropItemId);
             node.Consume();
-            HarvestResultClientRpc(new HarvestResult { Success = true, Reason = FailureReason.None });
+
+            HarvestResultClientRpc(Ok(), toOwner);
         }
 
         [ClientRpc]
-        private void HarvestResultClientRpc(HarvestResult result) { }
+        private void HarvestResultClientRpc(HarvestResult result, ClientRpcParams rpcParams = default)
+        {
+            // TODO: hook UI feedback here (toast/sound)
+            // result.Result.Success / result.Result.Reason
+        }
+
+        private static HarvestResult Fail(FailureReason reason)
+        {
+            return new HarvestResult
+            {
+                Result = new ActionResult { Success = false, Reason = reason }
+            };
+        }
+
+        private static HarvestResult Ok()
+        {
+            return new HarvestResult
+            {
+                Result = new ActionResult { Success = true, Reason = FailureReason.None }
+            };
+        }
     }
 }
