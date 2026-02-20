@@ -362,20 +362,5 @@ These may be addressed after MVP is validated.
 
 ---
 
-# 10. Next Spec (Required)
-
-Next document to lock is:
-
-PERSISTENCE_SPEC.md
-
-This will define:
-- save file structure
-- serialization format
-- where files live
-- versioning/migrations
-- server write policy
-
----
-
 END OF NETWORK_AUTHORITY_SPEC v0.1
 
