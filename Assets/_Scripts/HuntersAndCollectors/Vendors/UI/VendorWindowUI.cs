@@ -24,9 +24,6 @@ namespace HuntersAndCollectors.Vendors.UI
     /// </summary>
     public sealed class VendorWindowUI : MonoBehaviour
     {
-        [Header("Wiring")]
-        [Tooltip("VendorInteractable in the scene. If empty, we will try to FindObjectOfType.")]
-        [SerializeField] private VendorInteractable vendorInteractable;
 
         [Tooltip("VendorChestNet used by the vendor. If empty, we will try to resolve from VendorInteractable.")]
         [SerializeField] private VendorChestNet vendorChest;
@@ -67,15 +64,17 @@ namespace HuntersAndCollectors.Vendors.UI
             // If we already have a cached snapshot, render immediately.
             if (vendorChest != null && vendorChest.LastSnapshot.Slots != null)
                 Render(vendorChest.LastSnapshot);
-
-            // Ask server for the latest snapshot when we open the window.
-            RequestOpenVendorSnapshot();
         }
 
         private void OnDisable()
         {
             if (vendorChest != null)
                 vendorChest.OnSnapshotChanged -= HandleSnapshotChanged;
+
+            currentVendor = null;
+            vendorChest = null;
+
+            gameObject.SetActive(false);
         }
 
         /// <summary>
@@ -92,11 +91,23 @@ namespace HuntersAndCollectors.Vendors.UI
 
             currentVendor = vendor;
 
-            // Enable/show the UI (whatever your setup is)
+            // Bind to the exact chest for this vendor.
+            vendorChest = vendor.Chest;
+
+            if (vendorChest == null)
+            {
+                Debug.LogWarning("[VendorWindowUI] Vendor has no VendorChestNet.", vendor);
+                return;
+            }
+
+            // Subscribe AFTER we know the right chest.
+            vendorChest.OnSnapshotChanged += HandleSnapshotChanged;
+
+            // Show UI
             gameObject.SetActive(true);
 
-            // Ask the server to broadcast the current chest stock snapshot.
-            RequestOpenVendorSnapshot();
+            // Ask server for the snapshot
+            currentVendor.RequestOpenVendorServerRpc();
         }
 
         /// <summary>
@@ -117,15 +128,20 @@ namespace HuntersAndCollectors.Vendors.UI
         // Optional: When closing, clear the vendor reference.
         public void Close()
         {
+            if (vendorChest != null)
+                vendorChest.OnSnapshotChanged -= HandleSnapshotChanged;
+
             currentVendor = null;
+            vendorChest = null;
+
             gameObject.SetActive(false);
         }
 
         private void TryResolveRefs()
         {
             // Resolve VendorInteractable if not assigned.
-            if (vendorInteractable == null)
-                vendorInteractable = FindObjectOfType<VendorInteractable>();
+            if (currentVendor == null)
+                currentVendor = FindObjectOfType<VendorInteractable>();
 
             // Resolve VendorChestNet if not assigned.
             // VendorInteractable has a [SerializeField] vendorChest, but it is private,
@@ -192,7 +208,7 @@ namespace HuntersAndCollectors.Vendors.UI
 
         private void SendBuy(int slotIndex, int quantity)
         {
-            if (vendorInteractable == null)
+            if (currentVendor == null)
             {
                 Debug.LogWarning("[VendorWindowUI] Cannot buy - VendorInteractable missing.");
                 return;
@@ -214,12 +230,7 @@ namespace HuntersAndCollectors.Vendors.UI
                 }
             };
 
-            vendorInteractable.RequestCheckoutServerRpc(req);
-        }
-
-        public void Open()
-        {
-            gameObject.SetActive(true);
+            currentVendor.RequestCheckoutServerRpc(req);
         }
     }
 }
