@@ -1,6 +1,7 @@
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
+using System;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,49 +9,68 @@ using UnityEngine;
 namespace HuntersAndCollectors.Vendors
 {
     /// <summary>
-    /// Server-owned vendor chest inventory replicated to all clients as snapshots.
-    /// NOTE: Checkout is handled by VendorInteractable (RPC entry point).
+    /// VendorChestNet
+    /// --------------------------------------------------------------------
+    /// Server-owned vendor chest inventory.
+    /// Replicated to all clients via InventorySnapshot (ClientRpc).
+    ///
+    /// UI NOTE:
+    /// - Clients can't read the server InventoryGrid directly.
+    /// - So we cache the last received snapshot locally and raise an event.
     /// </summary>
     public sealed class VendorChestNet : NetworkBehaviour
     {
         [Header("Identity")]
         [SerializeField] private string vendorId = "VENDOR_001";
 
-        [Header("Inventory")]
+        [Header("Inventory (Server Authoritative)")]
         [SerializeField] private ItemDatabase itemDatabase;
         [SerializeField] private int width = 4;
         [SerializeField] private int height = 4;
 
         private InventoryGrid grid;
 
-        // Client-side shadow snapshot (optional but useful for UI)
-        private InventorySnapshot lastSnapshot;
+        // -------------------------
+        // CLIENT-SIDE SNAPSHOT CACHE
+        // -------------------------
+
+        /// <summary>
+        /// The most recent snapshot received on THIS client.
+        /// This is what the UI should render.
+        /// </summary>
+        public InventorySnapshot LastSnapshot { get; private set; }
+
+        /// <summary>
+        /// Fired when a new snapshot arrives on a client.
+        /// Vendor UI can subscribe and re-render.
+        /// </summary>
+        public event Action<InventorySnapshot> OnSnapshotChanged;
 
         public string VendorId => vendorId;
         public InventoryGrid Grid => grid;
-        public InventorySnapshot LastSnapshot => lastSnapshot;
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
             {
                 grid = new InventoryGrid(width, height, itemDatabase);
-                ForceBroadcastSnapshot(); // initial state
             }
         }
 
         /// <summary>
-        /// Broadcasts authoritative chest snapshot to all connected clients.
+        /// Server broadcasts authoritative chest snapshot to all connected clients.
         /// </summary>
         public void ForceBroadcastSnapshot()
         {
-            if (!IsServer || grid == null) return;
+            if (!IsServer || grid == null)
+                return;
 
             var slots = new InventorySnapshot.SlotDto[grid.Slots.Length];
 
             for (var i = 0; i < slots.Length; i++)
             {
                 var s = grid.Slots[i];
+
                 slots[i] = s.IsEmpty
                     ? new InventorySnapshot.SlotDto { IsEmpty = true }
                     : new InventorySnapshot.SlotDto
@@ -61,16 +81,39 @@ namespace HuntersAndCollectors.Vendors
                     };
             }
 
-            ReceiveChestSnapshotClientRpc(new InventorySnapshot { W = grid.Width, H = grid.Height, Slots = slots });
+            ReceiveChestSnapshotClientRpc(new InventorySnapshot
+            {
+                W = grid.Width,
+                H = grid.Height,
+                Slots = slots
+            });
         }
 
         [ClientRpc]
         private void ReceiveChestSnapshotClientRpc(InventorySnapshot snapshot)
         {
-            // Store snapshot for UI
-            lastSnapshot = snapshot;
+            // Cache it locally so the UI can access it.
+            LastSnapshot = snapshot;
 
-            // TODO: if you have a UI controller, notify it here
+            // Notify any listeners (Vendor UI) to re-render.
+            OnSnapshotChanged?.Invoke(snapshot);
+
+            Debug.Log($"[VendorChestNet][CLIENT] Chest snapshot received. W={snapshot.W} H={snapshot.H} Slots={(snapshot.Slots == null ? 0 : snapshot.Slots.Length)}");
+        }
+
+        /// <summary>
+        /// Helper for UI: translate an itemId into a display name if you have one.
+        /// If your ItemDatabase doesn’t support this yet, we just show itemId.
+        /// </summary>
+        public string GetDisplayName(string itemId)
+        {
+            if (itemDatabase == null || string.IsNullOrWhiteSpace(itemId))
+                return itemId ?? string.Empty;
+
+            // Adjust to match your real ItemDatabase API:
+            // e.g. itemDatabase.TryGet(itemId, out var def) ? def.DisplayName : itemId;
+            var def = itemDatabase.GetOrThrow(itemId); // <-- change if your API differs
+            return def != null ? def.DisplayName : itemId;
         }
     }
 }
