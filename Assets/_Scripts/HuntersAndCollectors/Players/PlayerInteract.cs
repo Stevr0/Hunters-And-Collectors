@@ -1,33 +1,35 @@
 using HuntersAndCollectors.Vendors;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace HuntersAndCollectors.Players
 {
-    /// <summary>
-    /// Handles interaction input for the local player.
-    /// </summary>
     public sealed class PlayerInteract : NetworkBehaviour
     {
-        [SerializeField] private float interactRange = 3f;
-
-        private VendorProximity currentVendor;
+        private PlayerInputActions input;
         private VendorWindowUI vendorUI;
 
         public override void OnNetworkSpawn()
         {
             if (!IsOwner)
+            {
                 enabled = false;
+                return;
+            }
+
+            input = new PlayerInputActions();
+
+            input.Player.Interact.performed += _ => TryInteract();
+
+            input.Enable();
 
             vendorUI = FindObjectOfType<VendorWindowUI>();
         }
 
-        private void Update()
+        private void OnDisable()
         {
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                TryInteract();
-            }
+            input?.Disable();
         }
 
         private void TryInteract()
@@ -38,19 +40,10 @@ namespace HuntersAndCollectors.Players
             {
                 if (vendor.IsPlayerInRange)
                 {
-                    currentVendor = vendor;
-                    OpenVendor();
+                    vendorUI?.Open();
                     break;
                 }
             }
-        }
-
-        private void OpenVendor()
-        {
-            if (vendorUI == null)
-                return;
-
-            vendorUI.Open();
         }
     }
 }
