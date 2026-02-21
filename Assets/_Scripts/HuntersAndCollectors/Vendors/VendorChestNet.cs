@@ -102,18 +102,20 @@ namespace HuntersAndCollectors.Vendors
         }
 
         /// <summary>
-        /// Helper for UI: translate an itemId into a display name if you have one.
-        /// If your ItemDatabase doesn’t support this yet, we just show itemId.
+        /// Returns a user-friendly display name for an itemId.
+        /// Falls back to raw itemId if not found.
         /// </summary>
         public string GetDisplayName(string itemId)
         {
             if (itemDatabase == null || string.IsNullOrWhiteSpace(itemId))
                 return itemId ?? string.Empty;
 
-            // Adjust to match your real ItemDatabase API:
-            // e.g. itemDatabase.TryGet(itemId, out var def) ? def.DisplayName : itemId;
-            var def = itemDatabase.GetOrThrow(itemId); // <-- change if your API differs
-            return def != null ? def.DisplayName : itemId;
+            // Use your real API
+            if (itemDatabase.TryGet(itemId, out var def))
+                return def.DisplayName;
+
+            // Fallback if unknown id
+            return itemId;
         }
     }
 }
