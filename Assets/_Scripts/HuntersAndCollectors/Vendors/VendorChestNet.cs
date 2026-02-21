@@ -2,6 +2,7 @@ using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -116,6 +117,25 @@ namespace HuntersAndCollectors.Vendors
 
             // Fallback if unknown id
             return itemId;
+        }
+
+        // Persistent base prices for this vendor
+        private readonly Dictionary<string, int> basePrices = new();
+
+        public int GetBasePrice(string itemId)
+        {
+            if (basePrices.TryGetValue(itemId, out var price))
+                return price;
+
+            // Fallback price (optional)
+            return 1;
+        }
+
+        public void SetBasePrice(string itemId, int price)
+        {
+            if (!IsServer) return;
+
+            basePrices[itemId] = Mathf.Max(0, price);
         }
     }
 }
