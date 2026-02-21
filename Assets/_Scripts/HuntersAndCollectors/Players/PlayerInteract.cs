@@ -1,4 +1,5 @@
 using HuntersAndCollectors.Vendors;
+using HuntersAndCollectors.Vendors.UI;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -18,13 +19,11 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
+            vendorUI = FindObjectOfType<VendorWindowUI>(true); // true finds inactive too
             input = new PlayerInputActions();
 
             input.Player.Interact.performed += _ => TryInteract();
-
             input.Enable();
-
-            vendorUI = FindObjectOfType<VendorWindowUI>();
         }
 
         private void OnDisable()
@@ -34,16 +33,33 @@ namespace HuntersAndCollectors.Players
 
         private void TryInteract()
         {
-            var vendors = FindObjectsOfType<VendorProximity>();
-
-            foreach (var vendor in vendors)
+            if (vendorUI == null)
             {
-                if (vendor.IsPlayerInRange)
-                {
-                    vendorUI?.Open();
-                    break;
-                }
+                Debug.LogWarning("[PlayerInteract] No VendorWindowUI found in scene.");
+                return;
             }
+
+            // Super simple MVP: find any vendor proximity we're inside.
+            // Later we can optimize this to nearest vendor only.
+            var proximities = FindObjectsOfType<VendorProximity>();
+
+            foreach (var p in proximities)
+            {
+                if (!p.IsPlayerInRange)
+                    continue;
+
+                if (p.Vendor == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] VendorProximity has no VendorInteractable assigned.");
+                    continue;
+                }
+
+                // Bind the UI to THIS vendor.
+                vendorUI.Open(p.Vendor);
+                return;
+            }
+
+            Debug.Log("[PlayerInteract] No vendor in range.");
         }
     }
 }
