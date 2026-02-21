@@ -13,12 +13,19 @@ namespace HuntersAndCollectors.Vendors
     /// - Validate everything before mutating anything.
     /// - Never remove stock by ItemId (must remove from the exact slot index requested).
     /// - Prevent duplicate SlotIndex lines from double-removing or double-pricing.
+    ///
+    /// OFFLINE-SELLER RULE:
+    /// - Seller may be null (offline).
+    /// - Base price must come from the VendorChest (persistent pricing), not from seller components.
+    /// - Seller payout must still happen via chest "pending payout" if seller is offline.
     /// </summary>
     public sealed class VendorTransactionService
     {
         public sealed class VendorContext
         {
             public VendorChestNet Chest;
+
+            // Optional: only present if seller is online and you resolved them.
             public PlayerNetworkRoot Seller;
         }
 
@@ -37,14 +44,25 @@ namespace HuntersAndCollectors.Vendors
                 TotalPrice = total
             };
 
+            // ---------------------------------------------------------
+            // 0) Basic validation (no allocations / no mutations)
+            // ---------------------------------------------------------
             if (buyer == null || vendor?.Chest == null || request.Lines == null || request.Lines.Length == 0)
+                return Fail(FailureReason.InvalidRequest);
+
+            if (buyer.Inventory == null || buyer.Inventory.Grid == null)
+                return Fail(FailureReason.InvalidRequest); // buyer not initialized properly
+
+            if (buyer.Wallet == null)
                 return Fail(FailureReason.InvalidRequest);
 
             var chestGrid = vendor.Chest.Grid;
             if (chestGrid == null)
                 return Fail(FailureReason.VendorNotFound);
 
-            // Aggregate quantities by SlotIndex to prevent duplicate-line exploits
+            // ---------------------------------------------------------
+            // 1) Aggregate quantities by SlotIndex (anti-exploit)
+            // ---------------------------------------------------------
             var requestedBySlot = new Dictionary<int, int>();
             foreach (var line in request.Lines)
             {
@@ -60,7 +78,13 @@ namespace HuntersAndCollectors.Vendors
                     requestedBySlot[line.SlotIndex] = line.Quantity;
             }
 
-            // 1) Validate stock + compute total price (use SELLER base prices)
+            // ---------------------------------------------------------
+            // 2) Validate stock + compute total price
+            //
+            // IMPORTANT CHANGE:
+            // - Base price comes from the VENDOR CHEST (persistent table),
+            //   NOT from seller.KnownItems (seller might be offline).
+            // ---------------------------------------------------------
             var totalPrice = 0;
 
             foreach (var kvp in requestedBySlot)
@@ -72,19 +96,22 @@ namespace HuntersAndCollectors.Vendors
                 if (slot.IsEmpty || qty > slot.Stack.Quantity)
                     return Fail(FailureReason.OutOfStock);
 
-                // Seller sets base price for items they sell (fallback = 1)
-                var basePrice = vendor.Seller != null
-                    ? vendor.Seller.KnownItems.GetBasePriceOrDefault(slot.Stack.ItemId, 1)
-                    : 1;
+                // Persistent base price owned by the vendor chest.
+                // Fallback = 1 coin (tune later).
+                var basePrice = vendor.Chest.GetBasePriceOrDefault(slot.Stack.ItemId, 1);
 
                 totalPrice += basePrice * qty;
             }
 
-            // 2) Validate buyer can afford
+            // ---------------------------------------------------------
+            // 3) Validate buyer can afford
+            // ---------------------------------------------------------
             if (buyer.Wallet.Coins < totalPrice)
                 return Fail(FailureReason.NotEnoughCoins, totalPrice);
 
-            // 3) Validate buyer inventory space (again by aggregated quantities)
+            // ---------------------------------------------------------
+            // 4) Validate buyer inventory space (atomicity check)
+            // ---------------------------------------------------------
             foreach (var kvp in requestedBySlot)
             {
                 var slot = chestGrid.Slots[kvp.Key];
@@ -94,12 +121,25 @@ namespace HuntersAndCollectors.Vendors
                     return Fail(FailureReason.NotEnoughInventorySpace, totalPrice);
             }
 
-            // 4) Apply mutations (atomic apply phase)
-            // Spend first is OK now that we validated space + stock.
+            // ---------------------------------------------------------
+            // 5) APPLY PHASE (mutations start here)
+            // ---------------------------------------------------------
+
+            // Spend first is OK because we already validated stock + space.
             if (!buyer.Wallet.TrySpend(totalPrice))
                 return Fail(FailureReason.NotEnoughCoins, totalPrice);
 
-            vendor.Seller?.Wallet.AddCoins(totalPrice);
+            // Pay seller:
+            // - If seller is online, credit their wallet immediately.
+            // - If seller is offline, store pending payout on the chest (persisted on shard).
+            if (vendor.Seller != null && vendor.Seller.Wallet != null)
+            {
+                vendor.Seller.Wallet.AddCoins(totalPrice);
+            }
+            else
+            {
+                vendor.Chest.AddPendingPayoutCoins(totalPrice);
+            }
 
             // Remove stock from the exact slot index requested, then add to buyer
             foreach (var kvp in requestedBySlot)
@@ -125,15 +165,23 @@ namespace HuntersAndCollectors.Vendors
                     chestGrid.Slots[slotIndex] = slot;
                 }
 
+                // Add to buyer inventory + mark as known
                 buyer.Inventory.AddItemServer(slot.Stack.ItemId, qty);
                 buyer.KnownItems.EnsureKnown(slot.Stack.ItemId);
             }
 
-            // 5) XP awards (MVP)
+            // ---------------------------------------------------------
+            // 6) XP awards (MVP)
+            // ---------------------------------------------------------
             buyer.Skills.AddXp(SkillId.Negotiation, 1);
+
+            // Only award Sales XP if seller exists (online).
+            // If you want offline sales XP too, that XP must be stored on vendor data (like pending payout).
             vendor.Seller?.Skills.AddXp(SkillId.Sales, 1);
 
-            // 6) Broadcast vendor chest update (so all shoppers see stock change)
+            // ---------------------------------------------------------
+            // 7) Broadcast vendor chest update
+            // ---------------------------------------------------------
             vendor.Chest.ForceBroadcastSnapshot();
 
             return Ok(totalPrice);
