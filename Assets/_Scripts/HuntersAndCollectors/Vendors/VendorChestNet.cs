@@ -31,6 +31,18 @@ namespace HuntersAndCollectors.Vendors
 
         private InventoryGrid grid;
 
+        // ---------------------------------------------------------
+        // Persistent base pricing table (ItemId -> BasePrice)
+        // In MVP this can live in-memory, but your shard save must serialize it later.
+        // ---------------------------------------------------------
+        private readonly Dictionary<string, int> basePrices = new();
+
+        // ---------------------------------------------------------
+        // Pending seller payout coins (for offline sellers).
+        // This MUST be persisted with shard/vendor data later.
+        // ---------------------------------------------------------
+        [SerializeField] private int pendingPayoutCoins = 0;
+
         // -------------------------
         // CLIENT-SIDE SNAPSHOT CACHE
         // -------------------------
@@ -100,6 +112,15 @@ namespace HuntersAndCollectors.Vendors
             OnSnapshotChanged?.Invoke(snapshot);
 
             Debug.Log($"[VendorChestNet][CLIENT] Chest snapshot received. W={snapshot.W} H={snapshot.H} Slots={(snapshot.Slots == null ? 0 : snapshot.Slots.Length)}");
+
+            int nonEmpty = 0;
+            if (snapshot.Slots != null)
+            {
+                for (int i = 0; i < snapshot.Slots.Length; i++)
+                    if (!snapshot.Slots[i].IsEmpty) nonEmpty++;
+            }
+            Debug.Log($"[VendorChestNet][CLIENT] Snapshot on chest='{name}' netId={NetworkObjectId} vendorId={vendorId} NonEmpty={nonEmpty}");
+            Debug.Log($"[VendorChestNet][CLIENT] Chest snapshot received. W={snapshot.W} H={snapshot.H} Slots={(snapshot.Slots == null ? 0 : snapshot.Slots.Length)} NonEmpty={nonEmpty}");
         }
 
         /// <summary>
@@ -119,8 +140,38 @@ namespace HuntersAndCollectors.Vendors
             return itemId;
         }
 
-        // Persistent base prices for this vendor
-        private readonly Dictionary<string, int> basePrices = new();
+        /// <summary>
+        /// Returns the base price for an item from this vendor's persistent pricing table.
+        /// If missing, returns fallback (e.g. 1).
+        /// </summary>
+        public int GetBasePriceOrDefault(string itemId, int fallback)
+        {
+            if (string.IsNullOrWhiteSpace(itemId))
+                return fallback;
+
+            if (basePrices.TryGetValue(itemId, out var p))
+                return Mathf.Max(0, p);
+
+            return fallback;
+        }
+
+        /// <summary>
+        /// Adds coins to the vendor's pending payout pool.
+        /// Use this when the seller is offline.
+        /// </summary>
+        public void AddPendingPayoutCoins(int amount)
+        {
+            if (!IsServer) return;
+
+            if (amount <= 0) return;
+
+            // Keep it simple; clamp if you want to be extra safe.
+            pendingPayoutCoins += amount;
+
+            // TODO later:
+            // - Mark vendor data dirty for shard persistence save.
+            // - Optionally replicate pending payout to owner UI only.
+        }
 
         public int GetBasePrice(string itemId)
         {
@@ -137,5 +188,6 @@ namespace HuntersAndCollectors.Vendors
 
             basePrices[itemId] = Mathf.Max(0, price);
         }
+
     }
 }
