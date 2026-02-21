@@ -5,21 +5,21 @@ using UnityEngine;
 
 namespace HuntersAndCollectors.Vendors
 {
-    /// <summary>
-    /// VendorInteractable
-    /// --------------------------------------------------------------------
-    /// Network entry point for opening vendor UI and requesting checkout.
-    ///
-    /// MVP rules:
-    /// - Clients do NOT own vendor NPC objects, so RequireOwnership must be false.
-    /// - Server resolves buyer from rpc sender id.
-    /// - Seller is resolved from VendorChest owner (or left null if server-owned).
-    /// </summary>
     public sealed class VendorInteractable : NetworkBehaviour
     {
         [SerializeField] private VendorChestNet vendorChest;
 
+        // Public read-only access so UI can bind to the correct chest.
+        public VendorChestNet Chest => vendorChest;
+
         private readonly VendorTransactionService transactionService = new();
+
+        private void OnValidate()
+        {
+            // Editor-time safety: helps catch missing wiring early.
+            if (vendorChest == null)
+                Debug.LogWarning($"[VendorInteractable] '{name}' has no VendorChestNet assigned.", this);
+        }
 
         [ServerRpc(RequireOwnership = false)]
         public void RequestOpenVendorServerRpc(ServerRpcParams serverRpcParams = default)
@@ -27,7 +27,6 @@ namespace HuntersAndCollectors.Vendors
             if (!IsServer || vendorChest == null)
                 return;
 
-            // MVP: broadcast to all so everyone sees consistent stock.
             vendorChest.ForceBroadcastSnapshot();
         }
 
@@ -37,7 +36,6 @@ namespace HuntersAndCollectors.Vendors
             if (!IsServer || vendorChest == null)
                 return;
 
-            // Identify buyer from the RPC sender.
             var buyerClientId = rpcParams.Receive.SenderClientId;
 
             if (!NetworkManager.ConnectedClients.TryGetValue(buyerClientId, out var buyerClient) || buyerClient.PlayerObject == null)
@@ -47,9 +45,6 @@ namespace HuntersAndCollectors.Vendors
             if (buyer == null)
                 return;
 
-            // Resolve seller:
-            // - If chest is owned by a player, that owner is the seller.
-            // - If server-owned chest, Seller will be null (server/vendor "NPC seller").
             PlayerNetworkRoot seller = null;
 
             var sellerClientId = vendorChest.OwnerClientId;
@@ -68,7 +63,6 @@ namespace HuntersAndCollectors.Vendors
 
             var result = transactionService.TryCheckout(buyer, context, request);
 
-            // Return result ONLY to buyer
             var toBuyer = new ClientRpcParams
             {
                 Send = new ClientRpcSendParams { TargetClientIds = new[] { buyerClientId } }
@@ -76,17 +70,13 @@ namespace HuntersAndCollectors.Vendors
 
             TransactionResultClientRpc(result, toBuyer);
 
-            // Update stock for everyone
             vendorChest.ForceBroadcastSnapshot();
         }
 
         [ClientRpc]
         private void TransactionResultClientRpc(TransactionResult result, ClientRpcParams rpc = default)
         {
-            // TODO UI hook:
-            // result.Result.Success
-            // result.Result.Reason
-            // result.TotalPrice
+            // UI hook lives elsewhere
         }
     }
 }
