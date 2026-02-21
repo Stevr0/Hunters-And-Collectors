@@ -1,5 +1,6 @@
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Skills;
+using System;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -14,6 +15,8 @@ namespace HuntersAndCollectors.Players
     /// </summary>
     public sealed class PlayerNetworkRoot : NetworkBehaviour
     {
+        public static event Action<PlayerNetworkRoot> LocalOwnerSpawned;
+
         [Header("Player Components (auto-filled if missing)")]
         [SerializeField] private WalletNet wallet;
         [SerializeField] private SkillsNet skills;
@@ -41,6 +44,9 @@ namespace HuntersAndCollectors.Players
         {
             // Safe to set on all peers (useful for logs/UI). Authority remains server-side for saves.
             PlayerKey = $"Client_{OwnerClientId}";
+
+            if (IsOwner && IsClient)
+                LocalOwnerSpawned?.Invoke(this);
         }
     }
 }
