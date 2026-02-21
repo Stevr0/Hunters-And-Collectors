@@ -1,37 +1,46 @@
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace HuntersAndCollectors.Players
 {
-    /// <summary>
-    /// Simple movement for testing world interaction.
-    /// Only the owning client can move their player.
-    /// </summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMovement : NetworkBehaviour
     {
         [SerializeField] private float moveSpeed = 6f;
 
         private CharacterController controller;
+        private PlayerInputActions input;
+        private Vector2 moveInput;
 
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            input = new PlayerInputActions();
         }
 
         public override void OnNetworkSpawn()
         {
-            // Only allow local player to control this object
             if (!IsOwner)
+            {
                 enabled = false;
+                return;
+            }
+
+            input.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
+            input.Player.Move.canceled += _ => moveInput = Vector2.zero;
+
+            input.Enable();
+        }
+
+        private void OnDisable()
+        {
+            input?.Disable();
         }
 
         private void Update()
         {
-            float h = Input.GetAxis("Horizontal");
-            float v = Input.GetAxis("Vertical");
-
-            Vector3 move = new Vector3(h, 0, v);
+            Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
 
             if (move.sqrMagnitude > 1f)
                 move.Normalize();
