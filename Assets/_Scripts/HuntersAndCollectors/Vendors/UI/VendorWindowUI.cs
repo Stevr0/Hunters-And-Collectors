@@ -41,6 +41,9 @@ namespace HuntersAndCollectors.Vendors.UI
         [Tooltip("Row prefab with VendorRowUI + TMP + Buttons.")]
         [SerializeField] private VendorRowUI rowPrefab;
 
+        // Keeps track of which vendor we are currently talking to.
+        private VendorInteractable currentVendor;
+
         // Keep spawned rows so we can reuse/clear them on refresh.
         private readonly List<VendorRowUI> rows = new();
 
@@ -75,6 +78,49 @@ namespace HuntersAndCollectors.Vendors.UI
                 vendorChest.OnSnapshotChanged -= HandleSnapshotChanged;
         }
 
+        /// <summary>
+        /// Opens the vendor window and binds it to a specific VendorInteractable.
+        /// This is IMPORTANT: the UI must know which vendor to call RPCs on.
+        /// </summary>
+        public void Open(VendorInteractable vendor)
+        {
+            if (vendor == null)
+            {
+                Debug.LogWarning("[VendorWindowUI] Open() called with null vendor.");
+                return;
+            }
+
+            currentVendor = vendor;
+
+            // Enable/show the UI (whatever your setup is)
+            gameObject.SetActive(true);
+
+            // Ask the server to broadcast the current chest stock snapshot.
+            RequestOpenVendorSnapshot();
+        }
+
+        /// <summary>
+        /// Called when UI wants the server to send us the current vendor stock.
+        /// </summary>
+        private void RequestOpenVendorSnapshot()
+        {
+            if (currentVendor == null)
+            {
+                Debug.LogWarning("[VendorWindowUI] No current vendor bound. Did you call Open(vendor)?");
+                return;
+            }
+
+            // This RPC runs on the vendor NetworkBehaviour.
+            currentVendor.RequestOpenVendorServerRpc();
+        }
+
+        // Optional: When closing, clear the vendor reference.
+        public void Close()
+        {
+            currentVendor = null;
+            gameObject.SetActive(false);
+        }
+
         private void TryResolveRefs()
         {
             // Resolve VendorInteractable if not assigned.
@@ -89,25 +135,6 @@ namespace HuntersAndCollectors.Vendors.UI
 
             if (titleText)
                 titleText.text = "Vendor";
-        }
-
-        /// <summary>
-        /// Call this when the player opens the vendor (later: via proximity interact).
-        /// For now, it just ensures server sends snapshots.
-        /// </summary>
-        private void RequestOpenVendorSnapshot()
-        {
-            if (vendorInteractable == null)
-            {
-                Debug.LogWarning("[VendorWindowUI] No VendorInteractable found to request snapshot.");
-                return;
-            }
-
-            // Only clients should request server snapshot.
-            if (!NetworkManager.Singleton || !NetworkManager.Singleton.IsClient)
-                return;
-
-            vendorInteractable.RequestOpenVendorServerRpc();
         }
 
         private void HandleSnapshotChanged(InventorySnapshot snapshot)
@@ -193,11 +220,6 @@ namespace HuntersAndCollectors.Vendors.UI
         public void Open()
         {
             gameObject.SetActive(true);
-        }
-
-        public void Close()
-        {
-            gameObject.SetActive(false);
         }
     }
 }
