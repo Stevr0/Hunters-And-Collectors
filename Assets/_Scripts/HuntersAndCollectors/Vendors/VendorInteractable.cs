@@ -21,6 +21,14 @@ namespace HuntersAndCollectors.Vendors
                 Debug.LogWarning($"[VendorInteractable] '{name}' has no VendorChestNet assigned.", this);
         }
 
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            Debug.Log(
+                $"[VendorInteractable] OnNetworkSpawn NetId={NetworkObjectId} OwnerClientId={OwnerClientId} IsServer={IsServer} IsClient={IsClient}",
+                this);
+        }
+
         [ServerRpc(RequireOwnership = false)]
         public void RequestOpenVendorServerRpc(ServerRpcParams serverRpcParams = default)
         {
@@ -30,6 +38,9 @@ namespace HuntersAndCollectors.Vendors
             vendorChest.ForceBroadcastSnapshot();
         }
 
+        // This RPC is invoked by any client interacting with a world vendor object.
+        // VendorInteractable is NOT client-owned, so default ServerRpc ownership checks
+        // would reject client calls unless we explicitly allow non-owners.
         [ServerRpc(RequireOwnership = false)]
         public void RequestCheckoutServerRpc(CheckoutRequest request, ServerRpcParams rpcParams = default)
         {
@@ -37,6 +48,22 @@ namespace HuntersAndCollectors.Vendors
                 return;
 
             var buyerClientId = rpcParams.Receive.SenderClientId;
+
+            var lines = request.Lines;
+            Debug.Log(
+                $"[VendorInteractable] RequestCheckoutServerRpc RECEIVED senderClientId={buyerClientId} lines={lines?.Length ?? 0}",
+                this);
+
+            if (lines != null)
+            {
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    Debug.Log(
+                        $"[VendorInteractable] CheckoutLine[{i}] slotIndex={line.SlotIndex} qty={line.Quantity}",
+                        this);
+                }
+            }
 
             if (!NetworkManager.ConnectedClients.TryGetValue(buyerClientId, out var buyerClient) || buyerClient.PlayerObject == null)
                 return;

@@ -175,6 +175,8 @@ namespace HuntersAndCollectors.Vendors.UI
             if (snapshot.Slots == null)
                 return;
 
+            var currentChest = vendorChest;
+
             // Create a row for every non-empty slot.
             for (int i = 0; i < snapshot.Slots.Length; i++)
             {
@@ -186,8 +188,8 @@ namespace HuntersAndCollectors.Vendors.UI
                 var qty = slot.Quantity;
 
                 // Ask VendorChestNet for a friendly name (fallback to itemId).
-                var displayName = vendorChest != null
-                    ? vendorChest.GetDisplayName(itemId)
+                var displayName = currentChest != null
+                    ? currentChest.GetDisplayName(itemId)
                     : itemId;
 
                 var row = Instantiate(rowPrefab, contentRoot);
@@ -229,6 +231,13 @@ namespace HuntersAndCollectors.Vendors.UI
                     }
                 }
             };
+
+            if (!currentVendor.IsSpawned)
+            {
+                var hasNetObj = currentVendor.NetworkObject != null;
+                var netIdText = hasNetObj ? currentVendor.NetworkObjectId.ToString() : "n/a";
+                Debug.LogWarning($"[VendorWindowUI] Vendor is not spawned. name={currentVendor.gameObject.name} netId={netIdText}", currentVendor);
+            }
 
             currentVendor.RequestCheckoutServerRpc(req);
         }
