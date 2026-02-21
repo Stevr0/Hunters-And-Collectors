@@ -9,7 +9,19 @@ namespace HuntersAndCollectors.Players
     public sealed class PlayerInteract : NetworkBehaviour
     {
         private PlayerInputActions input;
-        private VendorWindowUI vendorUI;
+
+        [Header("UI")]
+        [SerializeField] private VendorWindowUI vendorUI;
+
+        [Header("Interact Settings")]
+        [Tooltip("How far the player can interact with vendors.")]
+        [SerializeField] private float interactRange = 2.5f;
+
+        [Tooltip("Only objects on these layers can be interacted with.")]
+        [SerializeField] private LayerMask interactableMask;
+
+        // Reuse an array to avoid allocations each interact press (MVP performance win).
+        private readonly Collider[] hitBuffer = new Collider[16];
 
         public override void OnNetworkSpawn()
         {
@@ -19,9 +31,18 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            vendorUI = FindObjectOfType<VendorWindowUI>(true); // true finds inactive too
-            input = new PlayerInputActions();
+            // Find UI even if it's inactive
+            vendorUI = FindObjectOfType<VendorWindowUI>(true);
 
+            // If you forget to set the mask in inspector, default to a layer named "Interactable".
+            if (interactableMask.value == 0)
+            {
+                var layer = LayerMask.NameToLayer("Interactable");
+                if (layer >= 0)
+                    interactableMask = 1 << layer;
+            }
+
+            input = new PlayerInputActions();
             input.Player.Interact.performed += _ => TryInteract();
             input.Enable();
         }
@@ -39,27 +60,62 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            // Super simple MVP: find any vendor proximity we're inside.
-            // Later we can optimize this to nearest vendor only.
-            var proximities = FindObjectsOfType<VendorProximity>();
+            // Grab our position (center of player). If you have a dedicated "interaction point",
+            // you can use that transform instead.
+            var origin = transform.position;
 
-            foreach (var p in proximities)
+            // Find nearby colliders on the Interactable layer
+            int hitCount = Physics.OverlapSphereNonAlloc(
+                origin,
+                interactRange,
+                hitBuffer,
+                interactableMask,
+                QueryTriggerInteraction.Collide
+            );
+
+            if (hitCount <= 0)
             {
-                if (!p.IsPlayerInRange)
-                    continue;
-
-                if (p.Vendor == null)
-                {
-                    Debug.LogWarning("[PlayerInteract] VendorProximity has no VendorInteractable assigned.");
-                    continue;
-                }
-
-                // Bind the UI to THIS vendor.
-                vendorUI.Open(p.Vendor);
+                Debug.Log("[PlayerInteract] No vendor in range.");
                 return;
             }
 
-            Debug.Log("[PlayerInteract] No vendor in range.");
+            VendorInteractable bestVendor = null;
+            float bestDistSqr = float.MaxValue;
+
+            // Pick the nearest VendorInteractable found
+            for (int i = 0; i < hitCount; i++)
+            {
+                var col = hitBuffer[i];
+                if (col == null) continue;
+
+                // VendorInteractable might be on parent, so search upward.
+                var vendor = col.GetComponentInParent<VendorInteractable>();
+                if (vendor == null) continue;
+
+                float dSqr = (vendor.transform.position - origin).sqrMagnitude;
+                if (dSqr < bestDistSqr)
+                {
+                    bestDistSqr = dSqr;
+                    bestVendor = vendor;
+                }
+            }
+
+            if (bestVendor == null)
+            {
+                Debug.Log("[PlayerInteract] No vendor in range (hit colliders, but none were VendorInteractable).");
+                return;
+            }
+
+            // Open the UI bound to THIS vendor
+            vendorUI.Open(bestVendor);
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position, interactRange);
+        }
+#endif
     }
 }
