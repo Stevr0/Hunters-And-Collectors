@@ -1,3 +1,5 @@
+using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Vendors;
 using HuntersAndCollectors.Vendors.UI;
 using Unity.Netcode;
@@ -5,20 +7,6 @@ using UnityEngine;
 
 namespace HuntersAndCollectors.Players
 {
-    /// <summary>
-    /// PlayerInteract (Reticle Raycast Version)
-    /// ------------------------------------------------------------
-    /// What changed vs your current version:
-    /// - Instead of finding the nearest vendor in an OverlapSphere,
-    ///   we raycast forward from the player's camera (center reticle aim).
-    /// - The player can ONLY interact when:
-    ///     1) The reticle is pointing at a vendor (ray hits it)
-    ///     2) The vendor is within interactRange
-    ///
-    /// Why this is good:
-    /// - "Aim at target + press interact" feels consistent and precise.
-    /// - It scales easily to other interactables later (chests, harvest nodes, doors).
-    /// </summary>
     public sealed class PlayerInteract : NetworkBehaviour
     {
         private PlayerInputActions input;
@@ -26,20 +14,22 @@ namespace HuntersAndCollectors.Players
         [Header("UI")]
         [SerializeField] private VendorWindowUI vendorUI;
 
-        [Header("Camera / Ray Origin")]
-        [Tooltip("Camera used to raycast from the centre of the screen. If empty, we'll try to use Camera.main.")]
+        [Header("Camera")]
+        [Tooltip("Camera used for reticle raycasting. If null, will use Camera.main.")]
         [SerializeField] private Camera playerCamera;
 
         [Header("Interact Settings")]
-        [Tooltip("Max distance the player can interact with vendors.")]
+        [Tooltip("Max distance the player can interact.")]
         [SerializeField] private float interactRange = 2.5f;
 
-        [Tooltip("Only objects on these layers can be interacted with (raycast will ignore everything else).")]
+        [Tooltip("Only objects on these layers can be interacted with.")]
         [SerializeField] private LayerMask interactableMask;
+
+        // Reference to your real inventory network component (the one you pasted)
+        private PlayerInventoryNet inventoryNet;
 
         public override void OnNetworkSpawn()
         {
-            // Only the local player should read input and run raycasts.
             if (!IsOwner)
             {
                 enabled = false;
@@ -49,25 +39,26 @@ namespace HuntersAndCollectors.Players
             // Find UI even if it's inactive
             vendorUI = FindObjectOfType<VendorWindowUI>(true);
 
-            // If you forget to set the mask in inspector, default to a layer named "Interactable".
+            // Default layer if mask not set
             if (interactableMask.value == 0)
             {
-                int layer = LayerMask.NameToLayer("Interactable");
+                var layer = LayerMask.NameToLayer("Interactable");
                 if (layer >= 0)
                     interactableMask = 1 << layer;
             }
 
-            // Camera:
-            // In many multiplayer setups, each player has their own camera.
-            // If you assign it in the inspector, great.
-            // Otherwise we try Camera.main (works if the local camera is tagged MainCamera).
+            // Camera for reticle ray
             if (playerCamera == null)
                 playerCamera = Camera.main;
 
             if (playerCamera == null)
-                Debug.LogWarning("[PlayerInteract] No camera assigned and Camera.main not found. Assign Player Camera in inspector.");
+                Debug.LogWarning("[PlayerInteract] No camera assigned and Camera.main not found.");
 
-            // Input setup (your existing pattern)
+            // Grab inventory component on player
+            inventoryNet = GetComponent<PlayerInventoryNet>();
+            if (inventoryNet == null)
+                Debug.LogWarning("[PlayerInteract] PlayerInventoryNet not found on player prefab.");
+
             input = new PlayerInputActions();
             input.Player.Interact.performed += _ => TryInteract();
             input.Enable();
@@ -80,63 +71,123 @@ namespace HuntersAndCollectors.Players
 
         private void TryInteract()
         {
-            if (vendorUI == null)
-            {
-                Debug.LogWarning("[PlayerInteract] No VendorWindowUI found in scene.");
-                return;
-            }
-
             if (playerCamera == null)
-            {
-                Debug.LogWarning("[PlayerInteract] No camera available for raycast.");
                 return;
-            }
 
-            // Ray from camera forward = exactly where the centre reticle points.
-            // This is the key change that makes it a "pointer/reticle" interaction system.
-            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+            // Ray straight out of the camera = centre of screen reticle
+            var ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
 
-            // Only hit objects on interactableMask.
-            // This prevents you hitting terrain, props, etc.
+            // Only hit interactable layer objects, within range
             if (!Physics.Raycast(ray, out RaycastHit hit, interactRange, interactableMask, QueryTriggerInteraction.Collide))
+                return;
+
+            Debug.Log($"[PlayerInteract] Ray hit: {hit.collider.name} (root: {hit.collider.transform.root.name})");
+
+            // ------------------------------------------------------------
+            // 1) Vendor interaction (keep your existing behaviour)
+            // ------------------------------------------------------------
+            var vendor = hit.collider.GetComponentInParent<VendorInteractable>();
+            if (vendor != null)
             {
-                // Nothing interactable under the reticle within range.
+                if (vendorUI == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] No VendorWindowUI found in scene.");
+                    return;
+                }
+
+                vendorUI.Open(vendor);
                 return;
             }
 
-            // We may hit a child collider, so search upward for VendorInteractable.
-            VendorInteractable vendor = hit.collider.GetComponentInParent<VendorInteractable>();
-            if (vendor == null)
+            // ------------------------------------------------------------
+            // 2) World pickup interaction (NEW)
+            // ------------------------------------------------------------
+            var pickup = hit.collider.GetComponentInParent<WorldPickup>();
+            if (pickup != null)
             {
-                // Ray hit something on the interactable layer, but it wasn't a vendor.
-                // (Later, you can expand this to other interactable types.)
+                // We require a NetworkObject to reference it on the server
+                var pickupNetObj = pickup.GetComponent<NetworkObject>();
+                if (pickupNetObj == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] WorldPickup has no NetworkObject (required).");
+                    return;
+                }
+
+                // Ask server to pick it up (server validates + adds to inventory)
+                RequestPickupServerRpc(pickupNetObj.NetworkObjectId);
                 return;
             }
 
-            // We already limited the raycast by interactRange,
-            // but you can keep this extra check if you want more explicit safety.
-            float distance = Vector3.Distance(playerCamera.transform.position, vendor.transform.position);
-            if (distance > interactRange)
-                return;
-
-            // Open vendor UI bound to THIS vendor.
-            vendorUI.Open(vendor);
+            // Later: you can add other interactables here (chests, doors, harvest nodes, etc.)
         }
 
-#if UNITY_EDITOR
-        private void OnDrawGizmosSelected()
+        /// <summary>
+        /// SERVER: Attempt to pick up a WorldPickup by its NetworkObjectId.
+        ///
+        /// Security:
+        /// - RequireOwnership=true ensures only the owning client can call this on their player object.
+        /// - We also validate the pickup exists and is within range on the server.
+        /// </summary>
+        [ServerRpc(RequireOwnership = true)]
+        private void RequestPickupServerRpc(ulong pickupNetworkObjectId)
         {
-            // Visualize interaction distance (sphere around player).
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, interactRange);
+            if (!IsServer)
+                return;
 
-            // Visualize ray direction (only when camera is assigned).
-            if (playerCamera != null)
+            if (inventoryNet == null)
+                inventoryNet = GetComponent<PlayerInventoryNet>();
+
+            if (inventoryNet == null)
+                return;
+
+            // Find the pickup NetworkObject
+            if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(pickupNetworkObjectId, out var pickupNetObj))
+                return;
+
+            var pickup = pickupNetObj.GetComponent<WorldPickup>();
+            if (pickup == null)
+                return;
+
+            // Distance validation on server (prevents “pick up from across map”)
+            float dist = Vector3.Distance(transform.position, pickupNetObj.transform.position);
+            if (dist > interactRange + 0.25f) // small tolerance due to camera vs player pivot
+                return;
+
+            // Validate the pickup has a real item definition assigned
+            if (pickup.ItemDefinition == null)
             {
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawRay(playerCamera.transform.position, playerCamera.transform.forward * interactRange);
+                Debug.LogWarning($"[Pickup][SERVER] WorldPickup '{pickupNetObj.name}' has no ItemDefinition assigned.");
+                return;
+            }
+
+            // Use the stable id from the ItemDefinition (no more typed strings)
+            string itemId = pickup.ItemDefinition.ItemId;
+
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                Debug.LogWarning($"[Pickup][SERVER] ItemDefinition on '{pickupNetObj.name}' has an empty ItemId.");
+                return;
+            }
+
+            int remainder = inventoryNet.ServerAddItem(itemId, pickup.Quantity);
+
+            // If we couldn't add anything (inventory full), do nothing
+            if (remainder >= pickup.Quantity)
+                return;
+
+            // If we added all items, despawn the pickup
+            // If partial add is possible in future, you can reduce pickup.Quantity accordingly.
+            if (remainder == 0)
+            {
+                pickupNetObj.Despawn(true);
+            }
+            else
+            {
+                // Partial add (rare in MVP unless you introduce stack caps).
+                // MVP simplest: don't support partial; leave it in world.
+                // Or: adjust pickup's quantity to remainder (requires making quantity writable).
+                // For now, we leave it in world if partial occurred.
             }
         }
-#endif
     }
 }
