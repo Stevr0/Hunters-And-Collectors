@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using HuntersAndCollectors.Input;
-using HuntersAndCollectors.Items;              // ItemDatabase lives here in your project
+using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace HuntersAndCollectors.Inventory.UI
 {
@@ -12,28 +11,26 @@ namespace HuntersAndCollectors.Inventory.UI
     {
         [Header("UI References")]
         [SerializeField] private TMP_Text titleText;
-        [SerializeField] private Button closeButton;
-        [SerializeField] private Transform contentRoot;
-        [SerializeField] private InventoryRowUI rowPrefab;
+        [SerializeField] private Transform gridRoot;                 // Parent with GridLayoutGroup
+        [SerializeField] private InventoryGridSlotUI slotPrefab;     // PF_InventoryGridSlot
 
-        [Header("Item Name Resolver")]
-        [Tooltip("Used to map ItemId -> DisplayName. If null, ItemId is shown.")]
+        [Header("Item Resolver")]
         [SerializeField] private ItemDatabase itemDatabase;
 
+        // Optional: If you want click-to-equip later, assign this and use it in OnSlotClicked.
+        // [SerializeField] private HuntersAndCollectors.UI.PaperdollWindowUI paperdollWindow;
+
         private Inventory.PlayerInventoryNet currentInventoryNet;
-        private readonly List<InventoryRowUI> rows = new();
+        private readonly List<InventoryGridSlotUI> slotUIs = new();
 
         private bool gameplayLockHeld;
 
-        // If you're using polling version, keep your signature fields here.
+        // Simple polling signature (same as you had, but now we re-render visually).
         private int lastRenderedNonEmptyCount = -1;
         private int lastRenderedSlotsLength = -1;
 
         private void Awake()
         {
-            if (closeButton)
-                closeButton.onClick.AddListener(Close);
-
             if (titleText)
                 titleText.text = "Inventory";
         }
@@ -53,7 +50,10 @@ namespace HuntersAndCollectors.Inventory.UI
         private void OnDisable()
         {
             currentInventoryNet = null;
-            ClearRows();
+
+            // Keep the UI objects (optional) or clear them.
+            // For MVP, I recommend keeping them so reopening is instant.
+            // ClearGrid();
 
             lastRenderedNonEmptyCount = -1;
             lastRenderedSlotsLength = -1;
@@ -67,13 +67,9 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private void Update()
         {
-            // Polling MVP. If you later add OnSnapshotChanged, you can remove Update().
+            // Polling MVP. Later you can replace this with an event.
             TryRenderIfChanged();
         }
-
-        public void Open() => gameObject.SetActive(true);
-        public void Close() => gameObject.SetActive(false);
-        public void Toggle() => gameObject.SetActive(!gameObject.activeSelf);
 
         private void TryBindToLocalPlayerInventory()
         {
@@ -119,57 +115,97 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private void Render(InventorySnapshot snapshot)
         {
-            if (contentRoot == null || rowPrefab == null)
+            if (gridRoot == null || slotPrefab == null)
                 return;
 
-            ClearRows();
+            EnsureSlotUICount(snapshot.Slots.Length);
 
             for (int i = 0; i < snapshot.Slots.Length; i++)
             {
-                var slot = snapshot.Slots[i];
-                if (slot.IsEmpty)
+                var netSlot = snapshot.Slots[i];
+                var uiSlot = slotUIs[i];
+
+                if (netSlot.IsEmpty)
+                {
+                    uiSlot.SetEmpty();
                     continue;
+                }
 
-                string itemId = slot.ItemId.ToString();
-                int qty = slot.Quantity;
+                string itemId = netSlot.ItemId.ToString();
+                int qty = netSlot.Quantity;
 
-                // Resolve display name using ItemDatabase.
-                string displayName = GetDisplayName(itemId);
+                // Resolve icon from ItemDatabase
+                Sprite icon = ResolveIcon(itemId);
 
-                var row = Instantiate(rowPrefab, contentRoot);
-                rows.Add(row);
-
-                row.Bind(displayName, qty);
+                uiSlot.SetItem(itemId, icon, qty);
             }
         }
 
         /// <summary>
-        /// Converts an itemId into a friendly display name using the ItemDatabase.
-        /// Falls back to itemId if database is missing or item is unknown.
+        /// Make sure we have exactly N slot UI objects created.
+        /// We reuse them between renders for performance.
         /// </summary>
-        private string GetDisplayName(string itemId)
+        private void EnsureSlotUICount(int desiredCount)
         {
-            if (string.IsNullOrWhiteSpace(itemId))
-                return string.Empty;
+            // Create missing ones
+            while (slotUIs.Count < desiredCount)
+            {
+                var ui = Instantiate(slotPrefab, gridRoot);
+                slotUIs.Add(ui);
 
-            if (itemDatabase == null)
-                return itemId;
+                // Bind click handler (for future equip/use)
+                ui.BindClick(OnSlotClicked);
+            }
 
-            // Uses your existing ItemDatabase API (same pattern as VendorChestNet).
-            if (itemDatabase.TryGet(itemId, out var def) && def != null)
-                return def.DisplayName;
-
-            return itemId;
+            // If we have too many (inventory size changed), destroy extras.
+            while (slotUIs.Count > desiredCount)
+            {
+                int last = slotUIs.Count - 1;
+                if (slotUIs[last] != null)
+                    Destroy(slotUIs[last].gameObject);
+                slotUIs.RemoveAt(last);
+            }
         }
 
-        private void ClearRows()
+        private Sprite ResolveIcon(string itemId)
         {
-            for (int i = 0; i < rows.Count; i++)
+            if (string.IsNullOrWhiteSpace(itemId))
+                return null;
+
+            if (itemDatabase == null)
+                return null;
+
+            // Uses your existing API.
+            if (itemDatabase.TryGet(itemId, out var def) && def != null)
+                return def.Icon;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Slot click handler.
+        /// MVP: do nothing, or later call PaperdollWindowUI.RequestEquipFromInventory(itemId)
+        /// if the item is equippable.
+        /// </summary>
+        private void OnSlotClicked(string itemId)
+        {
+            // For now, just log so you know clicking works.
+            Debug.Log($"[Inventory] Clicked itemId={itemId}");
+
+            // Later (when you want click-to-equip):
+            // if (paperdollWindow != null)
+            //     paperdollWindow.RequestEquipFromInventory(itemId);
+        }
+
+        // Optional if you want to clear on disable.
+        private void ClearGrid()
+        {
+            for (int i = 0; i < slotUIs.Count; i++)
             {
-                if (rows[i] != null)
-                    Destroy(rows[i].gameObject);
+                if (slotUIs[i] != null)
+                    Destroy(slotUIs[i].gameObject);
             }
-            rows.Clear();
+            slotUIs.Clear();
         }
     }
 }
