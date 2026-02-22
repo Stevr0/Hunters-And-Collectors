@@ -5,30 +5,53 @@ namespace HuntersAndCollectors.Items
 {
     /// <summary>
     /// WorldPickup
-    /// ------------------------------------------------------------
-    /// Attach this to any scene item you want players to pick up.
-    /// Example: Stone, Stick.
+    /// --------------------------------------------------------------------
+    /// Attach this to any world item that can be picked up (Stone, Stick, etc).
     ///
-    /// Requirements:
-    /// - The GameObject must have a Collider (for raycast hit).
-    /// - The GameObject must have a NetworkObject (so server can despawn it).
+    /// IMPORTANT CHANGE (Option 3):
+    /// - Instead of typing a string itemId (error-prone),
+    ///   you assign an ItemDefinition asset in the inspector.
     ///
-    /// What this script stores:
-    /// - itemId: stable string ID used by your item system (e.g., "IT_Stone", "IT_Wood")
-    /// - amount: stack size to add to inventory when picked up
+    /// Why this is safer:
+    /// - No typos / casing issues
+    /// - You can rename display names freely while the stable id remains consistent
+    /// - You can expand ItemDefinition with icon, weight, stack size, etc.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
     public sealed class WorldPickup : NetworkBehaviour
     {
         [Header("Item Data")]
-        [Tooltip("Stable item id that will be added to inventory (e.g., IT_Stone, IT_Wood).")]
-        [SerializeField] private string itemId = "IT_Stone";
+        [Tooltip("Drag an ItemDefinition asset here (e.g. it_stone, it_stick).")]
+        [SerializeField] private ItemDef itemDefinition;
 
-        [Tooltip("How many items this pickup gives.")]
-        [SerializeField] private int amount = 1;
+        [Tooltip("How many items are granted when picked up.")]
+        [Min(1)]
+        [SerializeField] private int quantity = 1;
 
-        public string ItemId => itemId;
-        public int Amount => amount;
+        /// <summary>
+        /// The assigned ItemDefinition.
+        /// </summary>
+        public ItemDef ItemDefinition => itemDefinition;
+
+        /// <summary>
+        /// Quantity granted.
+        /// </summary>
+        public int Quantity => quantity;
+
+        /// <summary>
+        /// Convenience: stable item id string used by the inventory system.
+        /// Returns empty if the definition isn't assigned (we guard against this).
+        /// </summary>
+        public string ItemId => itemDefinition != null ? itemDefinition.ItemId : string.Empty;
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            // Editor-time safety: warn immediately if someone forgets to assign the definition.
+            if (itemDefinition == null)
+                Debug.LogWarning($"[WorldPickup] '{name}' has no ItemDefinition assigned.", this);
+        }
+#endif
     }
 }
