@@ -24,47 +24,70 @@ namespace HuntersAndCollectors.UI
 
         private void Awake()
         {
+            // If you didn't assign a root, default to THIS object.
             if (root == null)
                 root = gameObject;
 
+            // Start hidden so the character windows are closed on boot.
             if (startHidden)
                 root.SetActive(false);
         }
 
+        /// <summary>Open the whole Character Window root.</summary>
         public void Open()
         {
             if (root == null) return;
 
             root.SetActive(true);
 
-            // Optional: refresh when opening so visuals are always current.
-            if (paperdollWindow != null) paperdollWindow.Open();    // calls RefreshAll in your earlier setup
+            // When opening, refresh children so they reflect latest network state.
+            RefreshChildren();
         }
 
+        /// <summary>Close the whole Character Window root.</summary>
         public void Close()
         {
             if (root == null) return;
             root.SetActive(false);
         }
 
+        /// <summary>Toggle the Character Window root open/closed.</summary>
         public void Toggle()
         {
             if (root == null) return;
 
             bool newState = !root.activeSelf;
             Debug.Log($"[CharacterWindowRootUI] Toggle() {root.name} -> {newState}");
+
             root.SetActive(newState);
 
             if (newState)
-            {
-                // Force a clean refresh when opening.
-                if (inventoryWindow != null)
-
-                if (paperdollWindow != null)
-                    paperdollWindow.ForceRefresh(); // See below
-            }
+                RefreshChildren();
         }
 
+        /// <summary>True if the root is currently visible.</summary>
         public bool IsOpen => root != null && root.activeSelf;
+
+        /// <summary>
+        /// Refresh child windows when the root becomes visible.
+        /// This keeps UI in sync after equipment/inventory changed while closed.
+        /// </summary>
+        private void RefreshChildren()
+        {
+            // Inventory: only call if you actually have a Refresh method.
+            // If you don't, just delete this block.
+            if (inventoryWindow != null)
+            {
+                // If your inventory window has Refresh(), call it.
+                // inventoryWindow.Refresh();
+
+                // If it doesn't, leave this empty (safe) or call whatever your method is.
+                // Debug.Log("[CharacterWindowRootUI] InventoryWindow bound (no Refresh method called).");
+            }
+
+            // Paperdoll: ForceRefresh should call RefreshAll() internally.
+            if (paperdollWindow != null)
+                paperdollWindow.ForceRefresh();
+        }
     }
 }
