@@ -27,10 +27,11 @@ namespace HuntersAndCollectors.Skills
         /// </summary>
         public static float GetRunSpeed(float walkSpeed, float maxSpeed, int runningLevel)
         {
-            float multiplier = 1f + (runningLevel * 0.05f); // +5% per level
-            float runSpeed = walkSpeed * multiplier;
+            // Clamp for safety (even though SkillsNet caps it).
+            int lvl = Mathf.Clamp(runningLevel, 0, 100);
 
-            return Mathf.Min(runSpeed, maxSpeed);
+            float t = lvl / 100f; // 0..1
+            return Mathf.Lerp(walkSpeed, maxSpeed, t);
         }
     }
 }
