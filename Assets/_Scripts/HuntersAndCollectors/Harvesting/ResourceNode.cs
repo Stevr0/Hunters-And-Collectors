@@ -4,66 +4,144 @@ using UnityEngine;
 namespace HuntersAndCollectors.Harvesting
 {
     /// <summary>
-    /// Scene resource node with harvest drop and cooldown state.
+    /// ResourceNodeNet
+    /// --------------------------------------------------------------------
+    /// Scene-placed resource node (tree/rock/bush) with server-authoritative cooldown.
     ///
-    /// MVP rules:
-    /// - Cooldown is driven by server time (NGO ServerTime).
-    /// - Only the server should call Consume().
-    /// - NodeId must be unique in the scene (registry enforces this).
+    /// Core rules:
+    /// - Node lives in the scene (no constant spawn/despawn).
+    /// - Only server can "consume" and start cooldown.
+    /// - Cooldown is based on NGO ServerTime to avoid client desync.
+    /// - Cooldown state replicates to clients via a NetworkVariable.
+    ///
+    /// Unity setup:
+    /// - Add a NetworkObject component (required).
+    /// - This script (NetworkBehaviour) on same GameObject.
+    /// - Collider should be on your Interactable layer so PlayerInteract ray can hit it.
+    /// - Optional: assign visuals/collider that should disable while depleted.
     /// </summary>
-    public sealed class ResourceNode : MonoBehaviour
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(NetworkObject))]
+    public sealed class ResourceNodeNet : NetworkBehaviour
     {
         [Header("Identity")]
         [Tooltip("Unique id in the scene. Must be unique across all ResourceNodes.")]
         [SerializeField] private string nodeId = "NODE_001";
 
         [Header("Drop")]
+        [Tooltip("Stable item id (e.g. it_wood). In a later pass we can change this to ItemDef like pickups.")]
         [SerializeField] private string dropItemId = "it_wood";
+
+        [Min(1)]
         [SerializeField] private int dropQuantity = 1;
 
         [Header("Respawn")]
+        [Min(0f)]
         [SerializeField] private float respawnSeconds = 30f;
 
-        // Server-authoritative cooldown timestamp (in server time seconds).
-        private float nextHarvestServerTime;
+        [Header("Depleted Presentation (Optional)")]
+        [Tooltip("Optional: disable this collider while depleted (prevents interaction). If null, uses own collider.")]
+        [SerializeField] private Collider interactCollider;
+
+        [Tooltip("Optional: show/hide visuals while depleted. If empty, node stays visible.")]
+        [SerializeField] private GameObject[] visualsToHideWhenDepleted;
+
+        // Server-authoritative "next available" timestamp.
+        // Use double because ServerTime is double precision.
+        private readonly NetworkVariable<double> nextHarvestServerTime =
+            new(0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public string NodeId => nodeId;
         public string DropItemId => dropItemId;
-        public int DropQuantity => dropQuantity < 1 ? 1 : dropQuantity;
+        public int DropQuantity => Mathf.Max(1, dropQuantity);
 
         /// <summary>
-        /// Returns current server time (or best-known server time on clients).
+        /// Returns true if the node is currently harvestable (based on server time).
+        /// Works on server and clients (clients read replicated timestamp).
         /// </summary>
-        private static float ServerTimeNow()
+        public bool IsHarvestableNow()
         {
-            // If NetworkManager isn't running (editor scene tests), fall back to local Time.time
-            if (NetworkManager.Singleton == null)
-                return Time.time;
-
-            return (float)NetworkManager.Singleton.ServerTime.Time;
+            return ServerTimeNow() >= nextHarvestServerTime.Value;
         }
 
         /// <summary>
-        /// True when node is currently harvestable.
-        /// Uses server time to avoid per-client Time.time desync.
+        /// How many seconds until harvestable again (0 if already available).
+        /// Useful for UI.
         /// </summary>
-        public bool IsHarvestable()
+        public float SecondsUntilHarvestable()
         {
-            return ServerTimeNow() >= nextHarvestServerTime;
+            double remaining = nextHarvestServerTime.Value - ServerTimeNow();
+            return (float)Mathf.Max(0f, (float)remaining);
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            // Cache collider if not set.
+            if (interactCollider == null)
+                interactCollider = GetComponent<Collider>();
+
+            // When the replicated value changes, update visuals.
+            nextHarvestServerTime.OnValueChanged += (_, __) => RefreshPresentation();
+
+            // Refresh immediately for clients joining late.
+            RefreshPresentation();
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            nextHarvestServerTime.OnValueChanged -= (_, __) => RefreshPresentation();
         }
 
         /// <summary>
-        /// Consumes node and starts cooldown.
-        /// IMPORTANT: should only be called by the server.
+        /// SERVER: Consumes the node (starts cooldown).
+        /// Call this ONLY after a successful harvest (inventory add etc).
         /// </summary>
-        public void Consume()
+        public void ServerConsumeStartCooldown()
         {
-            // Defensive: if a client accidentally calls this, ignore.
-            if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer)
+            if (!IsServer)
                 return;
 
-            var cooldown = respawnSeconds < 0f ? 0f : respawnSeconds;
-            nextHarvestServerTime = ServerTimeNow() + cooldown;
+            double cooldown = Mathf.Max(0f, respawnSeconds);
+            nextHarvestServerTime.Value = ServerTimeNow() + cooldown;
+
+            // Presentation will update through OnValueChanged on all clients.
+            RefreshPresentation();
         }
+
+        private void RefreshPresentation()
+        {
+            bool available = IsHarvestableNow();
+
+            // Disable interaction collider while depleted (optional)
+            if (interactCollider != null)
+                interactCollider.enabled = available;
+
+            // Hide visuals while depleted (optional)
+            if (visualsToHideWhenDepleted != null)
+            {
+                for (int i = 0; i < visualsToHideWhenDepleted.Length; i++)
+                {
+                    if (visualsToHideWhenDepleted[i] != null)
+                        visualsToHideWhenDepleted[i].SetActive(available);
+                }
+            }
+        }
+
+        private static double ServerTimeNow()
+        {
+            // If NetworkManager isn't running (edit-mode tests), fall back to local time.
+            if (NetworkManager.Singleton == null)
+                return Time.timeAsDouble;
+
+            return NetworkManager.Singleton.ServerTime.Time;
+        }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (dropQuantity < 1) dropQuantity = 1;
+            if (respawnSeconds < 0f) respawnSeconds = 0f;
+        }
+#endif
     }
 }
