@@ -175,18 +175,16 @@ namespace HuntersAndCollectors.Players
             if (remainder >= pickup.Quantity)
                 return;
 
-            // If we added all items, despawn the pickup
-            // If partial add is possible in future, you can reduce pickup.Quantity accordingly.
+            // If we added all items, consume (despawn + notify spawner)
             if (remainder == 0)
             {
-                pickupNetObj.Despawn(true);
+                pickup.ServerConsumeAndDespawn();
             }
             else
             {
-                // Partial add (rare in MVP unless you introduce stack caps).
-                // MVP simplest: don't support partial; leave it in world.
-                // Or: adjust pickup's quantity to remainder (requires making quantity writable).
-                // For now, we leave it in world if partial occurred.
+                // Partial add handling (not in MVP yet):
+                // - easiest: do nothing and leave pickup as-is.
+                // - later: reduce remaining quantity in world.
             }
         }
     }
