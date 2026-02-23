@@ -14,11 +14,8 @@ namespace HuntersAndCollectors.Harvesting
     /// - Cooldown is based on NGO ServerTime to avoid client desync.
     /// - Cooldown state replicates to clients via a NetworkVariable.
     ///
-    /// Unity setup:
-    /// - Add a NetworkObject component (required).
-    /// - This script (NetworkBehaviour) on same GameObject.
-    /// - Collider should be on your Interactable layer so PlayerInteract ray can hit it.
-    /// - Optional: assign visuals/collider that should disable while depleted.
+    /// Drop safety (Option 3 style):
+    /// - Uses ItemDef instead of string id to avoid typos/casing issues.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -29,9 +26,10 @@ namespace HuntersAndCollectors.Harvesting
         [SerializeField] private string nodeId = "NODE_001";
 
         [Header("Drop")]
-        [Tooltip("Stable item id (e.g. it_wood). In a later pass we can change this to ItemDef like pickups.")]
-        [SerializeField] private string dropItemId = "it_wood";
+        [Tooltip("ItemDef to grant when harvested (e.g. it_wood).")]
+        [SerializeField] private HuntersAndCollectors.Items.ItemDef dropItem;
 
+        [Tooltip("How many items are granted when harvested.")]
         [Min(1)]
         [SerializeField] private int dropQuantity = 1;
 
@@ -40,19 +38,24 @@ namespace HuntersAndCollectors.Harvesting
         [SerializeField] private float respawnSeconds = 30f;
 
         [Header("Depleted Presentation (Optional)")]
-        [Tooltip("Optional: disable this collider while depleted (prevents interaction). If null, uses own collider.")]
+        [Tooltip("Disable this collider while depleted (prevents interaction). If null, uses own collider.")]
         [SerializeField] private Collider interactCollider;
 
-        [Tooltip("Optional: show/hide visuals while depleted. If empty, node stays visible.")]
+        [Tooltip("Optional visuals to hide while depleted. If empty, node stays visible.")]
         [SerializeField] private GameObject[] visualsToHideWhenDepleted;
 
         // Server-authoritative "next available" timestamp.
-        // Use double because ServerTime is double precision.
         private readonly NetworkVariable<double> nextHarvestServerTime =
             new(0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public string NodeId => nodeId;
-        public string DropItemId => dropItemId;
+
+        /// <summary>ItemDef assigned for drops (may be null if not configured).</summary>
+        public HuntersAndCollectors.Items.ItemDef DropItem => dropItem;
+
+        /// <summary>Stable id string used by inventory system.</summary>
+        public string DropItemId => dropItem != null ? dropItem.ItemId : string.Empty;
+
         public int DropQuantity => Mathf.Max(1, dropQuantity);
 
         /// <summary>
@@ -65,7 +68,7 @@ namespace HuntersAndCollectors.Harvesting
         }
 
         /// <summary>
-        /// How many seconds until harvestable again (0 if already available).
+        /// Seconds until node is harvestable again (0 if already available).
         /// Useful for UI.
         /// </summary>
         public float SecondsUntilHarvestable()
@@ -76,24 +79,28 @@ namespace HuntersAndCollectors.Harvesting
 
         public override void OnNetworkSpawn()
         {
-            // Cache collider if not set.
             if (interactCollider == null)
                 interactCollider = GetComponent<Collider>();
 
-            // When the replicated value changes, update visuals.
-            nextHarvestServerTime.OnValueChanged += (_, __) => RefreshPresentation();
+            // Subscribe so clients update visuals when the timestamp changes.
+            nextHarvestServerTime.OnValueChanged += OnNextHarvestTimeChanged;
 
-            // Refresh immediately for clients joining late.
+            // Refresh immediately for late-join clients / host.
             RefreshPresentation();
         }
 
         public override void OnNetworkDespawn()
         {
-            nextHarvestServerTime.OnValueChanged -= (_, __) => RefreshPresentation();
+            nextHarvestServerTime.OnValueChanged -= OnNextHarvestTimeChanged;
+        }
+
+        private void OnNextHarvestTimeChanged(double previousValue, double newValue)
+        {
+            RefreshPresentation();
         }
 
         /// <summary>
-        /// SERVER: Consumes the node (starts cooldown).
+        /// SERVER: Starts the cooldown timer (consume this node).
         /// Call this ONLY after a successful harvest (inventory add etc).
         /// </summary>
         public void ServerConsumeStartCooldown()
@@ -104,7 +111,7 @@ namespace HuntersAndCollectors.Harvesting
             double cooldown = Mathf.Max(0f, respawnSeconds);
             nextHarvestServerTime.Value = ServerTimeNow() + cooldown;
 
-            // Presentation will update through OnValueChanged on all clients.
+            // Host also needs to update visuals immediately.
             RefreshPresentation();
         }
 
@@ -112,24 +119,24 @@ namespace HuntersAndCollectors.Harvesting
         {
             bool available = IsHarvestableNow();
 
-            // Disable interaction collider while depleted (optional)
+            // Disable interaction collider while depleted
             if (interactCollider != null)
                 interactCollider.enabled = available;
 
-            // Hide visuals while depleted (optional)
+            // Hide/show visuals while depleted (optional)
             if (visualsToHideWhenDepleted != null)
             {
                 for (int i = 0; i < visualsToHideWhenDepleted.Length; i++)
                 {
-                    if (visualsToHideWhenDepleted[i] != null)
-                        visualsToHideWhenDepleted[i].SetActive(available);
+                    var go = visualsToHideWhenDepleted[i];
+                    if (go != null)
+                        go.SetActive(available);
                 }
             }
         }
 
         private static double ServerTimeNow()
         {
-            // If NetworkManager isn't running (edit-mode tests), fall back to local time.
             if (NetworkManager.Singleton == null)
                 return Time.timeAsDouble;
 
@@ -141,6 +148,9 @@ namespace HuntersAndCollectors.Harvesting
         {
             if (dropQuantity < 1) dropQuantity = 1;
             if (respawnSeconds < 0f) respawnSeconds = 0f;
+
+            if (string.IsNullOrWhiteSpace(nodeId))
+                nodeId = "NODE_001";
         }
 #endif
     }
