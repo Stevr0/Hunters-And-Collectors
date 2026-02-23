@@ -44,6 +44,8 @@ namespace HuntersAndCollectors.Harvesting
         [Tooltip("Optional visuals to hide while depleted. If empty, node stays visible.")]
         [SerializeField] private GameObject[] visualsToHideWhenDepleted;
 
+        private Coroutine _serverRespawnRoutine;
+
         // Server-authoritative "next available" timestamp.
         private readonly NetworkVariable<double> nextHarvestServerTime =
             new(0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -92,6 +94,12 @@ namespace HuntersAndCollectors.Harvesting
         public override void OnNetworkDespawn()
         {
             nextHarvestServerTime.OnValueChanged -= OnNextHarvestTimeChanged;
+
+            if (IsServer && _serverRespawnRoutine != null)
+            {
+                StopCoroutine(_serverRespawnRoutine);
+                _serverRespawnRoutine = null;
+            }
         }
 
         private void OnNextHarvestTimeChanged(double previousValue, double newValue)
@@ -109,10 +117,44 @@ namespace HuntersAndCollectors.Harvesting
                 return;
 
             double cooldown = Mathf.Max(0f, respawnSeconds);
+
+            // Set next available time (replicates to all clients)
             nextHarvestServerTime.Value = ServerTimeNow() + cooldown;
 
-            // Host also needs to update visuals immediately.
+            // Host also needs to update visuals immediately
             RefreshPresentation();
+
+            // Start/Restart a server respawn timer that will "poke" the value
+            // at the moment the node becomes available again.
+            if (_serverRespawnRoutine != null)
+                StopCoroutine(_serverRespawnRoutine);
+
+            if (cooldown <= 0d)
+            {
+                // No cooldown: make it available immediately and force a change event.
+                nextHarvestServerTime.Value = ServerTimeNow();
+                RefreshPresentation();
+                return;
+            }
+
+            _serverRespawnRoutine = StartCoroutine(ServerRespawnRoutine((float)cooldown));
+        }
+
+        private System.Collections.IEnumerator ServerRespawnRoutine(float delay)
+        {
+            // Wait in server time (simple; good enough for MVP)
+            yield return new WaitForSeconds(delay);
+
+            // "Poke" the network variable to trigger OnValueChanged on clients,
+            // which refreshes colliders/visuals.
+            //
+            // Setting it to ServerTimeNow() makes IsHarvestableNow() true immediately.
+            nextHarvestServerTime.Value = ServerTimeNow();
+
+            // Host refresh
+            RefreshPresentation();
+
+            _serverRespawnRoutine = null;
         }
 
         private void RefreshPresentation()
