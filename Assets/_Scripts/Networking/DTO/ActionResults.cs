@@ -1,3 +1,5 @@
+using HuntersAndCollectors.Crafting;
+using Unity.Collections;
 using Unity.Netcode;
 
 namespace HuntersAndCollectors.Networking.DTO
@@ -16,10 +18,12 @@ namespace HuntersAndCollectors.Networking.DTO
         VendorNotFound,
         RecipeNotFound,
         MissingIngredients,
+        CraftFailed,
         NodeNotHarvestable,
         OnCooldown,
     }
-        public struct ActionResult : INetworkSerializable
+
+    public struct ActionResult : INetworkSerializable
     {
         public bool Success;
         public FailureReason Reason;
@@ -61,14 +65,31 @@ namespace HuntersAndCollectors.Networking.DTO
 
     /// <summary>
     /// Result payload for crafting requests.
+    /// Includes debug info for UI/analytics.
     /// </summary>
     public struct CraftResult : INetworkSerializable
     {
         public ActionResult Result;
+        public FixedString64Bytes RecipeId;
+        public CraftingCategory Category;
+        public byte AttemptIndex;
+        public byte AttemptsRequested;
+        public byte SkillLevel;
+        public float RolledChance;
+        public float RollValue;
+        public bool IngredientsConsumed;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             Result.NetworkSerialize(serializer);
+            serializer.SerializeValue(ref RecipeId);
+            serializer.SerializeValue(ref Category);
+            serializer.SerializeValue(ref AttemptIndex);
+            serializer.SerializeValue(ref AttemptsRequested);
+            serializer.SerializeValue(ref SkillLevel);
+            serializer.SerializeValue(ref RolledChance);
+            serializer.SerializeValue(ref RollValue);
+            serializer.SerializeValue(ref IngredientsConsumed);
         }
     }
 }

@@ -306,8 +306,8 @@ namespace HuntersAndCollectors.Crafting.UI
             if (_selectedRecipe == null) return;
             if (_craftingNet == null) return;
 
-            // Server-authoritative craft request
-            _craftingNet.RequestCraftServerRpc(_selectedRecipe.RecipeId);
+            // Server-authoritative craft request (MVP single craft)
+            _craftingNet.RequestCraftServerRpc(_selectedRecipe.RecipeId, 1);
         }
 
         private void OnInventorySnapshotChanged(HuntersAndCollectors.Networking.DTO.InventorySnapshot snapshot)

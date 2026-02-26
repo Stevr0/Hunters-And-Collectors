@@ -31,6 +31,12 @@ namespace HuntersAndCollectors.Skills
             EnsureSkill(SkillId.Sales);
             EnsureSkill(SkillId.Negotiation);
             EnsureSkill(SkillId.Running);
+            EnsureSkill(SkillId.Woodcutting);
+            EnsureSkill(SkillId.Mining);
+            EnsureSkill(SkillId.Foraging);
+            EnsureSkill(SkillId.ToolCrafting);
+            EnsureSkill(SkillId.EquipmentCrafting);
+            EnsureSkill(SkillId.BuildingCrafting);
         }
 
         public SkillEntry Get(string id)
@@ -42,6 +48,19 @@ namespace HuntersAndCollectors.Skills
                     return s;
 
             return new SkillEntry { Id = key, Level = 0, Xp = 0 };
+        }
+
+        /// <summary>
+        /// Returns the current level for a skill id. Ensures the skill entry exists on the server.
+        /// </summary>
+        public int GetLevel(string id)
+        {
+            var entry = Get(id);
+
+            if (IsServer && entry.Id.Length > 0)
+                EnsureSkill(id);
+
+            return entry.Level;
         }
 
         public void AddXp(string id, int amount)

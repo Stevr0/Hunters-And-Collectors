@@ -1,8 +1,16 @@
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace HuntersAndCollectors.Harvesting
 {
+    public enum ResourceNodeResourceType
+    {
+        Wood,
+        Stone,
+        Fiber
+    }
+
     /// <summary>
     /// ResourceNodeNet
     /// --------------------------------------------------------------------
@@ -25,13 +33,18 @@ namespace HuntersAndCollectors.Harvesting
         [Tooltip("Unique id in the scene. Must be unique across all ResourceNodes.")]
         [SerializeField] private string nodeId = "NODE_001";
 
+        [Header("Resource Type")]
+        [Tooltip("Determines which harvesting skill controls this node.")]
+        [SerializeField] private ResourceNodeResourceType resourceType = ResourceNodeResourceType.Wood;
+
         [Header("Drop")]
         [Tooltip("ItemDef to grant when harvested (e.g. it_wood).")]
         [SerializeField] private HuntersAndCollectors.Items.ItemDef dropItem;
 
-        [Tooltip("How many items are granted when harvested.")]
+        [FormerlySerializedAs("dropQuantity")]
+        [Tooltip("Base yield before skill scaling.")]
         [Min(1)]
-        [SerializeField] private int dropQuantity = 1;
+        [SerializeField] private int baseYield = 1;
 
         [Header("Respawn")]
         [Min(0f)]
@@ -58,7 +71,11 @@ namespace HuntersAndCollectors.Harvesting
         /// <summary>Stable id string used by inventory system.</summary>
         public string DropItemId => dropItem != null ? dropItem.ItemId : string.Empty;
 
-        public int DropQuantity => Mathf.Max(1, dropQuantity);
+        public ResourceNodeResourceType ResourceType => resourceType;
+
+        public int BaseYield => Mathf.Max(1, baseYield);
+
+        public int DropQuantity => BaseYield;
 
         /// <summary>
         /// Returns true if the node is currently harvestable (based on server time).
@@ -188,7 +205,7 @@ namespace HuntersAndCollectors.Harvesting
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (dropQuantity < 1) dropQuantity = 1;
+            if (baseYield < 1) baseYield = 1;
             if (respawnSeconds < 0f) respawnSeconds = 0f;
 
             if (string.IsNullOrWhiteSpace(nodeId))

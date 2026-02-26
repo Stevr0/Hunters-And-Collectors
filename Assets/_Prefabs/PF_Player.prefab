@@ -166,6 +166,7 @@ GameObject:
   - component: {fileID: -1694204727928713689}
   - component: {fileID: 4371911881652788264}
   - component: {fileID: 9162402046273109018}
+  - component: {fileID: 2353484698067050047}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -289,6 +290,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.CraftingNet
   ShowTopMostFoldoutHeaderGroup: 1
   craftingDatabase: {fileID: 11400000, guid: a09edb9d25a8c394f947c4b295991869, type: 2}
+  maxCraftsPerRequest: 10
+  xpPerAttempt: 1
 --- !u!114 &3306535855743876770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -368,6 +371,7 @@ MonoBehaviour:
   interactableMask:
     serializedVersion: 2
     m_Bits: 0
+  harvestingNet: {fileID: 2353484698067050047}
 --- !u!114 &4371911881652788264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -429,3 +433,25 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
   inventoryNet: {fileID: 4863483339001891176}
+--- !u!114 &2353484698067050047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b066df01674a2844a59114eb81f0e43, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Harvesting.HarvestingNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  inventory: {fileID: 4863483339001891176}
+  skills: {fileID: 691804140746123789}
+  nodeRegistry: {fileID: 0}
+  nodeMaxDistance: 3
+  dropMaxDistance: 3
+  nodeYieldMax: 50
+  dropYieldMax: 30
+  xpPerAction: 1
+  xpBonusOnNodeDeplete: 2

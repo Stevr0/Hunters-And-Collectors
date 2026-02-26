@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2303589245932600054}
   - component: {fileID: -8772196433999699258}
   - component: {fileID: 6722909190727644896}
-  - component: {fileID: -5094353249140217729}
+  - component: {fileID: 8313555962324056132}
   m_Layer: 6
   m_Name: Stone
   m_TagString: Untagged
@@ -81,7 +81,7 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &-5094353249140217729
+--- !u!114 &8313555962324056132
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -96,6 +96,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   itemDefinition: {fileID: 11400000, guid: 8ca4f84c9289b34409be57f4ead07baa, type: 2}
   quantity: 1
+  spawner: {fileID: 0}
 --- !u!1 &3459821869685224513
 GameObject:
   m_ObjectHideFlags: 0

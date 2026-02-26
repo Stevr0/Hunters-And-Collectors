@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -7,7 +7,7 @@ namespace HuntersAndCollectors.Items
     /// <summary>
     /// PickupSpawnerNet
     /// --------------------------------------------------------------------
-    /// Server-authoritative respawn spawner for WorldPickup items.
+    /// Server-authoritative respawn spawner for ResourceDrop items.
     ///
     /// Best practice for NGO:
     /// - Place spawner objects inside the target scene.
@@ -82,9 +82,9 @@ namespace HuntersAndCollectors.Items
             // Instantiate on server.
             _spawnedInstance = Instantiate(pickupPrefab, pos, rot);
 
-            // If the prefab has WorldPickup, inject this spawner reference
+            // If the prefab has ResourceDrop, inject this spawner reference
             // so the pickup can notify us when it is consumed.
-            if (_spawnedInstance.TryGetComponent<WorldPickup>(out var pickup))
+            if (_spawnedInstance.TryGetComponent<ResourceDrop>(out var pickup))
             {
                 pickup.ServerSetSpawner(this);
             }
@@ -94,7 +94,7 @@ namespace HuntersAndCollectors.Items
         }
 
         /// <summary>
-        /// SERVER: Called by WorldPickup when it is consumed/despawned.
+        /// SERVER: Called by ResourceDrop when it is consumed/despawned.
         /// Starts the respawn timer if enabled.
         /// </summary>
         public void NotifyConsumedOrDespawned()

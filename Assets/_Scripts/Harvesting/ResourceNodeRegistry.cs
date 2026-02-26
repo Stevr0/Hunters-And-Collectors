@@ -22,9 +22,25 @@ namespace HuntersAndCollectors.Harvesting
     {
         private readonly Dictionary<string, ResourceNodeNet> byId = new();
 
+        public static ResourceNodeRegistry Instance { get; private set; }
+
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Debug.LogWarning("[ResourceNodeRegistry] Multiple registries detected. Destroying duplicate.", this);
+                enabled = false;
+                return;
+            }
+
+            Instance = this;
             Rebuild();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
 
         /// <summary>
@@ -73,6 +89,17 @@ namespace HuntersAndCollectors.Harvesting
             }
 
             return byId.TryGetValue(nodeId, out node);
+        }
+
+        public static bool TryGetNode(string nodeId, out ResourceNodeNet node)
+        {
+            if (Instance == null)
+            {
+                node = null;
+                return false;
+            }
+
+            return Instance.TryGet(nodeId, out node);
         }
     }
 }
