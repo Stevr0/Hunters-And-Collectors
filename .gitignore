@@ -1,0 +1,38 @@
+# ========== UNITY ==========
+
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+
+# Visual Studio cache
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+
+# Rider
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Crash reports
+sysinfo.txt
+
+# ========== OPTIONAL LARGE FILES (use Git LFS instead) ==========
+# *.psd
+# *.fbx
+# *.blend
+# *.wav
+# *.mp4
