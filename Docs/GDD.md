@@ -1,393 +1,346 @@
-# Hunters & Collectors — Game Design Document (Authoritative)
-Version: 1.0
-Status: DESIGN LOCKED (MVP + Full System Direction)
-Engine Target: Unity (Server-Authoritative, Host Mode MVP → Dedicated Server Later)
+# HUNTERS & COLLECTORS
+## Game Design Document (GDD)
+Version: 2.0 – Basin Adaptation Direction
+Engine: Unity 6 (URP)
+Networking: Netcode for GameObjects (Server Authoritative)
 
 ---
 
-# 1. Core Vision
+# 1. HIGH CONCEPT
 
-Hunters & Collectors is a skill-driven, player-shaped economic world where:
+Hunters & Collectors is a multiplayer, skill‑based survival economy game set inside a sealed basin world known as a Shard.
 
-• Every action is governed by a skill  
-• Every item can be sold  
-• Players define item value through Base Price  
-• World progression is shaped by crafting, ecology, and trade  
-• Infrastructure quality determines economic capability  
+A central settlement sits at the lowest point of a massive enclosed valley beneath an unnatural red sun. Players must explore outward, harvest resources, unlock ancient gates, stabilize the settlement, and survive escalating pressure from hostile factions.
 
-The MVP validates the economic loop.  
-The full vision expands into a living skill-locked society.
+The world grows more dangerous over time.
+The settlement grows unstable if neglected.
+Progression is capability-driven, not power-creep driven.
 
----
-
-# 2. Design Pillars
-
-## 2.1 Skill Determines Everything
-
-Every system is governed by skill level:
-
-• Harvest yield  
-• Craft quality  
-• Vendor capacity  
-• Warehouse size  
-• Buildable structures  
-• Economic efficiency  
-• Ecology interaction  
-
-There are no hard character classes.
-Progression is entirely skill-based.
+Core Pillars:
+- Skill-based progression (no traditional classes)
+- Economy-first rewards
+- Server-authoritative multiplayer
+- Settlement pressure & instability system
+- Gate-driven exploration
+- Player-driven trade and pricing
 
 ---
 
-## 2.2 Player-Defined Economy
+# 2. CORE GAME LOOP
 
-• Players set Base Price per Known Item  
-• Vendor listings use that Base Price  
-• Trade outcomes increase Sales / Negotiation skills  
-• Economic identity emerges from pricing decisions
+Primary Loop:
+1. Harvest resources (tools required)
+2. Craft equipment, tools, and build pieces
+3. Explore outward from settlement
+4. Clear Points of Interest (POIs)
+5. Recover artifacts and rare materials
+6. Unlock progression gates
+7. Settlement pressure increases over time
+8. Players reinforce, stabilize, expand
+9. Repeat at higher tiers
 
-The game does not dictate value — players do.
-
----
-
-## 2.3 Infrastructure Drives Capability
-
-Better skills unlock:
-
-• Larger vendor chests  
-• More vendor chest placements (Warehouse skill)  
-• Higher-tier build pieces  
-• Advanced crafting stations  
-
-Skill gates scale opportunity — not arbitrary level locks.
+Secondary Loops:
+- Trade via vendors and caravans
+- Skill progression via action use
+- Defensive building during raid windows
+- Artifact research to unlock recipes
 
 ---
 
-# 3. MVP Vertical Slice (Locked Scope)
+# 3. WORLD STRUCTURE
 
-The MVP proves the foundational loop:
+## 3.1 The Basin (Shard)
 
-1. Harvest Tier‑1 resources  
-2. Craft tool + sellable item  
-3. Build shelter  
-4. Vendor spawns  
-5. List item via vendor chest  
-6. Player purchases item  
-7. Currency transfers  
-8. Skills increase  
-9. Save → Load restores state
+Each Shard contains:
+- One primary buildable settlement zone (central)
+- Surrounding wilderness zones
+- Tiered dungeon POIs
+- Environmental hazard zones
 
----
+Players cannot build outside the central settlement area.
 
-# 4. Core Systems (MVP + Expansion Direction)
+## 3.2 Zone Tiers
 
----
+Tier 0 – Settlement Hub
+Tier 1 – Starting Wilds
+Tier 2 – Beastman Territories
+Tier 3 – Swamp Regions
+Tier 4 – Jungle Civilizations
+Tier 5 – Fire Lands
+Tier 6 – Deep Ancient Zones
 
-# 4.1 Currency System
-
-Currency: Coins  
-Integer values only  
-Player starts with 100 coins (MVP)
-
-Future:
-• Coins enter economy via NPC demand, trade, services  
-• Economic scarcity influences price behavior  
-
-Coins are stored per-player in Wallet.
+Zones unlock via Gates (see section 8).
 
 ---
 
-# 4.2 Skill System
+# 4. SETTLEMENT PRESSURE SYSTEM
 
-## MVP Skills
-• Sales  
-• Negotiation
+The Shard contains a global pressure system representing environmental corruption.
 
-Starting Level: 0  
-XP Curve: XP needed = 10 × (level + 1)  
-XP per successful transaction: +1
+## 4.1 Core Variables (Shard-Level)
 
-## Planned Skill Categories
+BasinAge (increases with time + milestones)
+SettlementStability (0–100)
+MadnessStage (derived from stability)
+RaidIntensity (derived from BasinAge + Stability)
 
-Harvesting Skills:
-• Woodcutting  
-• Mining  
-• Foraging
+## 4.2 Madness Stages
 
-Crafting Skills:
-• Carpentry  
-• Smithing  
-• Tailoring  
-• Toolmaking
+Stable → Irritated → Paranoid → Hostile → Collapse
 
-Commerce Skills:
-• Sales  
-• Negotiation  
-• Warehouse Management
+Effects:
+- Vendor price multipliers increase
+- Craft success slightly reduced
+- Raid frequency increases
+- Enemy tiers escalate
+- NPC dialogue shifts
 
-Building Skills:
-• Construction  
-• Engineering
-
-Ecology Skills (future):
-• Animal Handling  
-• Suppression  
-• Environmental Management
-
-Skill effects scale:
-• Yield  
-• Craft efficiency  
-• Item quality (future)  
-• Vendor slot count  
-• Chest placement limit
+Players restore stability by:
+- Opening gates
+- Completing artifact research
+- Delivering supplies
+- Building defensive structures
+- Establishing trade routes
+- Completing final ritual objective
 
 ---
 
-# 4.3 Items
+# 5. SKILL SYSTEM
 
-Items use stable string IDs.
+All actions are skill-driven.
+Max Skill Level: 100
+Success chance scales linearly (0% at 0 skill, 100% at 100 skill).
 
-MVP Items:
-Resources:
-• IT_Wood  
-• IT_Stone  
-• IT_Fiber
+Core Skills:
+- Lumberjacking
+- Mining
+- Foraging
+- Running
+- ToolCrafting
+- EquipmentCrafting
+- BuildingCrafting
+- Research
+- Negotiation
 
-Tool:
-• IT_StoneAxe
-
-Crafted:
-• IT_WoodenClub
-
-Future expansion:
-• Quality tiers  
-• Tool durability  
-• Material grades  
-• Crafted item variations
-
-All items are sellable if placed in a vendor chest.
-
----
-
-# 4.4 Inventory System
-
-Slot Grid system (locked).
-
-Transport rule:
-Only carried inventory transfers between shards.
-
-Future expansion:
-• Weight system  
-• Encumbrance  
-• Specialized storage containers
+Higher skill provides:
+- Reduced action time
+- Increased yield
+- Increased rare drop chance
+- Reduced stamina cost
+- Higher craft success chance
 
 ---
 
-# 4.5 Crafting System
+# 6. COMBAT SYSTEM
 
-MVP:
-• Always succeeds  
-• Ingredient removal + output add
+Combat is real-time with auto-attacks.
+Attributes:
+- Hit Chance
+- Defense Chance
+- Swing Speed
+- Damage Increase
+- Resistances
 
-Recipes (MVP):
-• Stone Axe  
-• Wooden Club
-
-Future expansion:
-• Skill-based success chance  
-• Quality tiers  
-• Craft speed scaling  
-• Workstation requirements  
-• Advanced recipe trees
-
----
-
-# 5. Building System
-
-## MVP Build Pieces
-• Floor  
-• Wall  
-• Door  
-• Roof  
-• (Optional Light)
-
-ShelterComplete triggers vendor spawn.
-
-## Future Building Expansion
-• Structural tiers  
-• Multi-tile foundations  
-• Advanced housing  
-• Workshops  
-• Specialized vendor stalls  
-• Decorative value affecting NPC attraction
-
-Building skill unlocks:
-• Larger structures  
-• Improved efficiency  
-• Advanced economic buildings
+Combat is not the primary progression path.
+Enemies exist to:
+- Guard gates
+- Pressure settlement
+- Disrupt gathering
+- Drop artifacts/resources
 
 ---
 
-# 6. Vendor & Commerce System
+# 7. FACTIONS
 
-## Vendor Behavior (MVP)
-• Spawns when shelter complete  
-• Linked to one Vendor Chest  
-• Lists all items in chest
+## 7.1 Core Factions
 
-## Base Price System
-• Per itemId  
-• Default 1 coin  
-• Editable via Known Items UI
+Settlement
+Beastmen
+Troglodytes
+Lizardmen
+Azcan Civilization
+Schattenalfen
+Ancient Corruption (hidden force)
 
-## Checkout Rules
-Atomic transaction:
-• Validate stock  
-• Validate coins  
-• Validate inventory space  
-• Transfer coins + items  
-• Apply XP
+Each faction defines:
+- Raid composition
+- Resource preferences
+- Artifact drops
+- Territory control
 
-## Future Commerce Expansion
-• Buyer NPC AI  
-• Negotiation modifiers  
-• Market demand modifiers  
-• Supply scarcity  
-• Regional price variation  
-• Player-to-player trade UI
+Faction relationships are shard-level.
 
 ---
 
-# 7. Known Item Registry
+# 8. GATE SYSTEM
 
-Item becomes Known when first entering inventory.
+Progression is gate-based, not level-based.
 
-Per item stores:
-• itemId  
-• basePrice
+Example Gate Chain:
 
-Future:
-• Knowledge tiers  
-• Appraisal skill  
-• Hidden value discovery  
-• Market intelligence systems
+GATE_GatewayPassage → unlock Swamp
+GATE_AzcanArtifacts → unlock Jungle
+GATE_FireRings → unlock Fire Lands
+GATE_Schattenalfen → unlock Deep Zone
+GATE_SummonRitual → stabilize Shard
 
----
+Gate Requirements may include:
+- Key item possession
+- Artifact sets
+- Completed POI
+- Stability threshold
 
-# 8. Ecology & Resource Systems
-
-## MVP
-• Fixed spawn points  
-• Simple respawn timers  
-• No stress system
-
-Respawn:
-• Tree 60s  
-• Rock 90s  
-• Plant 45s
-
-## Future Ecology Expansion
-• Overharvesting stress  
-• Yield reduction  
-• Regrowth cycles  
-• Guardian creatures  
-• Hazard zones  
-• Suppression mechanics  
-• Skill-based environmental mitigation
-
-Ecology is intended to become a strategic layer.
+Server validates all gate unlocks.
 
 ---
 
-# 9. Infrastructure Scaling (Future Direction)
+# 9. ITEM SYSTEM
 
-Vendor capacity is determined by:
-• Warehouse skill  
-• Vendor chest tier  
-• Crafted container quality
+## 9.1 Categories
 
-Carpentry skill unlocks:
-• Larger chests  
-• Improved storage  
-• Advanced structures
+Resources
+Tools
+Equipment
+Consumables
+Artifacts
+Key Items
 
-Every upgrade path is skill-based — not arbitrary unlock-based.
+## 9.2 Philosophy
 
----
+Items grant capability, not exponential stat growth.
 
-# 10. Networking Model
+Examples:
+- Ring of Fire Protection → access hazard zone
+- Withered Vine → bypass plant gate
+- Artifact Bundle → unlock research tier
 
-Authority: Server-authoritative
-
-MVP Runtime: Host (listen server)
-
-Future:
-• Dedicated shard servers  
-• Player-owned shards  
-• Cross-shard visitation  
-• Inventory-based trade transport
-
-Clients never write save data.
+Players set base prices for known items.
+Vendor holds funds until player spawn.
 
 ---
 
-# 11. Persistence
+# 10. POI DESIGN
 
-Player Save:
-• Coins  
-• Skills  
-• Known Items + Base Prices  
-• Inventory
+POIs serve as progression anchors.
 
-Shard Save:
-• ShelterComplete  
-• Placed Build Pieces  
-• Vendor Chest Contents
+Types:
+- Raider Camps (respawn, scaling)
+- Resource Mines
+- Artifact Ruins
+- Boss Lairs
+- Civilization Outposts
 
-Future:
-• Ecology states  
-• Vendor AI state  
-• Market conditions
-
----
-
-# 12. Explicitly Out of MVP Scope
-
-• Guardian creatures  
-• Hazard systems  
-• Advanced negotiation math  
-• PvP systems  
-• Crime / theft systems  
-• Multi-vendor economies  
-• Dynamic markets
-
-These are expansion layers beyond v1.0.
+Clearing POIs may:
+- Reduce raid frequency
+- Unlock trade route
+- Reveal gate requirement
+- Drop rare materials
 
 ---
 
-# 13. MVP Completion Criteria
+# 11. ECONOMY
 
-MVP is complete when:
+## 11.1 Coins
 
-1. Harvesting works  
-2. Crafting works  
-3. Shelter triggers vendor  
-4. Vendor chest lists items  
-5. Checkout transfers coins/items  
-6. Skills gain XP correctly  
-7. Save/Load restores full state
+Server-authoritative wallet.
+All transactions validated server-side.
 
----
+## 11.2 Vendors
 
-# 14. Long-Term Identity
+Stock increases with progression.
+Prices affected by MadnessStage.
 
-Hunters & Collectors is not just a crafting game.
-It is a skill-driven economic simulation where infrastructure, pricing decisions, and environmental stewardship determine prosperity.
+## 11.3 Caravans
 
-The MVP proves the engine.
-The expansion builds the society.
+Unlocked after discoveries.
+Provide:
+- Safe transport
+- Bulk hauling
+- Stability boost
 
 ---
 
-END OF GDD v1.0 (Authoritative)
+# 12. BUILDING
+
+Building allowed only in central settlement.
+Only shard owner (and co-owners) may build.
+
+Build categories:
+- Defensive (walls, towers)
+- Utility (craft stations)
+- Storage
+- Vendor stalls
+
+Defenses directly reduce raid impact.
+
+---
+
+# 13. RAID SYSTEM
+
+Raids occur only when shard owner is active.
+Raid intensity scales with:
+- BasinAge
+- MadnessStage
+- Cleared POIs
+
+Raid goals:
+- Destroy structures
+- Kill vendors
+- Steal resources
+
+Raid victory restores stability.
+
+---
+
+# 14. ARTIFACT RESEARCH SYSTEM
+
+Artifacts recovered from POIs.
+Delivered to research station.
+
+Effects:
+- Unlock recipes
+- Unlock gates
+- Reveal lore
+- Increase stability
+
+Artifacts drive narrative progression.
+
+---
+
+# 15. ENDGAME OBJECTIVE
+
+Players uncover the source of corruption.
+Final ritual event stabilizes Shard.
+Stabilization resets BasinAge pressure.
+Shard remains replayable with increased difficulty.
+
+---
+
+# 16. MVP SLICE
+
+To reach playable basin loop:
+
+1. Harvest + Craft + Save/Load
+2. Implement Beastman Camp POI
+3. Implement Settlement Pressure scaling
+4. Implement Gateway gate unlock
+5. Implement Artifact delivery
+
+This produces core basin gameplay loop.
+
+---
+
+# 17. DESIGN PRINCIPLES
+
+- Systems first, content second.
+- Economy over XP grind.
+- Capability over raw damage inflation.
+- Pressure must escalate.
+- Players must feel relief after stabilization.
+- All gameplay actions are skill-based.
+- All state changes are server-authoritative.
+
+---
+
+END OF DOCUMENT
 
