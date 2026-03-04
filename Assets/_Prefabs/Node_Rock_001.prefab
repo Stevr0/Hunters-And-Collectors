@@ -413,9 +413,14 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   nodeId: NODE_ROCK_001
   resourceType: 1
+  requiredTool: 2
+  requiredToolItem: {fileID: 11400000, guid: f08ad907b04b6f3469e7069fc6bbe5cb, type: 2}
+  baseHarvestSeconds: 3
   dropItem: {fileID: 11400000, guid: 8ca4f84c9289b34409be57f4ead07baa, type: 2}
   baseYield: 3
   respawnSeconds: 10
+  maxHealth: 3
+  rareDrops: []
   interactCollider: {fileID: 370017819112127593}
   visualsToHideWhenDepleted:
   - {fileID: 3658882028454486640}

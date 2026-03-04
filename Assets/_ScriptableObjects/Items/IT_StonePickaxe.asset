@@ -17,6 +17,10 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 6969f83b82d4e7b47853468a35254616, type: 3}
   MaxStack: 1
   Category: 1
+  visualPrefab: {fileID: 4569326234878662587, guid: 7ec58d290cd8c934d80ee49308d50b65, type: 3}
+  equipLocalPosition: {x: -0.009, y: -0.435, z: -0.017}
+  equipLocalEuler: {x: 0, y: -135, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
   Description: With a sharp stone point, breaks rocks.
   PropertiesText: 
   BaseValue: 2

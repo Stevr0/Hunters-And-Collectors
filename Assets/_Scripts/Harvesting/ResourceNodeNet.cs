@@ -1,116 +1,111 @@
+using System;
+using HuntersAndCollectors.Items;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace HuntersAndCollectors.Harvesting
 {
-    public enum ResourceNodeResourceType
-    {
-        Wood,
-        Stone,
-        Fiber
-    }
-
     /// <summary>
-    /// ResourceNodeNet
-    /// --------------------------------------------------------------------
-    /// Scene-placed resource node (tree/rock/bush) with server-authoritative cooldown.
-    ///
-    /// Core rules:
-    /// - Node lives in the scene (no constant spawn/despawn).
-    /// - Only server can "consume" and start cooldown.
-    /// - Cooldown is based on NGO ServerTime to avoid client desync.
-    /// - Cooldown state replicates to clients via a NetworkVariable.
-    ///
-    /// Drop safety (Option 3 style):
-    /// - Uses ItemDef instead of string id to avoid typos/casing issues.
+    /// Scene-authored harvest node with server-authoritative cooldown + tool gating.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
     public sealed class ResourceNodeNet : NetworkBehaviour
     {
         [Header("Identity")]
-        [Tooltip("Unique id in the scene. Must be unique across all ResourceNodes.")]
+        [Tooltip("Stable unique id per-scene (e.g. TREE_001).")]
         [SerializeField] private string nodeId = "NODE_001";
 
-        [Header("Resource Type")]
-        [Tooltip("Determines which harvesting skill controls this node.")]
-        [SerializeField] private ResourceNodeResourceType resourceType = ResourceNodeResourceType.Wood;
+        [Header("Resource")]
+        [Tooltip("Resource family used for skill + loot routing.")]
+        [SerializeField] private ResourceType resourceType = ResourceType.Wood;
 
-        [Header("Drop")]
-        [Tooltip("ItemDef to grant when harvested (e.g. it_wood).")]
+        [Tooltip("Tool required to begin harvesting. Fiber is gated by Sickle per MVP doc.")]
+        [SerializeField] private ToolType requiredTool = ToolType.Axe;
+
+        [Tooltip("Specific item that must be equipped. Leave empty to fall back to tool type.")]
+        [SerializeField] private ItemDef requiredToolItem;
+
+        [Tooltip("Base seconds before skill reductions.")]
+        [Min(0.1f)]
+        [SerializeField] private float baseHarvestSeconds = 2.0f;
+
+        [Header("Yield")]
+        [Tooltip("Item granted on success (stackable resource).")]
         [SerializeField] private HuntersAndCollectors.Items.ItemDef dropItem;
 
-        [FormerlySerializedAs("dropQuantity")]
-        [Tooltip("Base yield before skill scaling.")]
+        [Tooltip("Base amount before skill scaling.")]
         [Min(1)]
         [SerializeField] private int baseYield = 1;
 
         [Header("Respawn")]
+        [Tooltip("Seconds before the node becomes harvestable again.")]
         [Min(0f)]
         [SerializeField] private float respawnSeconds = 30f;
 
-        [Header("Depleted Presentation (Optional)")]
-        [Tooltip("Disable this collider while depleted (prevents interaction). If null, uses own collider.")]
+        [Header("Health")]
+        [Tooltip("Total hits required before the node depletes.")]
+        [Min(1)]
+        [SerializeField] private int maxHealth = 3;
+
+        [Header("Rare Drops")]
+        [Tooltip("Optional bonus roll entries. Leave empty for none.")]
+        [SerializeField] private RareDropEntry[] rareDrops;
+
+        [Header("Presentation")]
+        [Tooltip("Collider disabled while on cooldown. Defaults to current collider if null.")]
         [SerializeField] private Collider interactCollider;
 
-        [Tooltip("Optional visuals to hide while depleted. If empty, node stays visible.")]
+        [Tooltip("Optional visuals hidden while on cooldown.")]
         [SerializeField] private GameObject[] visualsToHideWhenDepleted;
 
         private Coroutine _serverRespawnRoutine;
-
-        // Server-authoritative "next available" timestamp.
         private readonly NetworkVariable<double> nextHarvestServerTime =
             new(0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> currentHealth =
+            new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private ulong _lockedByClientId = ulong.MaxValue;
+        private double _lockStartServerTime;
 
         public string NodeId => nodeId;
-
-        /// <summary>ItemDef assigned for drops (may be null if not configured).</summary>
-        public HuntersAndCollectors.Items.ItemDef DropItem => dropItem;
-
-        /// <summary>Stable id string used by inventory system.</summary>
-        public string DropItemId => dropItem != null ? dropItem.ItemId : string.Empty;
-
-        public ResourceNodeResourceType ResourceType => resourceType;
-
+        public ResourceType ResourceType => resourceType;
+        public ToolType RequiredTool => requiredTool;
+        public ItemDef RequiredToolItem => requiredToolItem;
+        public string RequiredToolItemId => requiredToolItem != null ? requiredToolItem.ItemId : string.Empty;
+        public float BaseHarvestSeconds => Mathf.Max(0.1f, baseHarvestSeconds);
         public int BaseYield => Mathf.Max(1, baseYield);
-
-        public int DropQuantity => BaseYield;
-
-        /// <summary>
-        /// Returns true if the node is currently harvestable (based on server time).
-        /// Works on server and clients (clients read replicated timestamp).
-        /// </summary>
-        public bool IsHarvestableNow()
-        {
-            return ServerTimeNow() >= nextHarvestServerTime.Value;
-        }
-
-        /// <summary>
-        /// Seconds until node is harvestable again (0 if already available).
-        /// Useful for UI.
-        /// </summary>
-        public float SecondsUntilHarvestable()
-        {
-            double remaining = nextHarvestServerTime.Value - ServerTimeNow();
-            return (float)Mathf.Max(0f, (float)remaining);
-        }
+        public string DropItemId => dropItem != null ? dropItem.ItemId : string.Empty;
+        public HuntersAndCollectors.Items.ItemDef DropItem => dropItem;
+        public float RespawnSeconds => Mathf.Max(0f, respawnSeconds);
+        public int MaxHealth => Mathf.Max(1, maxHealth);
+        public int CurrentHealth => Mathf.Clamp(currentHealth.Value, 0, MaxHealth);
+        public bool IsDepleted => CurrentHealth <= 0;
+        public bool HasRareDrops => rareDrops != null && rareDrops.Length > 0;
+        public System.Collections.Generic.IReadOnlyList<RareDropEntry> RareDrops => rareDrops ?? Array.Empty<RareDropEntry>();
+        public bool IsLocked => _lockedByClientId != ulong.MaxValue;
+        public ulong LockedByClientId => _lockedByClientId;
 
         public override void OnNetworkSpawn()
         {
             if (interactCollider == null)
                 interactCollider = GetComponent<Collider>();
 
-            // Subscribe so clients update visuals when the timestamp changes.
-            nextHarvestServerTime.OnValueChanged += OnNextHarvestTimeChanged;
+            if (IsServer)
+            {
+                maxHealth = Mathf.Max(1, maxHealth);
+                if (currentHealth.Value <= 0)
+                    currentHealth.Value = maxHealth;
+            }
 
-            // Refresh immediately for late-join clients / host.
+            nextHarvestServerTime.OnValueChanged += OnNextHarvestTimeChanged;
             RefreshPresentation();
         }
 
         public override void OnNetworkDespawn()
         {
             nextHarvestServerTime.OnValueChanged -= OnNextHarvestTimeChanged;
+            ServerForceReleaseHarvestLock();
 
             if (IsServer && _serverRespawnRoutine != null)
             {
@@ -119,78 +114,156 @@ namespace HuntersAndCollectors.Harvesting
             }
         }
 
+        /// <summary>Clients + server can query if the node can currently be harvested.</summary>
+        public bool IsHarvestableNow()
+        {
+            return ServerTimeNow() >= nextHarvestServerTime.Value;
+        }
+
+        /// <summary>Seconds remaining until harvestable (0 when available).</summary>
+        public float SecondsUntilHarvestable()
+        {
+            var remaining = (float)(nextHarvestServerTime.Value - ServerTimeNow());
+            return Mathf.Max(0f, remaining);
+        }
+
+        public bool ServerApplyDamage(int damage)
+        {
+            if (!IsServer)
+                return false;
+
+            if (damage <= 0)
+                return false;
+
+            if (!IsHarvestableNow())
+                return false;
+
+            var current = CurrentHealth;
+            if (current <= 0)
+                return false;
+
+            var next = Mathf.Max(0, current - damage);
+            currentHealth.Value = next;
+            return next <= 0;
+        }
+
+        public void ServerRestoreFullHealth()
+        {
+            if (!IsServer)
+                return;
+
+            currentHealth.Value = MaxHealth;
+            nextHarvestServerTime.Value = ServerTimeNow();
+            RefreshPresentation();
+        }
+
         private void OnNextHarvestTimeChanged(double previousValue, double newValue)
         {
             RefreshPresentation();
         }
 
+        /// <summary>SERVER: attempt to reserve this node for a specific client.</summary>
+        public bool ServerTryAcquireHarvestLock(ulong clientId)
+        {
+            if (!IsServer)
+                return false;
+
+            if (clientId == ulong.MaxValue)
+                return false;
+
+            if (IsLocked)
+                return _lockedByClientId == clientId; // already locked by same client
+
+            if (!IsHarvestableNow())
+                return false;
+
+            _lockedByClientId = clientId;
+            _lockStartServerTime = ServerTimeNow();
+            return true;
+        }
+
+        /// <summary>SERVER: releases the harvest lock when the owner cancels/completes.</summary>
+        public void ServerReleaseHarvestLock(ulong clientId)
+        {
+            if (!IsServer)
+                return;
+
+            if (_lockedByClientId != clientId)
+                return;
+
+            _lockedByClientId = ulong.MaxValue;
+        }
+
+        /// <summary>SERVER: forcefully clears the harvest lock (e.g., node cooldown).</summary>
+        public void ServerForceReleaseHarvestLock()
+        {
+            if (!IsServer)
+                return;
+
+            _lockedByClientId = ulong.MaxValue;
+        }
+
+        public bool IsServerLockOwner(ulong clientId)
+        {
+            return _lockedByClientId == clientId;
+        }
+
         /// <summary>
-        /// SERVER: Starts the cooldown timer (consume this node).
-        /// Call this ONLY after a successful harvest (inventory add etc).
+        /// SERVER: Call after successful harvest to enter cooldown + refresh visuals.
         /// </summary>
         public void ServerConsumeStartCooldown()
         {
             if (!IsServer)
                 return;
 
-            double cooldown = Mathf.Max(0f, respawnSeconds);
+            ServerForceReleaseHarvestLock();
+            currentHealth.Value = 0;
 
-            // Set next available time (replicates to all clients)
+            var cooldown = RespawnSeconds;
             nextHarvestServerTime.Value = ServerTimeNow() + cooldown;
-
-            // Host also needs to update visuals immediately
             RefreshPresentation();
 
-            // Start/Restart a server respawn timer that will "poke" the value
-            // at the moment the node becomes available again.
             if (_serverRespawnRoutine != null)
-                StopCoroutine(_serverRespawnRoutine);
-
-            if (cooldown <= 0d)
             {
-                // No cooldown: make it available immediately and force a change event.
+                StopCoroutine(_serverRespawnRoutine);
+                _serverRespawnRoutine = null;
+            }
+
+            if (cooldown <= 0f)
+            {
                 nextHarvestServerTime.Value = ServerTimeNow();
+                currentHealth.Value = MaxHealth;
                 RefreshPresentation();
                 return;
             }
 
-            _serverRespawnRoutine = StartCoroutine(ServerRespawnRoutine((float)cooldown));
+            _serverRespawnRoutine = StartCoroutine(ServerRespawnRoutine(cooldown));
         }
 
         private System.Collections.IEnumerator ServerRespawnRoutine(float delay)
         {
-            // Wait in server time (simple; good enough for MVP)
             yield return new WaitForSeconds(delay);
 
-            // "Poke" the network variable to trigger OnValueChanged on clients,
-            // which refreshes colliders/visuals.
-            //
-            // Setting it to ServerTimeNow() makes IsHarvestableNow() true immediately.
             nextHarvestServerTime.Value = ServerTimeNow();
-
-            // Host refresh
+            currentHealth.Value = MaxHealth;
             RefreshPresentation();
-
             _serverRespawnRoutine = null;
         }
 
         private void RefreshPresentation()
         {
-            bool available = IsHarvestableNow();
+            var available = IsHarvestableNow();
 
-            // Disable interaction collider while depleted
             if (interactCollider != null)
                 interactCollider.enabled = available;
 
-            // Hide/show visuals while depleted (optional)
-            if (visualsToHideWhenDepleted != null)
+            if (visualsToHideWhenDepleted == null)
+                return;
+
+            for (int i = 0; i < visualsToHideWhenDepleted.Length; i++)
             {
-                for (int i = 0; i < visualsToHideWhenDepleted.Length; i++)
-                {
-                    var go = visualsToHideWhenDepleted[i];
-                    if (go != null)
-                        go.SetActive(available);
-                }
+                if (visualsToHideWhenDepleted[i] != null)
+                    visualsToHideWhenDepleted[i].SetActive(available);
             }
         }
 
@@ -207,9 +280,38 @@ namespace HuntersAndCollectors.Harvesting
         {
             if (baseYield < 1) baseYield = 1;
             if (respawnSeconds < 0f) respawnSeconds = 0f;
+            if (baseHarvestSeconds < 0.1f) baseHarvestSeconds = 0.1f;
+            if (maxHealth < 1) maxHealth = 1;
+
+            if (resourceType == ResourceType.Fiber && requiredTool == ToolType.None)
+                requiredTool = ToolType.Sickle; // enforce MVP expectation
+
+            if (requiredToolItem != null && requiredTool == ToolType.None)
+                requiredTool = GuessToolTypeFromItem(requiredToolItem);
 
             if (string.IsNullOrWhiteSpace(nodeId))
-                nodeId = "NODE_001";
+                nodeId = name;
+        }
+
+        private static ToolType GuessToolTypeFromItem(ItemDef item)
+        {
+            if (item == null || item.ToolTags == null)
+                return ToolType.None;
+
+            for (int i = 0; i < item.ToolTags.Length; i++)
+            {
+                switch (item.ToolTags[i])
+                {
+                    case ToolTag.Axe:
+                        return ToolType.Axe;
+                    case ToolTag.Pickaxe:
+                        return ToolType.Pickaxe;
+                    case ToolTag.Sickle:
+                        return ToolType.Sickle;
+                }
+            }
+
+            return ToolType.None;
         }
 #endif
     }

@@ -17,6 +17,10 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 7f3887cfc5ddfad43ae8425f21856eb0, type: 3}
   MaxStack: 1
   Category: 2
+  visualPrefab: {fileID: 7281844234728093021, guid: a927a43727cda43448f4a2a56b13c373, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
   Description: A basic weapon, for bashing stuff.
   PropertiesText: 
   BaseValue: 2

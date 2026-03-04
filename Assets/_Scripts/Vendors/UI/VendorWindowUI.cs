@@ -104,15 +104,12 @@ namespace HuntersAndCollectors.Vendors.UI
             }
 
             currentVendor = vendor;
-            // Show UI first (locks input, etc.)
-            gameObject.SetActive(true);
 
-            // IMPORTANT: fetch chest AFTER activation + after lazy resolve
-            currentChest = currentVendor.Chest;
+            // Activate once (OnEnable locks gameplay)
+            if (!gameObject.activeSelf)
+                gameObject.SetActive(true);
 
             currentChest = vendor.Chest;
-
-            Debug.Log($"[VendorWindowUI] Bound chest='{currentChest.name}' netId={currentChest.NetworkObjectId} vendorId={currentChest.VendorId} lastSlots={(currentChest.LastSnapshot.Slots == null ? 0 : currentChest.LastSnapshot.Slots.Length)}");
 
             if (currentChest == null)
             {
@@ -120,26 +117,17 @@ namespace HuntersAndCollectors.Vendors.UI
                 return;
             }
 
-            // Show UI (OnEnable runs here if we were inactive)
-            gameObject.SetActive(true);
+            Debug.Log($"[VendorWindowUI] Bound chest='{currentChest.name}' netId={currentChest.NetworkObjectId} vendorId={currentChest.VendorId} lastSlots={(currentChest.LastSnapshot.Slots == null ? 0 : currentChest.LastSnapshot.Slots.Length)}");
 
-            // Ensure we are subscribed exactly once.
+            // Ensure subscribed exactly once
             currentChest.OnSnapshotChanged -= HandleSnapshotChanged;
             currentChest.OnSnapshotChanged += HandleSnapshotChanged;
 
-            // Render immediately if we already have any cached snapshot.
-            // This prevents "empty window" if we miss an event.
+            // Render cached snapshot immediately if present
             if (currentChest.LastSnapshot.Slots != null)
-            {
-                Debug.Log($"[VendorWindowUI] Rendering cached snapshot. slots={currentChest.LastSnapshot.Slots.Length}");
                 Render(currentChest.LastSnapshot);
-            }
-            else
-            {
-                Debug.Log("[VendorWindowUI] No cached snapshot yet; requesting from server...");
-            }
 
-            // Request fresh snapshot from server (should fire event again)
+            // Request fresh snapshot
             currentVendor.RequestOpenVendorServerRpc();
         }
 

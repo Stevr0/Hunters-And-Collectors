@@ -1,38 +1,27 @@
-# ========== UNITY ==========
-
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
+# Unity folders
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
 UserSettings/
 
-# Visual Studio cache
+# Visual Studio
 .vs/
 *.csproj
-*.unityproj
 *.sln
-*.suo
-*.tmp
 *.user
 *.userprefs
-*.pidb
-*.booproj
 
-# Rider
-.idea/
-
-# OS junk
+# OS
 .DS_Store
 Thumbs.db
 
-# Crash reports
-sysinfo.txt
+# Unity packages
+*.unitypackage
 
-# ========== OPTIONAL LARGE FILES (use Git LFS instead) ==========
-# *.psd
-# *.fbx
-# *.blend
-# *.wav
-# *.mp4
+# Downloaded assets
+DL_Assets/
+Assets/StoreAssets/
+Assets/Downloaded/

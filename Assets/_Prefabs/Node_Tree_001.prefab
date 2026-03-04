@@ -385,7 +385,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3932136478
+  GlobalObjectIdHash: 4053968297
   InScenePlacedSourceGlobalObjectIdHash: 4053968297
   DeferredDespawnTick: 0
   Ownership: 1
@@ -412,9 +412,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Harvesting.ResourceNodeNet
   ShowTopMostFoldoutHeaderGroup: 1
   nodeId: NODE_TREE_001
+  resourceType: 0
+  requiredTool: 1
+  requiredToolItem: {fileID: 11400000, guid: c3ec0fd12dc694044b24d33fa198ab68, type: 2}
+  baseHarvestSeconds: 3
   dropItem: {fileID: 11400000, guid: b5b9e311348865e49bd49ed9b02b261d, type: 2}
-  dropQuantity: 3
+  baseYield: 3
   respawnSeconds: 10
+  maxHealth: 3
+  rareDrops: []
   interactCollider: {fileID: 370017819112127593}
   visualsToHideWhenDepleted:
   - {fileID: 3658882028454486640}

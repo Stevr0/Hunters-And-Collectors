@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using Unity.Collections;
@@ -32,6 +34,8 @@ namespace HuntersAndCollectors.Players
 
         public event Action OnEquipmentChanged;
 
+        public NetworkVariable<FixedString64Bytes> MainHandNetVar => mainHand;
+
         public string GetMainHandItemId() => mainHand.Value.ToString();
 
         public string GetEquippedItemId(EquipSlot slot)
@@ -48,21 +52,42 @@ namespace HuntersAndCollectors.Players
             };
         }
 
+        /// <summary>
+        /// True if any equipped item satisfies the requested tool category (server authoritative).
+        /// </summary>
+        public bool HasEquippedToolType(ToolType requiredType)
+        {
+            if (requiredType == ToolType.None)
+                return true;
+
+            var tag = ConvertToToolTag(requiredType);
+            if (tag == ToolTag.None)
+                return false;
+
+            return HasToolTag(tag);
+        }
+
         public bool HasEquippedItem(string itemId)
         {
-            if (string.IsNullOrWhiteSpace(itemId)) return false;
+            var canonical = CanonicalizeItemId(itemId);
+            if (string.IsNullOrEmpty(canonical))
+                return false;
 
-            return mainHand.Value.ToString() == itemId
-                || offHand.Value.ToString() == itemId
-                || head.Value.ToString() == itemId
-                || chest.Value.ToString() == itemId
-                || legs.Value.ToString() == itemId
-                || feet.Value.ToString() == itemId;
+            return SlotMatches(mainHand.Value, canonical)
+                || SlotMatches(offHand.Value, canonical)
+                || SlotMatches(head.Value, canonical)
+                || SlotMatches(chest.Value, canonical)
+                || SlotMatches(legs.Value, canonical)
+                || SlotMatches(feet.Value, canonical);
         }
 
         public bool HasToolTag(ToolTag tag)
         {
-            if (tag == ToolTag.None || itemDatabase == null) return false;
+            if (tag == ToolTag.None)
+                return false;
+
+            if (!EnsureItemDatabase())
+                return false;
 
             return EquippedItemHasToolTag(mainHand.Value, tag)
                 || EquippedItemHasToolTag(offHand.Value, tag)
@@ -74,14 +99,38 @@ namespace HuntersAndCollectors.Players
 
         private bool EquippedItemHasToolTag(FixedString64Bytes itemIdFs, ToolTag tag)
         {
+            if (!EnsureItemDatabase())
+                return false;
+
             var id = itemIdFs.ToString();
-            if (string.IsNullOrWhiteSpace(id)) return false;
-            if (!itemDatabase.TryGet(id, out var def) || def == null) return false;
+            if (string.IsNullOrWhiteSpace(id))
+                return false;
+
+            if (!itemDatabase.TryGet(id, out var def) || def == null)
+                return false;
+
             var tags = def.ToolTags;
-            if (tags == null || tags.Length == 0) return false;
+            if (tags == null || tags.Length == 0)
+                return false;
+
             for (int i = 0; i < tags.Length; i++)
-                if (tags[i] == tag) return true;
+            {
+                if (tags[i] == tag)
+                    return true;
+            }
+
             return false;
+        }
+
+        private static ToolTag ConvertToToolTag(ToolType toolType)
+        {
+            return toolType switch
+            {
+                ToolType.Axe => ToolTag.Axe,
+                ToolType.Pickaxe => ToolTag.Pickaxe,
+                ToolType.Sickle => ToolTag.Sickle,
+                _ => ToolTag.None
+            };
         }
 
         public override void OnNetworkSpawn()
@@ -116,14 +165,16 @@ namespace HuntersAndCollectors.Players
         [ServerRpc(RequireOwnership = true)]
         public void RequestEquipByItemIdServerRpc(FixedString64Bytes itemIdFs)
         {
+            Debug.Log($"[Equipment][SERVER] RequestEquipByItemIdServerRpc itemId={itemIdFs} from owner={OwnerClientId}");
             if (!IsServer) return;
 
-            var itemId = itemIdFs.ToString();
+            var requestedId = itemIdFs.ToString();
+            var itemId = CanonicalizeItemId(requestedId);
             if (!ValidateCommon(itemId, out var def)) return;
 
             if (inventoryNet == null || !inventoryNet.ServerHasItem(itemId, 1))
             {
-                Debug.LogWarning($"[Equipment][SERVER] Equip denied: item not in inventory. itemId={itemId}");
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: item not in inventory. itemId={itemId} requested={requestedId}");
                 return;
             }
 
@@ -149,8 +200,7 @@ namespace HuntersAndCollectors.Players
             }
 
             ApplyEquip(def);
-
-            Debug.Log($"[Equipment][SERVER] Equipped itemId={itemId} on {def.EquipSlot} handed={def.Handedness}");
+            LogServerEquipmentState($"Equipped itemId={def.ItemId} slot={def.EquipSlot}");
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -338,37 +388,41 @@ namespace HuntersAndCollectors.Players
 
             SetSlot(slot, "");
             Debug.Log($"[Equipment][SERVER] Unequipped slot={slot} itemId={equippedId}");
+            LogServerEquipmentState($"Post-unequip slot={slot}");
             return true;
         }
 
         private void ApplyEquip(ItemDef def)
         {
+            if (def == null)
+                return;
+
             var itemId = def.ItemId;
 
             if (def.EquipSlot is EquipSlot.Head or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Feet)
             {
                 SetSlot(def.EquipSlot, itemId);
-                return;
             }
-
-            if (def.Handedness == Handedness.BothHands)
+            else if (def.Handedness == Handedness.BothHands)
             {
                 SetSlot(EquipSlot.MainHand, itemId);
                 SetSlot(EquipSlot.OffHand, itemId);
-                return;
             }
-
-            if (def.Handedness == Handedness.MainHand)
+            else if (def.Handedness == Handedness.MainHand)
             {
                 SetSlot(EquipSlot.MainHand, itemId);
-                return;
             }
-
-            if (def.Handedness == Handedness.OffHand)
+            else if (def.Handedness == Handedness.OffHand)
             {
                 SetSlot(EquipSlot.OffHand, itemId);
-                return;
             }
+            else
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip applied to unsupported slot. itemId={itemId}");
+            }
+
+            Debug.Log($"[Equipment][SERVER] Equipped. mainHand={mainHand.Value} offHand={offHand.Value}");
+            LogServerEquipmentState($"ApplyEquip itemId={itemId}");
         }
 
         private void SetSlot(EquipSlot slot, string itemId)
@@ -384,6 +438,116 @@ namespace HuntersAndCollectors.Players
                 case EquipSlot.Legs: legs.Value = fs; break;
                 case EquipSlot.Feet: feet.Value = fs; break;
             }
+        }
+
+        private bool SlotMatches(FixedString64Bytes slotValue, string canonicalId)
+        {
+            if (string.IsNullOrEmpty(canonicalId))
+                return false;
+
+            var slotId = slotValue.ToString();
+            if (string.IsNullOrEmpty(slotId))
+                return false;
+
+            return string.Equals(slotId, canonicalId, StringComparison.Ordinal);
+        }
+
+        private static string GetSlotString(FixedString64Bytes slotValue)
+        {
+            return slotValue.ToString();
+        }
+
+        private string CanonicalizeItemId(string rawItemId)
+        {
+            if (string.IsNullOrWhiteSpace(rawItemId))
+                return string.Empty;
+
+            var trimmed = rawItemId.Trim();
+
+            if (EnsureItemDatabase() && itemDatabase.TryGet(trimmed, out var def) && def != null)
+                return def.ItemId ?? trimmed;
+
+            return trimmed;
+        }
+
+        private bool EnsureItemDatabase()
+        {
+            if (itemDatabase != null)
+                return true;
+
+            Debug.LogError("[Equipment][SERVER] ItemDatabase reference missing.");
+            return false;
+        }
+
+        public string BuildServerDebugString()
+        {
+            var sb = new StringBuilder(256);
+            sb.Append("Slots[MH=").Append(GetSlotString(mainHand.Value))
+              .Append(", OH=").Append(GetSlotString(offHand.Value))
+              .Append(", Head=").Append(GetSlotString(head.Value))
+              .Append(", Chest=").Append(GetSlotString(chest.Value))
+              .Append(", Legs=").Append(GetSlotString(legs.Value))
+              .Append(", Feet=").Append(GetSlotString(feet.Value))
+              .Append(']');
+
+            if (EnsureItemDatabase())
+            {
+                sb.Append(" ToolTags[");
+                var startLength = sb.Length;
+                AppendSlotToolTags(sb, "MH", mainHand.Value);
+                AppendSlotToolTags(sb, "OH", offHand.Value);
+                AppendSlotToolTags(sb, "Head", head.Value);
+                AppendSlotToolTags(sb, "Chest", chest.Value);
+                AppendSlotToolTags(sb, "Legs", legs.Value);
+                AppendSlotToolTags(sb, "Feet", feet.Value);
+                if (sb.Length == startLength)
+                    sb.Append("none");
+                sb.Append(']');
+            }
+            else
+            {
+                sb.Append(" ToolTags=unavailable");
+            }
+
+            return sb.ToString();
+        }
+
+        private void AppendSlotToolTags(StringBuilder sb, string slotLabel, FixedString64Bytes slotValue)
+        {
+            var id = GetSlotString(slotValue);
+            if (string.IsNullOrWhiteSpace(id))
+                return;
+
+            if (!itemDatabase.TryGet(id, out var def) || def == null)
+                return;
+
+            var tags = def.ToolTags;
+            if (tags == null || tags.Length == 0)
+                return;
+
+            sb.Append(slotLabel).Append('=');
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (i > 0)
+                    sb.Append('|');
+                sb.Append(tags[i]);
+            }
+            sb.Append(' ');
+        }
+
+        private void LogServerEquipmentState(string context)
+        {
+            if (!IsServer)
+                return;
+
+            Debug.Log($"[Equipment][SERVER] {context} owner={OwnerClientId} state={BuildServerDebugString()}");
+        }
+
+        public bool TryGetItemDef(string itemId, out ItemDef def)
+        {
+            def = null;
+            if (itemDatabase == null) return false;
+            return itemDatabase.TryGet(itemId, out def);
         }
     }
 }

@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Vendors.VendorStockConfig
   lines:
   - ItemId: it_wood
-    Quantity: 20
+    Quantity: 200
   - ItemId: it_stone
-    Quantity: 10
+    Quantity: 200

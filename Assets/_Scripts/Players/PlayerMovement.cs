@@ -7,19 +7,18 @@ namespace HuntersAndCollectors.Players
     /// <summary>
     /// PlayerMovement (Server Authoritative)
     /// -------------------------------------------------------
-    /// Client (Owner):
-    /// - Reads input
-    /// - Applies local camera pitch
-    /// - Sends movement intent to server (move vector, sprint flag, yaw delta)
+    /// Adds Animator driving for basic locomotion.
     ///
-    /// Server:
-    /// - Applies yaw rotation to the player transform
-    /// - Moves CharacterController using server-computed speed (Running skill)
-    /// - Grants Running XP over time while sprinting + moving
+    /// Animator approach (important for networking):
+    /// - We DO NOT drive animations purely from input, because non-owners don't have input.
+    /// - Instead, we derive movement from transform delta (position change) which is replicated to all clients.
+    /// - This makes animations look correct for everyone with no extra network variables.
     ///
-    /// Notes:
-    /// - Requires a NetworkTransform (or equivalent) to replicate server position/rotation to clients.
-    /// - CharacterController should exist on the server instance as well.
+    /// Animator parameters expected:
+    /// - Float: MoveX   (local strafe, -1..+1)
+    /// - Float: MoveY   (local forward, -1..+1)
+    /// - Bool:  IsMoving
+    /// - Bool:  IsGrounded
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMovement : NetworkBehaviour
@@ -47,6 +46,16 @@ namespace HuntersAndCollectors.Players
         [Tooltip("Minimum input magnitude to count as 'moving' for running XP.")]
         [SerializeField] private float minMoveInputToCount = 0.1f;
 
+        [Header("Animator (Optional)")]
+        [Tooltip("Animator on the character (humanoid). If left null, we auto-find in children.")]
+        [SerializeField] private Animator animator;
+
+        [Tooltip("How quickly the blend tree values smooth toward the target.")]
+        [SerializeField] private float animDampTime = 0.10f;
+
+        [Tooltip("Minimum speed (m/s) before we consider the character moving for IsMoving.")]
+        [SerializeField] private float minSpeedToAnimate = 0.05f;
+
         private CharacterController controller;
         private SkillsNet skillsNet;
 
@@ -65,13 +74,31 @@ namespace HuntersAndCollectors.Players
         // --- Server-side XP ticking ---
         private float serverRunningXpTimer;
 
+        // --- Animator driving state (all instances) ---
+        private Vector3 lastPosition;
+
+        // Cache animator parameter hashes for performance (avoids string lookups every frame).
+        private static readonly int AnimMoveX = Animator.StringToHash("MoveX");
+        private static readonly int AnimMoveY = Animator.StringToHash("MoveY");
+        private static readonly int AnimIsMoving = Animator.StringToHash("IsMoving");
+        private static readonly int AnimIsGrounded = Animator.StringToHash("IsGrounded");
+        private static readonly int AnimSpeed01 = Animator.StringToHash("Speed01");
+        private static readonly int AnimGather = Animator.StringToHash("Gather");
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
             skillsNet = GetComponent<SkillsNet>();
 
+            // If user didn't assign animator, try to find it on children.
+            if (animator == null)
+                animator = GetComponentInChildren<Animator>();
+
             // Owner input wrapper
             input = new PlayerInputActions();
+
+            // Initialize last position for animation-derived velocity
+            lastPosition = transform.position;
         }
 
         public override void OnNetworkSpawn()
@@ -97,6 +124,9 @@ namespace HuntersAndCollectors.Players
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             }
+
+            // Reset animation velocity tracking when the object spawns on a client
+            lastPosition = transform.position;
         }
 
         private void OnDisable()
@@ -133,6 +163,13 @@ namespace HuntersAndCollectors.Players
                 HandleServerMovement();
                 HandleServerRunningXp();
             }
+
+            // Everyone: update animator from actual replicated motion.
+            // This keeps animations correct for:
+            // - The owner (local player)
+            // - Other clients watching the player
+            // - The host/server instance
+            UpdateAnimatorFromMotion();
         }
 
         /// <summary>
@@ -228,6 +265,90 @@ namespace HuntersAndCollectors.Players
                 // Server-authoritative XP gain
                 skillsNet.AddXp(SkillId.Running, runningXpPerTick);
             }
+        }
+
+        /// <summary>
+        /// Updates animator parameters based on REAL movement (transform delta).
+        /// Why this method is great for NGO:
+        /// - The server moves the object.
+        /// - NetworkTransform replicates position/rotation to clients.
+        /// - Clients can compute "how fast am I moving" from position change.
+        /// - So animation works for everyone without syncing extra variables.
+        /// </summary>
+        private void UpdateAnimatorFromMotion()
+        {
+            if (animator == null)
+                return;
+
+            // Compute world-space velocity from position delta.
+            // (This works even on non-owners, because their transform is updated by replication.)
+            Vector3 currentPos = transform.position;
+            Vector3 worldVel = (currentPos - lastPosition) / Mathf.Max(Time.deltaTime, 0.0001f);
+            lastPosition = currentPos;
+
+            // We only want horizontal motion for locomotion blending.
+            worldVel.y = 0f;
+
+            // Convert world velocity into LOCAL space so:
+            // - local.x = strafe left/right
+            // - local.z = move forward/back
+            Vector3 localVel = transform.InverseTransformDirection(worldVel);
+
+            // Convert to a -1..+1-ish range for blend tree parameters.
+            // We divide by maxMoveSpeed so:
+            // - walking becomes smaller values
+            // - sprinting approaches 1.0 at max speed
+            float norm = Mathf.Max(maxMoveSpeed, 0.01f);
+            float moveX = Mathf.Clamp(localVel.x / norm, -1f, 1f);
+            float moveY = Mathf.Clamp(localVel.z / norm, -1f, 1f);
+
+            // Consider moving if our planar speed is above a tiny threshold.
+            bool isMoving = worldVel.magnitude > minSpeedToAnimate;
+
+            // Planar speed (ignore vertical) in meters/second.
+            float planarSpeed = worldVel.magnitude;
+
+            // Convert speed into a 0..1 value relative to your maxMoveSpeed.
+            // This makes sprint naturally happen when speed approaches max.
+            float speed01 = Mathf.Clamp01(planarSpeed / Mathf.Max(maxMoveSpeed, 0.01f));
+
+            // Smoothly push Speed01 into the Animator.
+            // (If you want it snappier, reduce animDampTime.)
+            animator.SetFloat(AnimSpeed01, speed01, animDampTime, Time.deltaTime);
+
+            // Grounded:
+            // - On the server this is correct (controller is actually moving).
+            // - On clients it can still often be okay, but if it’s flaky we can replace it later
+            //   with a small raycast-based ground check.
+            bool isGrounded = controller != null && controller.isGrounded;
+
+            // Set animator parameters with damping for smooth blends.
+            animator.SetFloat(AnimMoveX, moveX, animDampTime, Time.deltaTime);
+            animator.SetFloat(AnimMoveY, moveY, animDampTime, Time.deltaTime);
+            animator.SetBool(AnimIsMoving, isMoving);
+            animator.SetBool(AnimIsGrounded, isGrounded);
+        }
+
+        /// <summary>
+        /// Plays the one-shot gathering animation locally.
+        /// Safe to call on any client. Does nothing if animator is missing.
+        /// </summary>
+        public void PlayGatherAnimationLocal()
+        {
+            if (animator == null)
+                return;
+
+            animator.SetTrigger(AnimGather);
+        }
+
+        /// <summary>
+        /// Server tells all clients to play the gather animation for this player.
+        /// This ensures remote players SEE the pickup animation too.
+        /// </summary>
+        [ClientRpc]
+        public void PlayGatherClientRpc()
+        {
+            PlayGatherAnimationLocal();
         }
     }
 }

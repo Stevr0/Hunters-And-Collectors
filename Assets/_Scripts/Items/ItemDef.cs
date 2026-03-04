@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Text;
+using UnityEngine;
 
 namespace HuntersAndCollectors.Items
 {
@@ -8,12 +8,11 @@ namespace HuntersAndCollectors.Items
     /// -------------------------------------------------------
     /// Static item type definition (ScriptableObject).
     ///
-    /// IMPORTANT (learning note):
+    /// IMPORTANT:
     /// - This is STATIC data: “what this item type is”.
-    /// - Runtime-changing data (current durability, rolled quality) should eventually live in
-    ///   a runtime “ItemInstance” structure (future version), NOT in this ScriptableObject.
-    ///
-    /// For now, we keep *base* and *limits* here so existing UI/equipment can work.
+    /// - Runtime-changing data (durability remaining, rolled stats, quality, etc.)
+    ///   should eventually live in a runtime “ItemInstance” (future version),
+    ///   NOT in this ScriptableObject.
     /// </summary>
     [CreateAssetMenu(menuName = "HuntersAndCollectors/Items/Item Definition", fileName = "ItemDef")]
     public sealed class ItemDef : ScriptableObject
@@ -23,7 +22,7 @@ namespace HuntersAndCollectors.Items
         // =========================================================
 
         [Header("Identity")]
-        [Tooltip("Stable unique id (eg: IT_Wood, IT_StoneAxe). Must never change.")]
+        [Tooltip("Stable unique id (eg: IT_Wood, IT_StoneAxe). Must never change once released.")]
         public string ItemId;
 
         [Tooltip("Name shown to players.")]
@@ -36,10 +35,43 @@ namespace HuntersAndCollectors.Items
         [Min(1)]
         public int MaxStack = 1;
 
+        [Tooltip("High-level category for UI + rules (Resource/Tool/Crafted/etc).")]
         public ItemCategory Category;
 
         // =========================================================
-        // TEXT / UI (these were referenced by CraftingWindowUI)
+        // EQUIP VISUAL (hand alignment)
+        // =========================================================
+        // This is used by PlayerEquipmentVisual to spawn an item model in the
+        // player's hand when equipped. This prefab is VISUAL ONLY (NO NetworkObject).
+        // Alignment is data-driven per item (local offsets saved in this asset).
+
+        [Header("Equip Visual")]
+        [Tooltip("Optional prefab to spawn when equipped (visual-only; should NOT have NetworkObject).")]
+        [SerializeField] private GameObject visualPrefab;
+
+        [Tooltip("Local position offset applied after parenting to the hand anchor.")]
+        [SerializeField] private Vector3 equipLocalPosition;
+
+        [Tooltip("Local rotation offset (Euler degrees) applied after parenting to the hand anchor.")]
+        [SerializeField] private Vector3 equipLocalEuler;
+
+        [Tooltip("Local scale applied after parenting. Usually (1,1,1).")]
+        [SerializeField] private Vector3 equipLocalScale = Vector3.one;
+
+        /// <summary>Prefab to spawn when equipped. Can be null.</summary>
+        public GameObject VisualPrefab => visualPrefab;
+
+        /// <summary>Per-item hand alignment offset (local position).</summary>
+        public Vector3 EquipLocalPosition => equipLocalPosition;
+
+        /// <summary>Per-item hand alignment offset (local rotation euler).</summary>
+        public Vector3 EquipLocalEuler => equipLocalEuler;
+
+        /// <summary>Per-item hand alignment (local scale).</summary>
+        public Vector3 EquipLocalScale => equipLocalScale;
+
+        // =========================================================
+        // TEXT / UI
         // =========================================================
 
         [Header("UI Text")]
@@ -108,7 +140,7 @@ namespace HuntersAndCollectors.Items
         public float MovementSpeed = 1f;
 
         // =========================================================
-        // EQUIPMENT (these were referenced by PlayerEquipmentNet)
+        // EQUIPMENT (used by PlayerEquipmentNet)
         // =========================================================
 
         [Header("Equipment")]
@@ -121,13 +153,15 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Hand usage rule for weapons/tools.")]
         public Handedness Handedness = Handedness.None;
 
-        [Tooltip("Tags used for tool checks (eg, Axe for Lumberjacking).")]
+        [Tooltip("Tags used for tool checks (eg, Axe for Woodcutting).")]
         public ToolTag[] ToolTags;
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            // Keep basic values safe so you don’t create broken defs in the Inspector.
+            // ---------------------------------------------------------
+            // Basic numeric safety
+            // ---------------------------------------------------------
             if (MaxStack < 1) MaxStack = 1;
             if (SwingSpeed <= 0f) SwingSpeed = 0.01f;
             if (MovementSpeed < 0f) MovementSpeed = 0f;
@@ -135,27 +169,27 @@ namespace HuntersAndCollectors.Items
             if (BaseQuality < 0f) BaseQuality = 0f;
             if (MaxDurability < 0) MaxDurability = 0;
 
-            // Optional sanity: if it’s not equippable, force slot/handedness to “None”
+            // Ensure we don't keep invalid equip configuration when not equippable
             if (!IsEquippable)
             {
                 EquipSlot = EquipSlot.None;
                 Handedness = Handedness.None;
             }
+
+            // Optional: keep equip scale sensible (avoid accidental zero scale)
+            if (equipLocalScale.x == 0f && equipLocalScale.y == 0f && equipLocalScale.z == 0f)
+                equipLocalScale = Vector3.one;
         }
 
         /// <summary>
         /// Builds a UI-friendly "Properties" block from this item's stat fields.
-        /// This is generated at runtime so you don't have to maintain text manually.
-        /// 
-        /// You can still keep manual notes in PropertiesText and choose whether to append them.
+        /// Generated at runtime so you don't have to maintain text manually.
         /// </summary>
         public string BuildPropertiesText(bool appendManualPropertiesText = true)
         {
-            // StringBuilder is efficient for building multi-line text.
             var sb = new StringBuilder(256);
 
-            // Helper local function to add a line only when value is meaningful.
-            // Keeps your UI clean (no "Damage: 0" spam).
+            // Adds "Label: Value" lines, with automatic newline handling.
             void AddLine(string label, string value)
             {
                 if (sb.Length > 0)
@@ -163,64 +197,41 @@ namespace HuntersAndCollectors.Items
                 sb.Append(label).Append(": ").Append(value);
             }
 
-            // ------------------------------------------------------------
             // ECONOMY / META
-            // ------------------------------------------------------------
             if (BaseValue > 0) AddLine("Base Value", BaseValue.ToString());
             if (Weight > 0f) AddLine("Weight", Weight.ToString("0.##"));
             AddLine("Rarity", Rarity.ToString());
 
-            // ------------------------------------------------------------
             // CRAFTING
-            // ------------------------------------------------------------
             if (CraftTime > 0f) AddLine("Craft Time", $"{CraftTime:0.##}s");
 
-            // ------------------------------------------------------------
             // QUALITY / DURABILITY (base/limits only)
-            // ------------------------------------------------------------
             if (BaseQuality != 1f) AddLine("Quality", BaseQuality.ToString("0.##"));
-            if (MaxDurability > 0) AddLine("Durability", MaxDurability.ToString()); // future: show current/max on instances
+            if (MaxDurability > 0) AddLine("Durability", MaxDurability.ToString());
 
-            // ------------------------------------------------------------
             // COMBAT / MOVEMENT
-            // ------------------------------------------------------------
             if (Damage > 0f) AddLine("Damage", Damage.ToString("0.##"));
             if (Defence > 0f) AddLine("Defence", Defence.ToString("0.##"));
-
-            // SwingSpeed: if you always want it shown, keep it unconditional.
-            // If you only want it shown when not default, change to (SwingSpeed != 1f).
             if (SwingSpeed > 0f) AddLine("Swing Speed", SwingSpeed.ToString("0.##"));
-
             if (MovementSpeed != 1f) AddLine("Move Speed", $"{MovementSpeed:0.##}x");
 
-            // ------------------------------------------------------------
-            // EQUIPMENT (only show if equippable)
-            // ------------------------------------------------------------
+            // EQUIPMENT
             if (IsEquippable)
             {
                 AddLine("Equip Slot", EquipSlot.ToString());
-
-                // Only show handedness if it’s meaningful.
                 if (Handedness != Handedness.None)
                     AddLine("Handedness", Handedness.ToString());
             }
 
-            // ------------------------------------------------------------
             // TOOL TAGS
-            // ------------------------------------------------------------
             if (ToolTags != null && ToolTags.Length > 0)
-            {
-                // Join tags like: Axe, Pickaxe
                 AddLine("Tool Tags", string.Join(", ", ToolTags));
-            }
 
-            // ------------------------------------------------------------
-            // OPTIONAL: Append manual custom text at the end
-            // ------------------------------------------------------------
+            // OPTIONAL: manual notes appended after generated block
             if (appendManualPropertiesText && !string.IsNullOrWhiteSpace(PropertiesText))
             {
                 if (sb.Length > 0)
-                    sb.AppendLine().AppendLine(); // blank line between generated + manual
+                    sb.AppendLine().AppendLine();
                 sb.Append(PropertiesText.Trim());
             }
 

@@ -32,11 +32,11 @@ namespace HuntersAndCollectors.Players
         [SerializeField] private CharacterController characterController;
 
         [Tooltip("How fast the player must be moving to count as 'running'.")]
-        [SerializeField] private float minMoveSpeedToCount = 0.1f;
+        [SerializeField] private float minMoveSpeedToCount = 0.05f;
 
         [Header("XP Tuning (Server Only)")]
         [Tooltip("XP granted each tick while running.")]
-        [SerializeField] private int xpPerTick = 1;
+        [SerializeField] public int xpPerTick = 2;
 
         [Tooltip("Seconds between XP ticks while running.")]
         [SerializeField] private float xpTickSeconds = 1.0f;

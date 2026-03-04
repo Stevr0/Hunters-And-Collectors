@@ -29,7 +29,24 @@ namespace HuntersAndCollectors.Items
         public bool TryGet(string itemId, out ItemDef def)
         {
             EnsureInitialized();
-            return byId.TryGetValue(itemId ?? string.Empty, out def);
+            def = null;
+
+            if (string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            if (byId.TryGetValue(itemId, out def))
+                return true;
+
+            foreach (var kvp in byId)
+            {
+                if (kvp.Key.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+                {
+                    def = kvp.Value;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
