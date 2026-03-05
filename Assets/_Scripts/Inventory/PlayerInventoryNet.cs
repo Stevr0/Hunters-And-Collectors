@@ -24,52 +24,26 @@ namespace HuntersAndCollectors.Inventory
         // --------------------------------------------------------------------
         // Snapshot batching (SERVER ONLY)
         // --------------------------------------------------------------------
-        // Vendor transactions may add multiple items in a single checkout.
-        // We want exactly ONE snapshot sent at the end, not one per item.
         private int _serverBatchDepth = 0;
         private bool _serverBatchDirty = false;
 
-        /// <summary>
-        /// Last snapshot received on this client (owner). Useful for UI / debug.
-        /// </summary>
         public InventorySnapshot LastSnapshot { get; private set; }
 
-        /// <summary>
-        /// Fired on the client whenever a new snapshot is received.
-        /// UI can subscribe to this.
-        /// </summary>
         public event Action<InventorySnapshot> OnSnapshotReceived;
-
-        /// <summary>
-        /// Fired whenever a new snapshot arrives on this client.
-        /// </summary>
         public event Action<InventorySnapshot> OnSnapshotChanged;
 
-        /// <summary>
-        /// Starts a server-side batching scope.
-        /// While batching, inventory mutations should NOT send snapshots immediately.
-        /// Instead they mark the batch as dirty and we send one snapshot when the
-        /// batch ends.
-        ///
-        /// Safe to nest (depth counter).
-        /// </summary>
         public void BeginServerBatch()
         {
             if (!IsServer) return;
             _serverBatchDepth++;
         }
 
-        /// <summary>
-        /// Ends a server-side batching scope and sends ONE snapshot to the owner
-        /// if anything changed during the batch.
-        /// </summary>
         public void EndServerBatchAndSendSnapshotToOwner()
         {
             if (!IsServer) return;
 
             _serverBatchDepth = Mathf.Max(0, _serverBatchDepth - 1);
 
-            // Only the outer-most End triggers the snapshot.
             if (_serverBatchDepth == 0 && _serverBatchDirty)
             {
                 _serverBatchDirty = false;
@@ -77,73 +51,246 @@ namespace HuntersAndCollectors.Inventory
             }
         }
 
-        /// <summary>
-        /// End a server-side batch WITHOUT sending a snapshot.
-        /// Useful when a transaction fails and you know you didn't commit anything.
-        /// </summary>
         public void EndServerBatchWithoutSending()
         {
             if (!IsServer) return;
 
             _serverBatchDepth = Mathf.Max(0, _serverBatchDepth - 1);
 
-            // Clear dirty when outermost scope ends.
             if (_serverBatchDepth == 0)
                 _serverBatchDirty = false;
         }
 
-        /// <summary>
-        /// Marks inventory as dirty. If we are batching, it will delay the snapshot.
-        /// If not batching, it will send immediately (legacy behavior).
-        /// </summary>
         private void MarkDirtyAndMaybeSendSnapshot()
         {
             if (!IsServer || grid == null) return;
 
             if (_serverBatchDepth > 0)
             {
-                // Defer snapshot until EndServerBatch...
                 _serverBatchDirty = true;
                 return;
             }
 
-            // Legacy behavior: send immediately.
             ForceSendSnapshotToOwner();
         }
 
-        /// <summary>
-        /// SERVER: Returns true if any slot contains at least quantity of itemId.
-        /// </summary>
         public bool ServerHasItem(string itemId, int quantity)
         {
             if (!IsServer || grid == null) return false;
             return grid.CanRemove(itemId, quantity);
         }
 
-        /// <summary>
-        /// SERVER: Removes quantity of itemId if possible (authoritative).
-        /// Sends snapshot batching-aware.
-        /// </summary>
         public bool ServerRemoveItem(string itemId, int quantity)
         {
             if (!IsServer || grid == null) return false;
             if (!grid.Remove(itemId, quantity)) return false;
 
-            // Uses your batching-aware snapshot send.
-            // If you didn't modify MarkDirtyAndMaybeSendSnapshot visibility,
-            // you can just call ForceSendSnapshotToOwner() here instead.
+            MarkDirtyAndMaybeSendSnapshot();
+            return true;
+        }
+
+        public int ServerAddItem(string itemId, int quantity, int durability = -1)
+        {
+            if (!IsServer) return quantity;
+            return AddItemServer(itemId, quantity, durability);
+        }
+
+        public bool ServerTryAddItemToSlot(string itemId, int slotIndex, int durability = -1)
+        {
+            if (!IsServer || grid == null) return false;
+            if (slotIndex < 0) return false;
+
+            if (!grid.TryAddOneToSlot(itemId, slotIndex, durability))
+                return false;
+
             MarkDirtyAndMaybeSendSnapshot();
             return true;
         }
 
         /// <summary>
-        /// SERVER: Adds quantity of itemId and returns remainder (authoritative).
-        /// Uses your existing AddItemServer which is already snapshot-aware.
+        /// SERVER: read a slot's current item data.
         /// </summary>
-        public int ServerAddItem(string itemId, int quantity)
+        public bool ServerTryGetSlotItem(int slotIndex, out string itemId, out int qty, out int durability)
         {
-            if (!IsServer) return quantity;
-            return AddItemServer(itemId, quantity);
+            itemId = string.Empty;
+            qty = 0;
+            durability = 0;
+
+            if (!IsServer || grid == null)
+                return false;
+
+            if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
+                return false;
+
+            var slot = grid.Slots[slotIndex];
+            if (slot.IsEmpty)
+                return false;
+
+            itemId = slot.Stack.ItemId;
+            qty = slot.Stack.Quantity;
+            durability = slot.Durability;
+
+            // Backward-safe normalization if older data left durability unset.
+            if (durability <= 0 && TryGetItemDef(itemId, out var def) && def.MaxDurability > 0)
+                durability = def.MaxDurability;
+
+            return true;
+        }
+
+        /// <summary>
+        /// SERVER: removes one item from a specific slot.
+        /// </summary>
+        public bool ServerRemoveOneAtSlot(int slotIndex, out string removedItemId, out int removedDurability)
+        {
+            removedItemId = string.Empty;
+            removedDurability = 0;
+
+            if (!IsServer || grid == null)
+                return false;
+
+            if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
+                return false;
+
+            var slot = grid.Slots[slotIndex];
+            if (slot.IsEmpty || slot.Stack.Quantity <= 0)
+                return false;
+
+            removedItemId = slot.Stack.ItemId;
+            removedDurability = slot.Durability;
+
+            if (TryGetItemDef(removedItemId, out var def) && def.MaxDurability > 0 && removedDurability <= 0)
+                removedDurability = def.MaxDurability;
+
+            slot.Stack.Quantity -= 1;
+            if (slot.Stack.Quantity <= 0)
+            {
+                grid.Slots[slotIndex] = new InventorySlot { IsEmpty = true };
+            }
+            else
+            {
+                grid.Slots[slotIndex] = slot;
+            }
+
+            MarkDirtyAndMaybeSendSnapshot();
+            return true;
+        }
+
+        /// <summary>
+        /// SERVER: overwrite a slot with validated state.
+        /// </summary>
+        public bool ServerTrySetSlot(int slotIndex, string itemId, int qty, int durability)
+        {
+            if (!IsServer || grid == null)
+                return false;
+
+            if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(itemId) || qty <= 0)
+            {
+                grid.Slots[slotIndex] = new InventorySlot { IsEmpty = true };
+                MarkDirtyAndMaybeSendSnapshot();
+                return true;
+            }
+
+            if (!TryGetItemDef(itemId, out var def))
+                return false;
+
+            bool durable = def.MaxDurability > 0;
+            int maxStack = durable ? 1 : Mathf.Max(1, def.MaxStack);
+
+            if (qty > maxStack)
+                return false;
+
+            if (durable && qty != 1)
+                return false;
+
+            int finalDurability = 0;
+            if (durable)
+            {
+                if (durability <= 0)
+                    finalDurability = def.MaxDurability;
+                else
+                    finalDurability = Mathf.Clamp(durability, 1, def.MaxDurability);
+            }
+
+            grid.Slots[slotIndex] = new InventorySlot
+            {
+                IsEmpty = false,
+                Stack = new ItemStack { ItemId = itemId, Quantity = qty },
+                Durability = finalDurability
+            };
+
+            MarkDirtyAndMaybeSendSnapshot();
+            return true;
+        }
+
+        /// <summary>
+        /// SERVER: damage a specific slot item's durability.
+        /// If it breaks, the item is removed from the slot.
+        /// </summary>
+        public bool ServerDamageDurabilityAtSlot(int slotIndex, int amount, out bool broke)
+        {
+            broke = false;
+
+            if (!IsServer || grid == null || amount <= 0)
+                return false;
+
+            if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
+                return false;
+
+            var slot = grid.Slots[slotIndex];
+            if (slot.IsEmpty || slot.Stack.Quantity <= 0)
+                return false;
+
+            if (!TryGetItemDef(slot.Stack.ItemId, out var def) || def.MaxDurability <= 0)
+                return false;
+
+            if (slot.Stack.Quantity != 1)
+                return false;
+
+            int current = slot.Durability > 0 ? slot.Durability : def.MaxDurability;
+            int next = Mathf.Max(0, current - amount);
+
+            if (next <= 0)
+            {
+                grid.Slots[slotIndex] = new InventorySlot { IsEmpty = true };
+                broke = true;
+            }
+            else
+            {
+                slot.Durability = next;
+                grid.Slots[slotIndex] = slot;
+            }
+
+            MarkDirtyAndMaybeSendSnapshot();
+            return true;
+        }
+
+        /// <summary>
+        /// SERVER: find first non-empty slot containing itemId.
+        /// </summary>
+        public bool ServerTryFindFirstSlotWithItem(string itemId, out int slotIndex)
+        {
+            slotIndex = -1;
+            if (!IsServer || grid == null || string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            string canonical = itemId.Trim();
+            for (int i = 0; i < grid.Slots.Length; i++)
+            {
+                var slot = grid.Slots[i];
+                if (slot.IsEmpty)
+                    continue;
+
+                if (string.Equals(slot.Stack.ItemId, canonical, StringComparison.Ordinal))
+                {
+                    slotIndex = i;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public override void OnNetworkSpawn()
@@ -168,7 +315,7 @@ namespace HuntersAndCollectors.Inventory
                 Send = new ClientRpcSendParams { TargetClientIds = new[] { OwnerClientId } }
             };
 
-            ReceiveInventorySnapshotClientRpc(ToSnapshot(grid), rpcParams);
+            ReceiveInventorySnapshotClientRpc(ToSnapshot(grid, itemDatabase), rpcParams);
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -193,48 +340,28 @@ namespace HuntersAndCollectors.Inventory
         [ClientRpc]
         private void ReceiveInventorySnapshotClientRpc(InventorySnapshot snapshot, ClientRpcParams rpcParams = default)
         {
-            // IMPORTANT:
-            // This runs on the CLIENT. On host, it also runs locally (same process).
-            // If you don't do anything here, your UI will never update.
-
             LastSnapshot = snapshot;
             OnSnapshotChanged?.Invoke(snapshot);
 
             Debug.Log($"[InventoryNet][CLIENT] Snapshot received. W={snapshot.W} H={snapshot.H} Slots={snapshot.Slots?.Length ?? 0} IsOwner={IsOwner} OwnerClientId={OwnerClientId}");
 
-            // Tell any UI listeners to refresh.
             OnSnapshotReceived?.Invoke(snapshot);
         }
 
-        public int AddItemServer(string itemId, int quantity)
+        public int AddItemServer(string itemId, int quantity, int durability = -1)
         {
-
             if (!IsServer || grid == null || quantity <= 0) return quantity;
 
-            var remainder = grid.Add(itemId, quantity);
+            var remainder = grid.Add(itemId, quantity, durability);
 
             if (remainder < quantity)
                 knownItems?.EnsureKnown(itemId);
 
-            // NEW (batch-aware):
             MarkDirtyAndMaybeSendSnapshot();
-
             return remainder;
         }
 
-        public bool ServerTryAddItemToSlot(string itemId, int slotIndex)
-        {
-            if (!IsServer || grid == null) return false;
-            if (slotIndex < 0) return false;
-
-            if (!grid.TryAddOneToSlot(itemId, slotIndex))
-                return false;
-
-            MarkDirtyAndMaybeSendSnapshot();
-            return true;
-        }
-
-        private static InventorySnapshot ToSnapshot(InventoryGrid source)
+        private static InventorySnapshot ToSnapshot(InventoryGrid source, ItemDatabase itemDatabase)
         {
             var slots = new InventorySnapshot.SlotDto[source.Slots.Length];
 
@@ -242,14 +369,35 @@ namespace HuntersAndCollectors.Inventory
             {
                 var s = source.Slots[i];
 
-                slots[i] = s.IsEmpty
-                    ? new InventorySnapshot.SlotDto { IsEmpty = true }
-                    : new InventorySnapshot.SlotDto
+                if (s.IsEmpty)
+                {
+                    slots[i] = new InventorySnapshot.SlotDto
                     {
-                        IsEmpty = false,
-                        ItemId = new FixedString64Bytes(s.Stack.ItemId),
-                        Quantity = s.Stack.Quantity
+                        IsEmpty = true,
+                        ItemId = default,
+                        Quantity = 0,
+                        Durability = 0,
+                        MaxDurability = 0
                     };
+                    continue;
+                }
+
+                int maxDurability = 0;
+                if (itemDatabase != null && itemDatabase.TryGet(s.Stack.ItemId, out var def) && def != null)
+                    maxDurability = Mathf.Max(0, def.MaxDurability);
+
+                int durability = maxDurability > 0
+                    ? Mathf.Clamp(s.Durability <= 0 ? maxDurability : s.Durability, 1, maxDurability)
+                    : 0;
+
+                slots[i] = new InventorySnapshot.SlotDto
+                {
+                    IsEmpty = false,
+                    ItemId = new FixedString64Bytes(s.Stack.ItemId),
+                    Quantity = s.Stack.Quantity,
+                    Durability = durability,
+                    MaxDurability = maxDurability
+                };
             }
 
             return new InventorySnapshot
@@ -258,8 +406,15 @@ namespace HuntersAndCollectors.Inventory
                 H = source.Height,
                 Slots = slots
             };
+        }
 
+        private bool TryGetItemDef(string itemId, out ItemDef def)
+        {
+            def = null;
+            if (itemDatabase == null || string.IsNullOrWhiteSpace(itemId))
+                return false;
 
+            return itemDatabase.TryGet(itemId, out def) && def != null;
         }
     }
 }

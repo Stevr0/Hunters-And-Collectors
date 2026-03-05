@@ -28,6 +28,7 @@ namespace HuntersAndCollectors.UI
 
         private Action equipmentChangedHandler;
         private readonly Dictionary<EquipSlot, string> lastRenderedSlotIds = new();
+        private readonly Dictionary<EquipSlot, int> lastRenderedSlotDurability = new();
 
         private void OnEnable()
         {
@@ -115,6 +116,8 @@ namespace HuntersAndCollectors.UI
             equipmentChangedHandler = null;
             equipmentNet = null;
             inventoryNet = null;
+            lastRenderedSlotIds.Clear();
+            lastRenderedSlotDurability.Clear();
         }
 
         public void OnSlotClicked(EquipSlot slot)
@@ -135,7 +138,16 @@ namespace HuntersAndCollectors.UI
             if (string.IsNullOrWhiteSpace(itemId))
                 return;
 
+            // Legacy fallback path.
             equipmentNet.RequestEquipByItemIdServerRpc(new FixedString64Bytes(itemId));
+        }
+
+        public void RequestEquipFromInventorySlot(int slotIndex)
+        {
+            if (equipmentNet == null || !equipmentNet.IsOwner)
+                return;
+
+            equipmentNet.RequestEquipFromInventorySlotServerRpc(slotIndex);
         }
 
         public void ForceRefresh()
@@ -161,7 +173,19 @@ namespace HuntersAndCollectors.UI
                 var icon = ResolveIcon(itemId);
                 slotUI.SetIcon(icon);
                 slotUI.SetEquippedItemCache(itemId, icon);
+
+                int maxDurability = 0;
+                if (!string.IsNullOrWhiteSpace(itemId) && itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
+                    maxDurability = Mathf.Max(0, def.MaxDurability);
+
+                int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
+                if (maxDurability > 0 && durability <= 0)
+                    durability = maxDurability;
+
+                slotUI.SetDurability(durability, maxDurability);
+
                 lastRenderedSlotIds[slotUI.Slot] = itemId ?? string.Empty;
+                lastRenderedSlotDurability[slotUI.Slot] = durability;
             }
         }
 
@@ -197,10 +221,11 @@ namespace HuntersAndCollectors.UI
                     continue;
 
                 var latestId = equipmentNet.GetEquippedItemId(slotUI.Slot) ?? string.Empty;
-                if (!lastRenderedSlotIds.TryGetValue(slotUI.Slot, out var lastId))
+                if (!lastRenderedSlotIds.TryGetValue(slotUI.Slot, out var lastId) || !string.Equals(latestId, lastId, StringComparison.Ordinal))
                     return true;
 
-                if (!string.Equals(latestId, lastId, StringComparison.Ordinal))
+                int latestDurability = equipmentNet.GetEquippedDurability(slotUI.Slot);
+                if (!lastRenderedSlotDurability.TryGetValue(slotUI.Slot, out var lastDurability) || latestDurability != lastDurability)
                     return true;
             }
 

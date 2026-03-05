@@ -18,5 +18,11 @@ namespace HuntersAndCollectors.Skills
         public const string ToolCrafting = "ToolCrafting";
         public const string EquipmentCrafting = "EquipmentCrafting";
         public const string BuildingCrafting = "BuildingCrafting";
+
+        // Combat tool skills (awarded on successful server-confirmed damage only)
+        public const string CombatAxe = "Combat_Axe";
+        public const string CombatPickaxe = "Combat_Pickaxe";
+        public const string CombatKnife = "Combat_Knife";
+        public const string CombatClub = "Combat_Club";
     }
 }

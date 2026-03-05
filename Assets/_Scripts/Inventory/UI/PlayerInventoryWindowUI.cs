@@ -27,9 +27,7 @@ namespace HuntersAndCollectors.Inventory.UI
         private bool gameplayLockHeld;
         private bool subscribedToSnapshots;
 
-        // Polling signature (optional)
-        private int lastRenderedNonEmptyCount = -1;
-        private int lastRenderedSlotsLength = -1;
+        private int lastRenderedSignature = int.MinValue;
 
         private void Awake()
         {
@@ -46,10 +44,7 @@ namespace HuntersAndCollectors.Inventory.UI
             }
 
             TryBindToLocalPlayerInventory();
-
-            // Ensure our UI always has 48 slots.
             EnsureSlotUICount(uiSlotCount);
-
             ForceNextRender();
             TryRenderIfChanged();
         }
@@ -59,8 +54,7 @@ namespace HuntersAndCollectors.Inventory.UI
             UnsubscribeFromInventorySnapshots();
             currentInventoryNet = null;
 
-            lastRenderedNonEmptyCount = -1;
-            lastRenderedSlotsLength = -1;
+            lastRenderedSignature = int.MinValue;
 
             if (gameplayLockHeld)
             {
@@ -108,20 +102,37 @@ namespace HuntersAndCollectors.Inventory.UI
             if (snapshot.Slots == null)
                 return;
 
-            int slotsLen = snapshot.Slots.Length;
-
-            int nonEmpty = 0;
-            for (int i = 0; i < slotsLen; i++)
-                if (!snapshot.Slots[i].IsEmpty) nonEmpty++;
-
-            // This signature still works, but note: UI count is fixed, snapshot may vary.
-            if (slotsLen == lastRenderedSlotsLength && nonEmpty == lastRenderedNonEmptyCount)
+            int signature = ComputeSnapshotSignature(snapshot);
+            if (signature == lastRenderedSignature)
                 return;
 
-            lastRenderedSlotsLength = slotsLen;
-            lastRenderedNonEmptyCount = nonEmpty;
-
+            lastRenderedSignature = signature;
             Render(snapshot);
+        }
+
+        private static int ComputeSnapshotSignature(InventorySnapshot snapshot)
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 31 + snapshot.W;
+                hash = hash * 31 + snapshot.H;
+                hash = hash * 31 + (snapshot.Slots == null ? 0 : snapshot.Slots.Length);
+
+                if (snapshot.Slots == null)
+                    return hash;
+
+                for (int i = 0; i < snapshot.Slots.Length; i++)
+                {
+                    var s = snapshot.Slots[i];
+                    hash = hash * 31 + (s.IsEmpty ? 1 : 0);
+                    hash = hash * 31 + s.Quantity;
+                    hash = hash * 31 + s.Durability;
+                    hash = hash * 31 + s.MaxDurability;
+                }
+
+                return hash;
+            }
         }
 
         private void Render(InventorySnapshot snapshot)
@@ -129,13 +140,11 @@ namespace HuntersAndCollectors.Inventory.UI
             if (gridRoot == null || slotPrefab == null)
                 return;
 
-            // Always keep 48 UI slots.
             EnsureSlotUICount(uiSlotCount);
 
             int snapshotCount = snapshot.Slots.Length;
             int renderCount = Mathf.Min(uiSlotCount, snapshotCount);
 
-            // 1) Fill slots that exist in snapshot
             for (int i = 0; i < renderCount; i++)
             {
                 var netSlot = snapshot.Slots[i];
@@ -151,31 +160,36 @@ namespace HuntersAndCollectors.Inventory.UI
                 string itemId = netSlot.ItemId.ToString();
                 int qty = netSlot.Quantity;
 
+                int maxDurability = netSlot.MaxDurability;
+                int durability = netSlot.Durability;
+
+                // Backward-safe fallback if an older snapshot source omitted max durability.
+                if (maxDurability <= 0 && itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
+                {
+                    maxDurability = Mathf.Max(0, def.MaxDurability);
+                    if (maxDurability > 0 && durability <= 0)
+                        durability = maxDurability;
+                }
+
                 Sprite icon = ResolveIcon(itemId);
-                uiSlot.SetItem(itemId, icon, qty);
+                uiSlot.SetItem(itemId, icon, qty, durability, maxDurability);
             }
 
-            // 2) Clear remaining UI slots (if snapshot smaller than 48)
             for (int i = renderCount; i < uiSlotCount; i++)
-            {
                 slotUIs[i].SetEmpty();
-            }
         }
 
         private void EnsureSlotUICount(int desiredCount)
         {
-            // Create missing
             while (slotUIs.Count < desiredCount)
             {
                 var ui = Instantiate(slotPrefab, gridRoot);
                 slotUIs.Add(ui);
                 ui.SetSlotIndex(slotUIs.Count - 1);
                 ui.BindClick(OnSlotClicked);
-                ui.SetEmpty(); // start empty
-
+                ui.SetEmpty();
             }
 
-            // Destroy extra (shouldn't happen unless you change uiSlotCount in inspector)
             while (slotUIs.Count > desiredCount)
             {
                 int last = slotUIs.Count - 1;
@@ -230,8 +244,7 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private void ForceNextRender()
         {
-            lastRenderedNonEmptyCount = -1;
-            lastRenderedSlotsLength = -1;
+            lastRenderedSignature = int.MinValue;
         }
     }
 }

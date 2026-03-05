@@ -24,25 +24,22 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private Button button;
         [SerializeField] private UIDragDropBroker dragDrop; // assign in prefab or auto-find
 
+        [Header("Durability")]
+        [SerializeField] private Image durabilityFill;
+
         [Header("Debug")]
         [SerializeField] private bool debugHover;
 
-        // Current item in this UI slot (empty string = empty).
         private string itemId = string.Empty;
         private int quantity;
 
         public int SlotIndex { get; private set; } = -1;
 
-        /// <summary>
-        /// Called by the inventory window so this slot knows which inventory index it represents.
-        /// Drag/drop needs this index for ServerRpc requests.
-        /// </summary>
         public void SetSlotIndex(int index)
         {
             SlotIndex = index;
         }
 
-        // Callback set by the window so the slot doesn't need to know "what to do".
         private System.Action<string> onClicked;
 
         private void Reset()
@@ -84,11 +81,13 @@ namespace HuntersAndCollectors.Inventory.UI
                 qtyText.enabled = false;
             }
 
+            SetDurability(0, 0);
+
             if (button != null)
                 button.interactable = false;
         }
 
-        public void SetItem(string newItemId, Sprite iconSprite, int qty)
+        public void SetItem(string newItemId, Sprite iconSprite, int qty, int durability, int maxDurability)
         {
             itemId = newItemId ?? string.Empty;
             quantity = qty;
@@ -113,8 +112,24 @@ namespace HuntersAndCollectors.Inventory.UI
                 }
             }
 
+            SetDurability(durability, maxDurability);
+
             if (button != null)
                 button.interactable = !string.IsNullOrWhiteSpace(itemId);
+        }
+
+        public void SetDurability(int durability, int maxDurability)
+        {
+            if (durabilityFill == null)
+                return;
+
+            bool show = maxDurability > 0;
+            durabilityFill.enabled = show;
+            if (!show)
+                return;
+
+            float fill = maxDurability <= 0 ? 0f : Mathf.Clamp01(durability / (float)maxDurability);
+            durabilityFill.fillAmount = fill;
         }
 
         private void HandleClick()
@@ -146,29 +161,23 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            // Only drag if slot has an item.
             if (string.IsNullOrWhiteSpace(itemId))
                 return;
 
-            // Start a drag payload from inventory.
             dragDrop?.BeginDragFromInventory(this, itemId, iconImage != null ? iconImage.sprite : null);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            // Drag ghost follows mouse via UIDragGhost.Update().
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            // If we ended drag not over a valid drop target, hide the ghost.
             dragDrop?.CancelDrag();
         }
 
         public void OnDrop(PointerEventData eventData)
         {
-            // Something was dropped onto this inventory slot.
-            // We don't need to inspect eventData; our broker knows the current payload.
             dragDrop?.CompleteDropOnInventorySlot(SlotIndex);
         }
     }

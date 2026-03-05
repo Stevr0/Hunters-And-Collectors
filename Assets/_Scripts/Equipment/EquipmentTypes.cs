@@ -47,7 +47,8 @@ namespace HuntersAndCollectors.Items
         Knife = 3,
         Hammer = 4,
         FishingRod = 5,
-        Sickle,
+        Sickle = 6,
+        Club = 8,
     }
 
     /// <summary>

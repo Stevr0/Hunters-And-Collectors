@@ -136,7 +136,7 @@ namespace HuntersAndCollectors.UI
             if (_payload.SourceKind == DragSourceKind.Inventory)
             {
                 if (_localEquipmentNet != null)
-                    _localEquipmentNet.RequestEquipByItemIdServerRpc(_payload.ItemId);
+                    _localEquipmentNet.RequestEquipFromInventorySlotServerRpc(_payload.SourceInventoryIndex);
 
                 CancelDrag();
                 return;

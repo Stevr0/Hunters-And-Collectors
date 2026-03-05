@@ -37,6 +37,10 @@ namespace HuntersAndCollectors.Skills
             EnsureSkill(SkillId.ToolCrafting);
             EnsureSkill(SkillId.EquipmentCrafting);
             EnsureSkill(SkillId.BuildingCrafting);
+            EnsureSkill(SkillId.CombatAxe);
+            EnsureSkill(SkillId.CombatPickaxe);
+            EnsureSkill(SkillId.CombatKnife);
+            EnsureSkill(SkillId.CombatClub);
         }
 
         public SkillEntry Get(string id)

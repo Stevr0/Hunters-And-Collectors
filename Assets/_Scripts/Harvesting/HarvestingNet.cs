@@ -521,7 +521,7 @@ namespace HuntersAndCollectors.Harvesting
         // --------------------------------------------------------------------
         #region Node Depletion Flow
 
-        private void HandleNodeDepleted(ResourceNodeNet node)
+        private void HandleNodeDepleted(ResourceNodeNet node, string equippedItemIdUsed)
         {
             if (node == null)
                 return;
@@ -564,8 +564,33 @@ namespace HuntersAndCollectors.Harvesting
             GrantXp(skillId, xpAward);
 
             SendHarvestResult(true, HarvestFailureReason.None, nodeId, itemId, desiredYield, _rareDropIdsBuffer, _rareDropAmountsBuffer);
+
+            // Durability is consumed only when harvest completion actually succeeded.
+            // Failed/rejected swings never reach this successful completion path.
+            ServerConsumeHarvestDurability(equippedItemIdUsed);
         }
 
+
+        /// <summary>
+        /// SERVER ONLY: consume one durability use for the equipped harvesting item.
+        /// This runs only after a successful harvest completion (resource payout path).
+        /// </summary>
+        private void ServerConsumeHarvestDurability(string equippedItemIdUsed)
+        {
+            if (!IsServer)
+                return;
+
+            if (equipment == null)
+                equipment = GetComponent<PlayerEquipmentNet>();
+
+            if (equipment == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(equippedItemIdUsed))
+                return;
+
+            equipment.ServerDamageDurabilityForEquippedItem(equippedItemIdUsed, 1, out _, out _);
+        }
         private bool ProcessRareDrops(ResourceNodeNet node, int playerLevel)
         {
             if (node == null || !node.HasRareDrops)
@@ -924,7 +949,7 @@ namespace HuntersAndCollectors.Harvesting
             bool depleted = node.ServerApplyDamage(damage);
 
             if (depleted)
-                HandleNodeDepleted(node);
+                HandleNodeDepleted(node, equippedItemId);
 
             return true;
         }
@@ -1402,4 +1427,5 @@ namespace HuntersAndCollectors.Harvesting
         HitRateLimited
     }
 }
+
 

@@ -22,6 +22,7 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private Button button;
         [SerializeField] private Image iconImage;
         [SerializeField] private Image emptyBackground;
+        [SerializeField] private Image durabilityFill;
 
         [SerializeField] private UIDragDropBroker dragDrop;
         [SerializeField] private PlayerEquipmentNet equipmentNet; // optional auto-find
@@ -83,6 +84,22 @@ namespace HuntersAndCollectors.UI
 
             if (emptyBackground != null)
                 emptyBackground.enabled = isEmpty;
+
+            if (isEmpty)
+                SetDurability(0, 0);
+        }
+
+        public void SetDurability(int durability, int maxDurability)
+        {
+            if (durabilityFill == null)
+                return;
+
+            bool show = maxDurability > 0;
+            durabilityFill.enabled = show;
+            if (!show)
+                return;
+
+            durabilityFill.fillAmount = Mathf.Clamp01(durability / (float)maxDurability);
         }
 
         private void HandleClick()
@@ -90,6 +107,7 @@ namespace HuntersAndCollectors.UI
             if (ownerWindow != null)
                 ownerWindow.OnSlotClicked(slot);
         }
+
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (debugHover)
@@ -111,7 +129,6 @@ namespace HuntersAndCollectors.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            // Only drag if something is equipped here
             if (string.IsNullOrWhiteSpace(_equippedItemIdCached))
                 return;
 
@@ -127,9 +144,7 @@ namespace HuntersAndCollectors.UI
 
         public void OnDrop(PointerEventData eventData)
         {
-            // Inventory item dropped onto this equipment slot
             dragDrop?.CompleteDropOnPaperdollSlot(slot);
         }
     }
 }
-

@@ -6,7 +6,6 @@ namespace HuntersAndCollectors.UI
 {
     /// <summary>
     /// Attach to an inventory UI slot/row to support "click to equip".
-    /// Your inventory UI must call SetItemId(itemId) when binding the cell.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class InventoryEquipClickHandler : MonoBehaviour
@@ -16,6 +15,7 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private ItemDatabase itemDatabase;
 
         private string itemId;
+        private int slotIndex = -1;
 
         private void Reset()
         {
@@ -36,6 +36,11 @@ namespace HuntersAndCollectors.UI
             itemId = newItemId;
         }
 
+        public void SetSlotIndex(int index)
+        {
+            slotIndex = index;
+        }
+
         private void HandleClick()
         {
             if (paperdollWindow == null || itemDatabase == null)
@@ -44,14 +49,13 @@ namespace HuntersAndCollectors.UI
             if (string.IsNullOrWhiteSpace(itemId))
                 return;
 
-            // MVP equippable check:
-            // Replace this with your actual rule if you have def.IsEquippable etc.
-            if (itemDatabase.TryGet(itemId, out ItemDef def))
-            {
-                bool equippable = true; // TODO: replace with real check
-                if (equippable)
-                    paperdollWindow.RequestEquipFromInventory(itemId);
-            }
+            if (!itemDatabase.TryGet(itemId, out ItemDef _))
+                return;
+
+            if (slotIndex >= 0)
+                paperdollWindow.RequestEquipFromInventorySlot(slotIndex);
+            else
+                paperdollWindow.RequestEquipFromInventory(itemId);
         }
     }
 }

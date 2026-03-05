@@ -32,9 +32,23 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<FixedString64Bytes> legs = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> feet = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // Server writes durability, all clients read for UI.
+        private readonly NetworkVariable<int> mainHandDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> offHandDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> headDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> chestDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> legsDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> feetDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         public event Action OnEquipmentChanged;
 
         public NetworkVariable<FixedString64Bytes> MainHandNetVar => mainHand;
+        public NetworkVariable<int> MainHandDurabilityNetVar => mainHandDurability;
+        public NetworkVariable<int> OffHandDurabilityNetVar => offHandDurability;
+        public NetworkVariable<int> HeadDurabilityNetVar => headDurability;
+        public NetworkVariable<int> ChestDurabilityNetVar => chestDurability;
+        public NetworkVariable<int> LegsDurabilityNetVar => legsDurability;
+        public NetworkVariable<int> FeetDurabilityNetVar => feetDurability;
 
         public string GetMainHandItemId() => mainHand.Value.ToString();
 
@@ -49,6 +63,20 @@ namespace HuntersAndCollectors.Players
                 EquipSlot.Legs => legs.Value.ToString(),
                 EquipSlot.Feet => feet.Value.ToString(),
                 _ => string.Empty
+            };
+        }
+
+        public int GetEquippedDurability(EquipSlot slot)
+        {
+            return slot switch
+            {
+                EquipSlot.MainHand => mainHandDurability.Value,
+                EquipSlot.OffHand => offHandDurability.Value,
+                EquipSlot.Head => headDurability.Value,
+                EquipSlot.Chest => chestDurability.Value,
+                EquipSlot.Legs => legsDurability.Value,
+                EquipSlot.Feet => feetDurability.Value,
+                _ => 0
             };
         }
 
@@ -145,6 +173,13 @@ namespace HuntersAndCollectors.Players
             legs.OnValueChanged += OnAnySlotChanged;
             feet.OnValueChanged += OnAnySlotChanged;
 
+            mainHandDurability.OnValueChanged += OnAnyDurabilityChanged;
+            offHandDurability.OnValueChanged += OnAnyDurabilityChanged;
+            headDurability.OnValueChanged += OnAnyDurabilityChanged;
+            chestDurability.OnValueChanged += OnAnyDurabilityChanged;
+            legsDurability.OnValueChanged += OnAnyDurabilityChanged;
+            feetDurability.OnValueChanged += OnAnyDurabilityChanged;
+
             OnEquipmentChanged?.Invoke();
         }
 
@@ -156,6 +191,13 @@ namespace HuntersAndCollectors.Players
             chest.OnValueChanged -= OnAnySlotChanged;
             legs.OnValueChanged -= OnAnySlotChanged;
             feet.OnValueChanged -= OnAnySlotChanged;
+
+            mainHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            offHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            headDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            chestDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            legsDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            feetDurability.OnValueChanged -= OnAnyDurabilityChanged;
         }
 
         private void OnAnySlotChanged(FixedString64Bytes prev, FixedString64Bytes next)
@@ -163,45 +205,43 @@ namespace HuntersAndCollectors.Players
             OnEquipmentChanged?.Invoke();
         }
 
+        private void OnAnyDurabilityChanged(int prev, int next)
+        {
+            OnEquipmentChanged?.Invoke();
+        }
+
         [ServerRpc(RequireOwnership = true)]
         public void RequestEquipByItemIdServerRpc(FixedString64Bytes itemIdFs)
         {
-            Debug.Log($"[Equipment][SERVER] RequestEquipByItemIdServerRpc itemId={itemIdFs} from owner={OwnerClientId}");
-            if (!IsServer) return;
+            if (!IsServer)
+                return;
 
-            var requestedId = itemIdFs.ToString();
-            var itemId = CanonicalizeItemId(requestedId);
-            if (!ValidateCommon(itemId, out var def)) return;
+            string requestedId = itemIdFs.ToString();
+            string itemId = CanonicalizeItemId(requestedId);
+            if (string.IsNullOrWhiteSpace(itemId) || inventoryNet == null)
+                return;
 
-            if (inventoryNet == null || !inventoryNet.ServerHasItem(itemId, 1))
+            // Legacy fallback path: choose first matching inventory slot.
+            if (!inventoryNet.ServerTryFindFirstSlotWithItem(itemId, out int slotIndex))
             {
                 Debug.LogWarning($"[Equipment][SERVER] Equip denied: item not in inventory. itemId={itemId} requested={requestedId}");
                 return;
             }
 
-            if (!def.IsEquippable)
-            {
-                Debug.LogWarning($"[Equipment][SERVER] Equip denied: item not equippable. itemId={itemId}");
+            ServerTryEquipFromInventorySlot(slotIndex);
+        }
+
+        /// <summary>
+        /// New authoritative equip entrypoint using inventory slot index.
+        /// Required for preserving per-slot durability.
+        /// </summary>
+        [ServerRpc(RequireOwnership = true)]
+        public void RequestEquipFromInventorySlotServerRpc(int inventorySlotIndex)
+        {
+            if (!IsServer)
                 return;
-            }
 
-            if (!CanEquip(def, out var toUnequipA, out var toUnequipB))
-            {
-                Debug.LogWarning($"[Equipment][SERVER] Equip denied: rules failed. itemId={itemId}");
-                return;
-            }
-
-            if (!TryServerUnequipIfNeeded(toUnequipA)) return;
-            if (!TryServerUnequipIfNeeded(toUnequipB)) return;
-
-            if (!inventoryNet.ServerRemoveItem(itemId, 1))
-            {
-                Debug.LogWarning($"[Equipment][SERVER] Equip denied: could not remove from inventory. itemId={itemId}");
-                return;
-            }
-
-            ApplyEquip(def);
-            LogServerEquipmentState($"Equipped itemId={def.ItemId} slot={def.EquipSlot}");
+            ServerTryEquipFromInventorySlot(inventorySlotIndex);
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -259,8 +299,153 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            SetSlot(toSlot, fromItemId);
-            SetSlot(fromSlot, toItemId);
+            int fromDurability = GetEquippedDurability(fromSlot);
+            int toDurability = GetEquippedDurability(toSlot);
+
+            SetSlot(toSlot, fromItemId, fromDurability);
+            SetSlot(fromSlot, toItemId, toDurability);
+        }
+
+        /// <summary>
+        /// Server-only durability damage helper for combat swings.
+        /// </summary>
+        public bool ServerDamageMainHandDurability(int amount, out bool broke, out string brokenItemId)
+        {
+            return ServerDamageEquippedDurability(EquipSlot.MainHand, amount, out broke, out brokenItemId);
+        }
+
+        /// <summary>
+        /// Server-only durability damage helper for harvesting/combat based on specific equipped item id.
+        /// </summary>
+        public bool ServerDamageDurabilityForEquippedItem(string equippedItemId, int amount, out bool broke, out string brokenItemId)
+        {
+            broke = false;
+            brokenItemId = string.Empty;
+
+            if (!IsServer || string.IsNullOrWhiteSpace(equippedItemId))
+                return false;
+
+            EquipSlot[] order =
+            {
+                EquipSlot.MainHand,
+                EquipSlot.OffHand,
+                EquipSlot.Head,
+                EquipSlot.Chest,
+                EquipSlot.Legs,
+                EquipSlot.Feet
+            };
+
+            for (int i = 0; i < order.Length; i++)
+            {
+                var slot = order[i];
+                if (!string.Equals(GetEquippedItemId(slot), equippedItemId, StringComparison.Ordinal))
+                    continue;
+
+                return ServerDamageEquippedDurability(slot, amount, out broke, out brokenItemId);
+            }
+
+            return false;
+        }
+
+        public bool ServerDamageEquippedDurability(EquipSlot slot, int amount, out bool broke, out string brokenItemId)
+        {
+            broke = false;
+            brokenItemId = string.Empty;
+
+            if (!IsServer || amount <= 0)
+                return false;
+
+            string itemId = GetEquippedItemId(slot);
+            if (string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            if (!ValidateCommon(itemId, out var def))
+                return false;
+
+            int maxDurability = Mathf.Max(0, def.MaxDurability);
+            if (maxDurability <= 0)
+                return false;
+
+            int current = GetEquippedDurability(slot);
+            if (current <= 0)
+                current = maxDurability;
+
+            int next = Mathf.Max(0, current - amount);
+
+            if (next > 0)
+            {
+                SetSlotDurability(slot, next);
+                Debug.Log($"[Durability] Used item={itemId} slot={slot} dur={next}/{maxDurability}", this);
+                return true;
+            }
+
+            // Broken: clear slot and matching linked two-hand slot if it mirrors same item id.
+            broke = true;
+            brokenItemId = itemId;
+
+            SetSlot(slot, string.Empty, 0);
+
+            if (slot == EquipSlot.MainHand && string.Equals(GetEquippedItemId(EquipSlot.OffHand), itemId, StringComparison.Ordinal))
+                SetSlot(EquipSlot.OffHand, string.Empty, 0);
+            else if (slot == EquipSlot.OffHand && string.Equals(GetEquippedItemId(EquipSlot.MainHand), itemId, StringComparison.Ordinal))
+                SetSlot(EquipSlot.MainHand, string.Empty, 0);
+
+            Debug.Log($"[Durability] Item broke item={itemId} slot={slot} owner={OwnerClientId}", this);
+            return true;
+        }
+
+        private bool ServerTryEquipFromInventorySlot(int inventorySlotIndex)
+        {
+            if (!IsServer || inventoryNet == null)
+                return false;
+
+            if (!inventoryNet.ServerTryGetSlotItem(inventorySlotIndex, out string slotItemId, out int qty, out int slotDurability))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: invalid inventory slot={inventorySlotIndex}");
+                return false;
+            }
+
+            if (qty != 1)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: slot quantity must be 1 for equippables. slot={inventorySlotIndex} qty={qty}");
+                return false;
+            }
+
+            var itemId = CanonicalizeItemId(slotItemId);
+            if (!ValidateCommon(itemId, out var def))
+                return false;
+
+            if (!def.IsEquippable)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: item not equippable. itemId={itemId}");
+                return false;
+            }
+
+            if (!CanEquip(def, out var toUnequipA, out var toUnequipB))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: rules failed. itemId={itemId}");
+                return false;
+            }
+
+            if (!TryServerUnequipIfNeeded(toUnequipA)) return false;
+            if (!TryServerUnequipIfNeeded(toUnequipB)) return false;
+
+            if (!inventoryNet.ServerRemoveOneAtSlot(inventorySlotIndex, out string removedItemId, out int removedDurability))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: could not remove from inventory slot={inventorySlotIndex} itemId={itemId}");
+                return false;
+            }
+
+            if (!string.Equals(removedItemId, itemId, StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Equip denied: slot changed during equip. expected={itemId} got={removedItemId}");
+                return false;
+            }
+
+            int finalDurability = ResolveInitialDurability(def, removedDurability);
+            ApplyEquip(def, finalDurability);
+            LogServerEquipmentState($"Equipped itemId={def.ItemId} slot={def.EquipSlot} fromInventorySlot={inventorySlotIndex}");
+            return true;
         }
 
         private bool ValidateCommon(string itemId, out ItemDef def)
@@ -373,13 +558,15 @@ namespace HuntersAndCollectors.Players
             if (string.IsNullOrWhiteSpace(equippedId))
                 return true;
 
+            int equippedDurability = GetEquippedDurability(slot);
+
             bool stored = false;
             if (preferredInventoryIndex >= 0)
-                stored = inventoryNet.ServerTryAddItemToSlot(equippedId, preferredInventoryIndex);
+                stored = inventoryNet.ServerTryAddItemToSlot(equippedId, preferredInventoryIndex, equippedDurability);
 
             if (!stored)
             {
-                var remainder = inventoryNet.ServerAddItem(equippedId, 1);
+                var remainder = inventoryNet.ServerAddItem(equippedId, 1, equippedDurability);
                 if (remainder > 0)
                 {
                     Debug.LogWarning($"[Equipment][SERVER] Unequip denied: inventory full. slot={slot} itemId={equippedId}");
@@ -387,35 +574,36 @@ namespace HuntersAndCollectors.Players
                 }
             }
 
-            SetSlot(slot, "");
+            SetSlot(slot, "", 0);
             Debug.Log($"[Equipment][SERVER] Unequipped slot={slot} itemId={equippedId}");
             LogServerEquipmentState($"Post-unequip slot={slot}");
             return true;
         }
 
-        private void ApplyEquip(ItemDef def)
+        private void ApplyEquip(ItemDef def, int durability)
         {
             if (def == null)
                 return;
 
             var itemId = def.ItemId;
+            int finalDurability = ResolveInitialDurability(def, durability);
 
             if (def.EquipSlot is EquipSlot.Head or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Feet)
             {
-                SetSlot(def.EquipSlot, itemId);
+                SetSlot(def.EquipSlot, itemId, finalDurability);
             }
             else if (def.Handedness == Handedness.BothHands)
             {
-                SetSlot(EquipSlot.MainHand, itemId);
-                SetSlot(EquipSlot.OffHand, itemId);
+                SetSlot(EquipSlot.MainHand, itemId, finalDurability);
+                SetSlot(EquipSlot.OffHand, itemId, finalDurability);
             }
             else if (def.Handedness == Handedness.MainHand)
             {
-                SetSlot(EquipSlot.MainHand, itemId);
+                SetSlot(EquipSlot.MainHand, itemId, finalDurability);
             }
             else if (def.Handedness == Handedness.OffHand)
             {
-                SetSlot(EquipSlot.OffHand, itemId);
+                SetSlot(EquipSlot.OffHand, itemId, finalDurability);
             }
             else
             {
@@ -426,18 +614,63 @@ namespace HuntersAndCollectors.Players
             LogServerEquipmentState($"ApplyEquip itemId={itemId}");
         }
 
-        private void SetSlot(EquipSlot slot, string itemId)
+        private int ResolveInitialDurability(ItemDef def, int durability)
+        {
+            if (def == null || def.MaxDurability <= 0)
+                return 0;
+
+            if (durability <= 0)
+                return def.MaxDurability;
+
+            return Mathf.Clamp(durability, 1, def.MaxDurability);
+        }
+
+        private void SetSlot(EquipSlot slot, string itemId, int durability)
         {
             var fs = new FixedString64Bytes(itemId ?? "");
+            bool clear = string.IsNullOrWhiteSpace(itemId);
+            int finalDurability = clear ? 0 : Mathf.Max(0, durability);
 
             switch (slot)
             {
-                case EquipSlot.MainHand: mainHand.Value = fs; break;
-                case EquipSlot.OffHand: offHand.Value = fs; break;
-                case EquipSlot.Head: head.Value = fs; break;
-                case EquipSlot.Chest: chest.Value = fs; break;
-                case EquipSlot.Legs: legs.Value = fs; break;
-                case EquipSlot.Feet: feet.Value = fs; break;
+                case EquipSlot.MainHand:
+                    mainHand.Value = fs;
+                    mainHandDurability.Value = finalDurability;
+                    break;
+                case EquipSlot.OffHand:
+                    offHand.Value = fs;
+                    offHandDurability.Value = finalDurability;
+                    break;
+                case EquipSlot.Head:
+                    head.Value = fs;
+                    headDurability.Value = finalDurability;
+                    break;
+                case EquipSlot.Chest:
+                    chest.Value = fs;
+                    chestDurability.Value = finalDurability;
+                    break;
+                case EquipSlot.Legs:
+                    legs.Value = fs;
+                    legsDurability.Value = finalDurability;
+                    break;
+                case EquipSlot.Feet:
+                    feet.Value = fs;
+                    feetDurability.Value = finalDurability;
+                    break;
+            }
+        }
+
+        private void SetSlotDurability(EquipSlot slot, int durability)
+        {
+            int finalDurability = Mathf.Max(0, durability);
+            switch (slot)
+            {
+                case EquipSlot.MainHand: mainHandDurability.Value = finalDurability; break;
+                case EquipSlot.OffHand: offHandDurability.Value = finalDurability; break;
+                case EquipSlot.Head: headDurability.Value = finalDurability; break;
+                case EquipSlot.Chest: chestDurability.Value = finalDurability; break;
+                case EquipSlot.Legs: legsDurability.Value = finalDurability; break;
+                case EquipSlot.Feet: feetDurability.Value = finalDurability; break;
             }
         }
 
@@ -482,13 +715,13 @@ namespace HuntersAndCollectors.Players
 
         public string BuildServerDebugString()
         {
-            var sb = new StringBuilder(256);
-            sb.Append("Slots[MH=").Append(GetSlotString(mainHand.Value))
-              .Append(", OH=").Append(GetSlotString(offHand.Value))
-              .Append(", Head=").Append(GetSlotString(head.Value))
-              .Append(", Chest=").Append(GetSlotString(chest.Value))
-              .Append(", Legs=").Append(GetSlotString(legs.Value))
-              .Append(", Feet=").Append(GetSlotString(feet.Value))
+            var sb = new StringBuilder(320);
+            sb.Append("Slots[MH=").Append(GetSlotString(mainHand.Value)).Append('(').Append(mainHandDurability.Value).Append(')')
+              .Append(", OH=").Append(GetSlotString(offHand.Value)).Append('(').Append(offHandDurability.Value).Append(')')
+              .Append(", Head=").Append(GetSlotString(head.Value)).Append('(').Append(headDurability.Value).Append(')')
+              .Append(", Chest=").Append(GetSlotString(chest.Value)).Append('(').Append(chestDurability.Value).Append(')')
+              .Append(", Legs=").Append(GetSlotString(legs.Value)).Append('(').Append(legsDurability.Value).Append(')')
+              .Append(", Feet=").Append(GetSlotString(feet.Value)).Append('(').Append(feetDurability.Value).Append(')')
               .Append(']');
 
             if (EnsureItemDatabase())

@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Players;
+using HuntersAndCollectors.Skills;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -48,6 +50,18 @@ namespace HuntersAndCollectors.Combat
 
         [SerializeField] private bool requireLineOfSight = true;
 
+        [Header("Hit Timing")]
+        [Tooltip("Delay between accepted swing and authoritative hit check.")]
+        [Min(0f)]
+        [SerializeField] private float hitDelaySeconds = 0.15f;
+
+        [Tooltip("Duration of hit window. MVP currently checks once at window start.")]
+        [Min(0f)]
+        [SerializeField] private float hitWindowSeconds = 0.20f;
+
+        [SerializeField] private bool singleHitPerAttack = true;
+        [SerializeField] private bool allowMissSwing = true;
+
         [Header("Unarmed Fallback")]
         [Min(1)]
         [SerializeField] private int defaultUnarmedDamage = 1;
@@ -60,6 +74,12 @@ namespace HuntersAndCollectors.Combat
         [SerializeField] private PlayerEquipmentNet equipmentNet;
         [SerializeField] private PlayerCombatAnimNet playerCombatAnim;
         [SerializeField] private Transform viewOrigin;
+        [SerializeField] private SkillsNet skills;
+
+        [Header("Combat XP")]
+        [Min(0)]
+        [SerializeField] private int xpPerHit = 1;
+        [SerializeField] private bool awardXpOnZeroDamage = false;
 
         [Header("Server Ray Validation")]
         [SerializeField] private float originTolerance = 1.25f;
@@ -72,6 +92,7 @@ namespace HuntersAndCollectors.Combat
 
         // Server-authoritative cooldown timestamp.
         private double _nextAttackServerTime;
+        private ulong _nextAttackId;
 
         private struct SweepCandidate
         {
@@ -81,6 +102,19 @@ namespace HuntersAndCollectors.Combat
             public float Multiplier;
         }
 
+        private struct ServerAttackContext
+        {
+            public ulong AttackId;
+            public ulong RequestedTargetNetworkObjectId;
+            public Vector3 Direction;
+            public int BaseDamage;
+            public string WeaponLabel;
+            public string WeaponItemId;
+            public string CombatSkillId;
+            public float SwingSpeed;
+            public float CooldownSeconds;
+        }
+
         public override void OnNetworkSpawn()
         {
             if (equipmentNet == null)
@@ -88,6 +122,9 @@ namespace HuntersAndCollectors.Combat
 
             if (playerCombatAnim == null)
                 playerCombatAnim = GetComponent<PlayerCombatAnimNet>();
+
+            if (skills == null)
+                skills = GetComponent<SkillsNet>();
 
             if (viewOrigin == null)
             {
@@ -269,33 +306,110 @@ namespace HuntersAndCollectors.Combat
             }
 
             ResolveServerAttackStats(out int baseDamage, out float swingSpeed, out string weaponLabel, out var style);
+            bool hasCombatSkill = TryResolveCombatSkillForCurrentWeapon(out string combatSkillId, out string weaponItemId);
             float cooldownSeconds = 1f / Mathf.Max(0.01f, swingSpeed);
+            ulong attackId = ++_nextAttackId;
+
+            _nextAttackServerTime = now + cooldownSeconds;
 
             // Accepted swing intent: replicate animation to everyone now.
             playerCombatAnim?.ServerPlayAttack(style);
+            // Server-authoritative durability consumption for accepted swings.
+            // Rejected attacks return earlier and never consume durability.
+            ServerConsumeAcceptedSwingDurability();
+            Debug.Log($"[Combat] AttackAccepted id={attackId} dmg={baseDamage} delay={hitDelaySeconds:0.###} window={hitWindowSeconds:0.###}", this);
 
-            var candidates = CollectSweepCandidates(clientRayOrigin, clientRayDirection, Mathf.Max(0.1f, attackRange), out bool anyOccluded);
-            SweepCandidate? selected = SelectSweepCandidate(candidates, targetNetworkObjectId);
+            var context = new ServerAttackContext
+            {
+                AttackId = attackId,
+                RequestedTargetNetworkObjectId = targetNetworkObjectId,
+                Direction = clientRayDirection,
+                BaseDamage = baseDamage,
+                WeaponLabel = weaponLabel,
+                WeaponItemId = weaponItemId,
+                CombatSkillId = hasCombatSkill ? combatSkillId : string.Empty,
+                SwingSpeed = swingSpeed,
+                CooldownSeconds = cooldownSeconds
+            };
+            StartCoroutine(ServerResolveAttackHitWindow(context));
+        }
+
+        /// <summary>
+        /// SERVER ONLY: delayed hit timing window.
+        /// - The swing animation starts immediately when attack is accepted.
+        /// - Damage is evaluated later to match visual weapon connect timing.
+        /// - This keeps hit timing authoritative while feeling less "instant click damage".
+        /// </summary>
+        private IEnumerator ServerResolveAttackHitWindow(ServerAttackContext context)
+        {
+            if (!IsServer)
+                yield break;
+
+            float delay = Mathf.Max(0f, hitDelaySeconds);
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            if (!IsServer || !IsSpawned)
+            {
+                Debug.Log($"[Combat] AttackIgnored id={context.AttackId} reason=AttackerDespawned", this);
+                yield break;
+            }
+
+            NetworkManager manager = NetworkManager.Singleton != null ? NetworkManager.Singleton : NetworkManager;
+            if (manager == null || manager.SpawnManager == null)
+            {
+                Debug.Log($"[Combat] AttackIgnored id={context.AttackId} reason=AttackerDespawned", this);
+                yield break;
+            }
+
+            // If the suggested target despawned before the hit frame, treat as miss.
+            if (context.RequestedTargetNetworkObjectId != 0 &&
+                !TryResolveSuggestedTarget(manager.SpawnManager, context.RequestedTargetNetworkObjectId, out _))
+            {
+                Debug.Log($"[Combat] AttackIgnored id={context.AttackId} reason=TargetDespawned", this);
+                Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Miss target=", this);
+                yield break;
+            }
+
+            Vector3 origin = viewOrigin != null ? viewOrigin.position : transform.position;
+            Vector3 direction = context.Direction;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Miss target=", this);
+                yield break;
+            }
+
+            direction.Normalize();
+
+            bool hitApplied = false;
+            var candidates = CollectSweepCandidates(origin, direction, Mathf.Max(0.1f, attackRange), out bool anyOccluded);
+            SweepCandidate? selected = SelectSweepCandidate(candidates, context.RequestedTargetNetworkObjectId);
 
             if (selected.HasValue)
             {
                 SweepCandidate c = selected.Value;
-                int finalDamage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0f, c.Multiplier)));
+                int finalDamage = Mathf.Max(1, Mathf.RoundToInt(context.BaseDamage * Mathf.Max(0f, c.Multiplier)));
 
                 IDamageableNet damageable = c.Damageable.GetComponent(typeof(IDamageableNet)) as IDamageableNet;
                 if (damageable != null && damageable.ServerTryApplyDamage(finalDamage, OwnerClientId, c.HitPoint))
                 {
-                    _nextAttackServerTime = now + cooldownSeconds;
+                    hitApplied = true;
                     Debug.Log($"[Combat] SweepHit target={c.Damageable.name} dist={c.Distance:0.##} mult={c.Multiplier:0.##} dmg={finalDamage}", this);
-                    Debug.Log($"[Combat] Attack accepted weapon={weaponLabel} dmg={finalDamage} speed={swingSpeed:0.##} cd={cooldownSeconds:0.###}", this);
-                    return;
+                    Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Hit target={c.Damageable.name}", this);
+                    Debug.Log($"[Combat] Attack accepted weapon={context.WeaponLabel} dmg={finalDamage} speed={context.SwingSpeed:0.##} cd={context.CooldownSeconds:0.###}", this);
+                    ServerAwardCombatXp(context, finalDamage);
                 }
             }
 
-            _nextAttackServerTime = now + cooldownSeconds;
+            if (singleHitPerAttack && hitApplied)
+                yield break;
+
             string missReason = candidates.Count > 0 ? "TargetMismatch" : (anyOccluded ? "Occluded" : "NoValidHits");
-            Debug.Log($"[Combat] SweepMiss reason={missReason}", this);
-            Debug.Log($"[Combat] Attack accepted (miss) weapon={weaponLabel} speed={swingSpeed:0.##} cd={cooldownSeconds:0.###}", this);
+            if (allowMissSwing)
+                Debug.Log($"[Combat] SweepMiss reason={missReason}", this);
+
+            Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Miss target=", this);
+            Debug.Log($"[Combat] Attack accepted (miss) weapon={context.WeaponLabel} speed={context.SwingSpeed:0.##} cd={context.CooldownSeconds:0.###}", this);
         }
 
         /// <summary>
@@ -435,6 +549,95 @@ namespace HuntersAndCollectors.Combat
                 : PlayerCombatAnimNet.AttackStyle.OneHand;
         }
 
+        private void ServerAwardCombatXp(ServerAttackContext context, int appliedDamage)
+        {
+            // Server authoritative: only the server can grant progression.
+            if (!IsServer)
+                return;
+
+            if (xpPerHit <= 0)
+                return;
+
+            // Optional guard for future mechanics where an accepted hit might do 0 damage.
+            if (!awardXpOnZeroDamage && appliedDamage <= 0)
+                return;
+
+            if (string.IsNullOrWhiteSpace(context.CombatSkillId))
+                return;
+
+            if (skills == null)
+                skills = GetComponent<SkillsNet>();
+
+            if (skills == null)
+                return;
+
+            skills.AddXp(context.CombatSkillId, xpPerHit);
+            Debug.Log($"[CombatSkill] Awarded XP skill={context.CombatSkillId} xp={xpPerHit} weapon={context.WeaponItemId} attacker={OwnerClientId}", this);
+        }
+
+        private bool TryResolveCombatSkillForCurrentWeapon(out string skillId, out string weaponItemId)
+        {
+            skillId = string.Empty;
+            weaponItemId = "Unarmed";
+
+            if (equipmentNet == null)
+                return false;
+
+            string itemId = equipmentNet.GetMainHandItemId();
+            if (string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            if (!equipmentNet.TryGetItemDef(itemId, out ItemDef def) || def == null)
+                return false;
+
+            weaponItemId = itemId;
+            return TryMapCombatSkillIdFromToolTags(def.ToolTags, out skillId);
+        }
+
+        private static bool TryMapCombatSkillIdFromToolTags(ToolTag[] tags, out string skillId)
+        {
+            // Priority rule for items with multiple tags.
+            if (HasToolTag(tags, ToolTag.Axe))
+            {
+                skillId = SkillId.CombatAxe;
+                return true;
+            }
+
+            if (HasToolTag(tags, ToolTag.Pickaxe))
+            {
+                skillId = SkillId.CombatPickaxe;
+                return true;
+            }
+
+            if (HasToolTag(tags, ToolTag.Knife))
+            {
+                skillId = SkillId.CombatKnife;
+                return true;
+            }
+
+            if (HasToolTag(tags, ToolTag.Club))
+            {
+                skillId = SkillId.CombatClub;
+                return true;
+            }
+
+            skillId = string.Empty;
+            return false;
+        }
+
+        private static bool HasToolTag(ToolTag[] tags, ToolTag wanted)
+        {
+            if (tags == null || tags.Length == 0)
+                return false;
+
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i] == wanted)
+                    return true;
+            }
+
+            return false;
+        }
         // Client local estimate for request pacing only.
         private float GetOwnerExpectedSwingIntervalSeconds()
         {
@@ -465,6 +668,20 @@ namespace HuntersAndCollectors.Combat
         {
             Debug.Log($"[Combat] Attack rejected reason={reason}", this);
         }
+
+        /// <summary>
+        /// SERVER ONLY: consume one durability use for the equipped main-hand item.
+        /// This is called on accepted swings (hit or miss), matching cooldown usage.
+        /// </summary>
+        private void ServerConsumeAcceptedSwingDurability()
+        {
+            if (!IsServer || equipmentNet == null)
+                return;
+
+            // This helper is a no-op when unarmed or when the equipped item is indestructible.
+            equipmentNet.ServerDamageMainHandDurability(1, out _, out _);
+        }
     }
 }
+
 

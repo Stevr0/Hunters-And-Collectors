@@ -13,12 +13,16 @@ namespace HuntersAndCollectors.Networking.DTO
             public bool IsEmpty;
             public FixedString64Bytes ItemId;
             public int Quantity;
+            public int Durability;
+            public int MaxDurability;
 
             public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
             {
                 serializer.SerializeValue(ref IsEmpty);
                 serializer.SerializeValue(ref ItemId);
                 serializer.SerializeValue(ref Quantity);
+                serializer.SerializeValue(ref Durability);
+                serializer.SerializeValue(ref MaxDurability);
             }
         }
 
@@ -36,13 +40,9 @@ namespace HuntersAndCollectors.Networking.DTO
 
             if (serializer.IsReader)
             {
-                // Validate count to prevent malformed packets
                 var expected = W * H;
                 if (count != expected)
-                {
-                    // Hard clamp to expected size
                     count = expected;
-                }
 
                 Slots = new SlotDto[count];
             }

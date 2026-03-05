@@ -107,7 +107,7 @@ namespace HuntersAndCollectors.UI
         private void SetCoinsText(int coins)
         {
             if (coinsText != null)
-                coinsText.text = $"Coins: {coins}";
+                coinsText.text = $" {coins}";
         }
     }
 }
