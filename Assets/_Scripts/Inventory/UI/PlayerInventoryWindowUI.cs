@@ -254,3 +254,4 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+

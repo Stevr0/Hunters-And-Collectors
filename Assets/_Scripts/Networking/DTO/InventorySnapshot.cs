@@ -16,6 +16,11 @@ namespace HuntersAndCollectors.Networking.DTO
             public int Durability;
             public int MaxDurability;
 
+            // Per-instance crafted bonus attributes (0 for normal stackables).
+            public int BonusStrength;
+            public int BonusDexterity;
+            public int BonusIntelligence;
+
             public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
             {
                 serializer.SerializeValue(ref IsEmpty);
@@ -23,6 +28,9 @@ namespace HuntersAndCollectors.Networking.DTO
                 serializer.SerializeValue(ref Quantity);
                 serializer.SerializeValue(ref Durability);
                 serializer.SerializeValue(ref MaxDurability);
+                serializer.SerializeValue(ref BonusStrength);
+                serializer.SerializeValue(ref BonusDexterity);
+                serializer.SerializeValue(ref BonusIntelligence);
             }
         }
 

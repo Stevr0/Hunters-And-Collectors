@@ -4,7 +4,10 @@ namespace HuntersAndCollectors.Inventory
 {
     /// <summary>
     /// Fixed-size slot grid with validated add/remove/move/split operations.
+    ///
     /// Durable items (MaxDurability > 0) are treated as non-stackable slot items.
+    /// Per-instance attribute bonuses are stored only on non-stackable crafted
+    /// equippable/tool items. Regular stackables always keep zero bonuses.
     /// </summary>
     public sealed class InventoryGrid
     {
@@ -35,7 +38,8 @@ namespace HuntersAndCollectors.Inventory
 
             for (var i = 0; i < Slots.Length && remaining > 0; i++)
             {
-                if (!Slots[i].IsEmpty && Slots[i].Stack.ItemId == itemId && !durable)
+                // Bonus instances never stack into normal stacks.
+                if (!Slots[i].IsEmpty && Slots[i].Stack.ItemId == itemId && !durable && !Slots[i].InstanceData.HasAnyBonus)
                     remaining -= maxStack - Slots[i].Stack.Quantity;
 
                 if (Slots[i].IsEmpty)
@@ -46,7 +50,7 @@ namespace HuntersAndCollectors.Inventory
             return remainder == 0;
         }
 
-        public int Add(string itemId, int quantity, int durability = -1)
+        public int Add(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (quantity <= 0 || !TryGetDef(itemId, out var def))
                 return quantity;
@@ -55,11 +59,17 @@ namespace HuntersAndCollectors.Inventory
             int maxStack = GetMaxStack(def);
             int remaining = quantity;
 
+            ItemInstanceData instanceData = BuildInstanceData(def, bonusStrength, bonusDexterity, bonusIntelligence);
+
             if (!durable)
             {
                 for (var i = 0; i < Slots.Length && remaining > 0; i++)
                 {
                     if (Slots[i].IsEmpty || Slots[i].Stack.ItemId != itemId)
+                        continue;
+
+                    // Never merge stacks that carry instance bonuses.
+                    if (Slots[i].InstanceData.HasAnyBonus || instanceData.HasAnyBonus)
                         continue;
 
                     var room = maxStack - Slots[i].Stack.Quantity;
@@ -86,6 +96,10 @@ namespace HuntersAndCollectors.Inventory
                 Slots[i].IsEmpty = false;
                 Slots[i].Stack = new ItemStack { ItemId = itemId, Quantity = moved };
                 Slots[i].Durability = durable ? clampedDurability : 0;
+
+                // Only non-stackable item instances should carry per-item bonuses.
+                Slots[i].InstanceData = durable || moved == 1 ? instanceData : default;
+
                 remaining -= moved;
             }
 
@@ -148,7 +162,9 @@ namespace HuntersAndCollectors.Inventory
 
             if (to.Stack.ItemId == from.Stack.ItemId &&
                 TryGetDef(from.Stack.ItemId, out var def) &&
-                !IsDurable(def))
+                !IsDurable(def) &&
+                !to.InstanceData.HasAnyBonus &&
+                !from.InstanceData.HasAnyBonus)
             {
                 var room = GetMaxStack(def) - to.Stack.Quantity;
                 var move = room < from.Stack.Quantity ? room : from.Stack.Quantity;
@@ -179,6 +195,10 @@ namespace HuntersAndCollectors.Inventory
             if (IsDurable(def))
                 return false;
 
+            // Bonus instances are not stackables and should never split-merge behavior.
+            if (Slots[index].InstanceData.HasAnyBonus)
+                return false;
+
             if (Slots[index].Stack.Quantity <= splitAmount)
                 return false;
 
@@ -192,7 +212,8 @@ namespace HuntersAndCollectors.Inventory
                 {
                     IsEmpty = false,
                     Stack = new ItemStack { ItemId = Slots[index].Stack.ItemId, Quantity = splitAmount },
-                    Durability = 0
+                    Durability = 0,
+                    InstanceData = default
                 };
 
                 newSlotIndex = i;
@@ -202,13 +223,14 @@ namespace HuntersAndCollectors.Inventory
             return false;
         }
 
-        public bool TryAddOneToSlot(string itemId, int slotIndex, int durability = -1)
+        public bool TryAddOneToSlot(string itemId, int slotIndex, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (!IsValidIndex(slotIndex) || !TryGetDef(itemId, out var def))
                 return false;
 
             ref var slot = ref Slots[slotIndex];
             bool durable = IsDurable(def);
+            ItemInstanceData instanceData = BuildInstanceData(def, bonusStrength, bonusDexterity, bonusIntelligence);
 
             if (slot.IsEmpty)
             {
@@ -218,15 +240,24 @@ namespace HuntersAndCollectors.Inventory
                 {
                     int max = def.MaxDurability;
                     slot.Durability = durability > 0 ? (durability > max ? max : durability) : max;
+                    slot.InstanceData = instanceData;
                 }
                 else
                 {
+                    // Stackables must keep zero instance bonuses.
                     slot.Durability = 0;
+                    slot.InstanceData = default;
                 }
                 return true;
             }
 
             if (durable)
+                return false;
+
+            if (instanceData.HasAnyBonus)
+                return false;
+
+            if (slot.InstanceData.HasAnyBonus)
                 return false;
 
             if (slot.Stack.ItemId != itemId)
@@ -237,6 +268,23 @@ namespace HuntersAndCollectors.Inventory
 
             slot.Stack.Quantity += 1;
             return true;
+        }
+
+        private static ItemInstanceData BuildInstanceData(ItemDef def, int bonusStrength, int bonusDexterity, int bonusIntelligence)
+        {
+            if (def == null)
+                return default;
+
+            // Keep instance bonuses only for equippable or tagged tool-like items.
+            bool allowBonus = def.IsEquippable || (def.ToolTags != null && def.ToolTags.Length > 0);
+            if (!allowBonus)
+                return default;
+
+            ItemInstanceData data;
+            data.BonusStrength = bonusStrength;
+            data.BonusDexterity = bonusDexterity;
+            data.BonusIntelligence = bonusIntelligence;
+            return data;
         }
 
         private static bool IsDurable(ItemDef def) => def != null && def.MaxDurability > 0;

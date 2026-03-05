@@ -5472,6 +5472,7 @@ GameObject:
   - component: {fileID: 4545690860031361385}
   - component: {fileID: 8023456712345678901}
   - component: {fileID: 6123456701234567890}
+  - component: {fileID: 6036641258081310702}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -5993,7 +5994,7 @@ MonoBehaviour:
   equipmentNet: {fileID: 9162402046273109018}
   playerCombatAnim: {fileID: 6123456701234567890}
   viewOrigin: {fileID: 6085582210013377002}
-  skills: {fileID: 0}
+  skills: {fileID: 691804140746123789}
   xpPerHit: 1
   awardXpOnZeroDamage: 0
   originTolerance: 1.25
@@ -6012,6 +6013,25 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   animator: {fileID: 5712288911929492183}
   attackStateDuration: 0.25
+--- !u!114 &6036641258081310702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6889ecf946472c841b44846566ad563d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Stats.PlayerBaseStats
+  baseStrength: 10
+  baseDexterity: 10
+  baseIntelligence: 10
+  baseMoveSpeedMult: 1
+  baseDamage: 0
+  baseDefence: 0
+  baseSwingSpeed: 1
 --- !u!1 &6085582210013377001
 GameObject:
   m_ObjectHideFlags: 0

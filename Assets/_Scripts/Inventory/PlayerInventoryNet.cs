@@ -89,18 +89,18 @@ namespace HuntersAndCollectors.Inventory
             return true;
         }
 
-        public int ServerAddItem(string itemId, int quantity, int durability = -1)
+        public int ServerAddItem(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (!IsServer) return quantity;
-            return AddItemServer(itemId, quantity, durability);
+            return AddItemServer(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence);
         }
 
-        public bool ServerTryAddItemToSlot(string itemId, int slotIndex, int durability = -1)
+        public bool ServerTryAddItemToSlot(string itemId, int slotIndex, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (!IsServer || grid == null) return false;
             if (slotIndex < 0) return false;
 
-            if (!grid.TryAddOneToSlot(itemId, slotIndex, durability))
+            if (!grid.TryAddOneToSlot(itemId, slotIndex, durability, bonusStrength, bonusDexterity, bonusIntelligence))
                 return false;
 
             MarkDirtyAndMaybeSendSnapshot();
@@ -108,13 +108,22 @@ namespace HuntersAndCollectors.Inventory
         }
 
         /// <summary>
-        /// SERVER: read a slot's current item data.
+        /// Backward-compatible overload.
         /// </summary>
         public bool ServerTryGetSlotItem(int slotIndex, out string itemId, out int qty, out int durability)
+        {
+            return ServerTryGetSlotItem(slotIndex, out itemId, out qty, out durability, out _);
+        }
+
+        /// <summary>
+        /// SERVER: read a slot's current item data including instance bonuses.
+        /// </summary>
+        public bool ServerTryGetSlotItem(int slotIndex, out string itemId, out int qty, out int durability, out ItemInstanceData instanceData)
         {
             itemId = string.Empty;
             qty = 0;
             durability = 0;
+            instanceData = default;
 
             if (!IsServer || grid == null)
                 return false;
@@ -129,6 +138,7 @@ namespace HuntersAndCollectors.Inventory
             itemId = slot.Stack.ItemId;
             qty = slot.Stack.Quantity;
             durability = slot.Durability;
+            instanceData = slot.InstanceData;
 
             // Backward-safe normalization if older data left durability unset.
             if (durability <= 0 && TryGetItemDef(itemId, out var def) && def.MaxDurability > 0)
@@ -138,12 +148,21 @@ namespace HuntersAndCollectors.Inventory
         }
 
         /// <summary>
-        /// SERVER: removes one item from a specific slot.
+        /// Backward-compatible overload.
         /// </summary>
         public bool ServerRemoveOneAtSlot(int slotIndex, out string removedItemId, out int removedDurability)
         {
+            return ServerRemoveOneAtSlot(slotIndex, out removedItemId, out removedDurability, out _);
+        }
+
+        /// <summary>
+        /// SERVER: removes one item from a specific slot and returns instance bonuses.
+        /// </summary>
+        public bool ServerRemoveOneAtSlot(int slotIndex, out string removedItemId, out int removedDurability, out ItemInstanceData removedInstanceData)
+        {
             removedItemId = string.Empty;
             removedDurability = 0;
+            removedInstanceData = default;
 
             if (!IsServer || grid == null)
                 return false;
@@ -157,6 +176,7 @@ namespace HuntersAndCollectors.Inventory
 
             removedItemId = slot.Stack.ItemId;
             removedDurability = slot.Durability;
+            removedInstanceData = slot.InstanceData;
 
             if (TryGetItemDef(removedItemId, out var def) && def.MaxDurability > 0 && removedDurability <= 0)
                 removedDurability = def.MaxDurability;
@@ -168,6 +188,10 @@ namespace HuntersAndCollectors.Inventory
             }
             else
             {
+                // If more than one remains in stack, this slot is a regular stack and bonuses should stay default.
+                if (slot.Stack.Quantity > 1)
+                    slot.InstanceData = default;
+
                 grid.Slots[slotIndex] = slot;
             }
 
@@ -178,7 +202,7 @@ namespace HuntersAndCollectors.Inventory
         /// <summary>
         /// SERVER: overwrite a slot with validated state.
         /// </summary>
-        public bool ServerTrySetSlot(int slotIndex, string itemId, int qty, int durability)
+        public bool ServerTrySetSlot(int slotIndex, string itemId, int qty, int durability, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (!IsServer || grid == null)
                 return false;
@@ -214,11 +238,20 @@ namespace HuntersAndCollectors.Inventory
                     finalDurability = Mathf.Clamp(durability, 1, def.MaxDurability);
             }
 
+            ItemInstanceData instanceData = default;
+            if (durable || qty == 1)
+            {
+                instanceData.BonusStrength = bonusStrength;
+                instanceData.BonusDexterity = bonusDexterity;
+                instanceData.BonusIntelligence = bonusIntelligence;
+            }
+
             grid.Slots[slotIndex] = new InventorySlot
             {
                 IsEmpty = false,
                 Stack = new ItemStack { ItemId = itemId, Quantity = qty },
-                Durability = finalDurability
+                Durability = finalDurability,
+                InstanceData = instanceData
             };
 
             MarkDirtyAndMaybeSendSnapshot();
@@ -348,11 +381,11 @@ namespace HuntersAndCollectors.Inventory
             OnSnapshotReceived?.Invoke(snapshot);
         }
 
-        public int AddItemServer(string itemId, int quantity, int durability = -1)
+        public int AddItemServer(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
         {
             if (!IsServer || grid == null || quantity <= 0) return quantity;
 
-            var remainder = grid.Add(itemId, quantity, durability);
+            var remainder = grid.Add(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence);
 
             if (remainder < quantity)
                 knownItems?.EnsureKnown(itemId);
@@ -377,7 +410,10 @@ namespace HuntersAndCollectors.Inventory
                         ItemId = default,
                         Quantity = 0,
                         Durability = 0,
-                        MaxDurability = 0
+                        MaxDurability = 0,
+                        BonusStrength = 0,
+                        BonusDexterity = 0,
+                        BonusIntelligence = 0
                     };
                     continue;
                 }
@@ -396,7 +432,10 @@ namespace HuntersAndCollectors.Inventory
                     ItemId = new FixedString64Bytes(s.Stack.ItemId),
                     Quantity = s.Stack.Quantity,
                     Durability = durability,
-                    MaxDurability = maxDurability
+                    MaxDurability = maxDurability,
+                    BonusStrength = s.InstanceData.BonusStrength,
+                    BonusDexterity = s.InstanceData.BonusDexterity,
+                    BonusIntelligence = s.InstanceData.BonusIntelligence
                 };
             }
 

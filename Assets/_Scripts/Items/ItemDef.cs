@@ -1,5 +1,6 @@
 using System.Text;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace HuntersAndCollectors.Items
 {
@@ -9,18 +10,14 @@ namespace HuntersAndCollectors.Items
     /// Static item type definition (ScriptableObject).
     ///
     /// IMPORTANT:
-    /// - This is STATIC data: “what this item type is”.
+    /// - This is STATIC data: "what this item type is".
     /// - Runtime-changing data (durability remaining, rolled stats, quality, etc.)
-    ///   should eventually live in a runtime “ItemInstance” (future version),
+    ///   should eventually live in a runtime "ItemInstance" (future version),
     ///   NOT in this ScriptableObject.
     /// </summary>
     [CreateAssetMenu(menuName = "HuntersAndCollectors/Items/Item Definition", fileName = "ItemDef")]
     public sealed class ItemDef : ScriptableObject
     {
-        // =========================================================
-        // IDENTITY (core)
-        // =========================================================
-
         [Header("Identity")]
         [Tooltip("Stable unique id (eg: IT_Wood, IT_StoneAxe). Must never change once released.")]
         public string ItemId;
@@ -38,13 +35,6 @@ namespace HuntersAndCollectors.Items
         [Tooltip("High-level category for UI + rules (Resource/Tool/Crafted/etc).")]
         public ItemCategory Category;
 
-        // =========================================================
-        // EQUIP VISUAL (hand alignment)
-        // =========================================================
-        // This is used by PlayerEquipmentVisual to spawn an item model in the
-        // player's hand when equipped. This prefab is VISUAL ONLY (NO NetworkObject).
-        // Alignment is data-driven per item (local offsets saved in this asset).
-
         [Header("Equip Visual")]
         [Tooltip("Optional prefab to spawn when equipped (visual-only; should NOT have NetworkObject).")]
         [SerializeField] private GameObject visualPrefab;
@@ -58,21 +48,10 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Local scale applied after parenting. Usually (1,1,1).")]
         [SerializeField] private Vector3 equipLocalScale = Vector3.one;
 
-        /// <summary>Prefab to spawn when equipped. Can be null.</summary>
         public GameObject VisualPrefab => visualPrefab;
-
-        /// <summary>Per-item hand alignment offset (local position).</summary>
         public Vector3 EquipLocalPosition => equipLocalPosition;
-
-        /// <summary>Per-item hand alignment offset (local rotation euler).</summary>
         public Vector3 EquipLocalEuler => equipLocalEuler;
-
-        /// <summary>Per-item hand alignment (local scale).</summary>
         public Vector3 EquipLocalScale => equipLocalScale;
-
-        // =========================================================
-        // TEXT / UI
-        // =========================================================
 
         [Header("UI Text")]
         [TextArea(2, 6)]
@@ -82,10 +61,6 @@ namespace HuntersAndCollectors.Items
         [TextArea(2, 10)]
         [Tooltip("Extra lines shown in UI (eg: 'Damage: 12\\nSpeed: 1.2').")]
         public string PropertiesText;
-
-        // =========================================================
-        // ECONOMY / CRAFTING
-        // =========================================================
 
         [Header("Economy")]
         [Tooltip("Default base value before player-defined pricing.")]
@@ -104,10 +79,6 @@ namespace HuntersAndCollectors.Items
         [Min(0f)]
         public float CraftTime = 1f;
 
-        // =========================================================
-        // QUALITY / DURABILITY (base + limits)
-        // =========================================================
-
         [Header("Quality / Durability")]
         [Tooltip("Base quality (1.0 = normal). Future: crafting may roll this per instance.")]
         [Min(0f)]
@@ -116,10 +87,6 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Max durability limit for this item type. 0 = indestructible.")]
         [Min(0)]
         public int MaxDurability = 0;
-
-        // =========================================================
-        // COMBAT / MOVEMENT STATS (base values)
-        // =========================================================
 
         [Header("Combat")]
         [Tooltip("Base damage (weapons/tools).")]
@@ -139,9 +106,25 @@ namespace HuntersAndCollectors.Items
         [Min(0f)]
         public float MovementSpeed = 1f;
 
-        // =========================================================
-        // EQUIPMENT (used by PlayerEquipmentNet)
-        // =========================================================
+        [Header("Attributes")]
+        [Tooltip("Primary strength attribute bonus.")]
+        [Min(0)]
+        public int Strength = 0;
+
+        [FormerlySerializedAs("Deterity")]
+        [FormerlySerializedAs("Stamina")]
+        [Tooltip("Primary dexterity attribute bonus.")]
+        [Min(0)]
+        public int Dexterity = 0;
+
+        // Hidden legacy float value used by very old assets before int Dexterity existed.
+        [FormerlySerializedAs("Deterity")]
+        [FormerlySerializedAs("Stamina")]
+        [HideInInspector] public float LegacyDexterity;
+
+        [Tooltip("Primary intelligence attribute bonus.")]
+        [Min(0)]
+        public int Intelligence = 0;
 
         [Header("Equipment")]
         [Tooltip("If true, this item can be equipped into an equipment slot.")]
@@ -159,37 +142,34 @@ namespace HuntersAndCollectors.Items
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            // ---------------------------------------------------------
-            // Basic numeric safety
-            // ---------------------------------------------------------
             if (MaxStack < 1) MaxStack = 1;
             if (SwingSpeed <= 0f) SwingSpeed = 0.01f;
             if (MovementSpeed < 0f) MovementSpeed = 0f;
+            if (Strength < 0) Strength = 0;
+            if (Dexterity < 0) Dexterity = 0;
+            if (Intelligence < 0) Intelligence = 0;
             if (BaseValue < 0) BaseValue = 0;
             if (BaseQuality < 0f) BaseQuality = 0f;
             if (MaxDurability < 0) MaxDurability = 0;
 
-            // Ensure we don't keep invalid equip configuration when not equippable
+            // One-time migration fallback for old float dexterity assets.
+            if (Dexterity <= 0 && LegacyDexterity > 0f)
+                Dexterity = Mathf.RoundToInt(LegacyDexterity);
+
             if (!IsEquippable)
             {
                 EquipSlot = EquipSlot.None;
                 Handedness = Handedness.None;
             }
 
-            // Optional: keep equip scale sensible (avoid accidental zero scale)
             if (equipLocalScale.x == 0f && equipLocalScale.y == 0f && equipLocalScale.z == 0f)
                 equipLocalScale = Vector3.one;
         }
 
-        /// <summary>
-        /// Builds a UI-friendly "Properties" block from this item's stat fields.
-        /// Generated at runtime so you don't have to maintain text manually.
-        /// </summary>
         public string BuildPropertiesText(bool appendManualPropertiesText = true)
         {
             var sb = new StringBuilder(256);
 
-            // Adds "Label: Value" lines, with automatic newline handling.
             void AddLine(string label, string value)
             {
                 if (sb.Length > 0)
@@ -197,25 +177,24 @@ namespace HuntersAndCollectors.Items
                 sb.Append(label).Append(": ").Append(value);
             }
 
-            // ECONOMY / META
             if (BaseValue > 0) AddLine("Base Value", BaseValue.ToString());
             if (Weight > 0f) AddLine("Weight", Weight.ToString("0.##"));
             AddLine("Rarity", Rarity.ToString());
 
-            // CRAFTING
             if (CraftTime > 0f) AddLine("Craft Time", $"{CraftTime:0.##}s");
 
-            // QUALITY / DURABILITY (base/limits only)
             if (BaseQuality != 1f) AddLine("Quality", BaseQuality.ToString("0.##"));
             if (MaxDurability > 0) AddLine("Durability", MaxDurability.ToString());
 
-            // COMBAT / MOVEMENT
+            if (Strength > 0) AddLine("Strength", Strength.ToString());
+            if (Dexterity > 0) AddLine("Dexterity", Dexterity.ToString());
+            if (Intelligence > 0) AddLine("Intelligence", Intelligence.ToString());
+
             if (Damage > 0f) AddLine("Damage", Damage.ToString("0.##"));
             if (Defence > 0f) AddLine("Defence", Defence.ToString("0.##"));
             if (SwingSpeed > 0f) AddLine("Swing Speed", SwingSpeed.ToString("0.##"));
             if (MovementSpeed != 1f) AddLine("Move Speed", $"{MovementSpeed:0.##}x");
 
-            // EQUIPMENT
             if (IsEquippable)
             {
                 AddLine("Equip Slot", EquipSlot.ToString());
@@ -223,11 +202,9 @@ namespace HuntersAndCollectors.Items
                     AddLine("Handedness", Handedness.ToString());
             }
 
-            // TOOL TAGS
             if (ToolTags != null && ToolTags.Length > 0)
                 AddLine("Tool Tags", string.Join(", ", ToolTags));
 
-            // OPTIONAL: manual notes appended after generated block
             if (appendManualPropertiesText && !string.IsNullOrWhiteSpace(PropertiesText))
             {
                 if (sb.Length > 0)
