@@ -14,8 +14,9 @@ namespace HuntersAndCollectors.Items
         [Min(1)]
         [SerializeField] private int quantity = 1;
 
-        [Header("Optional Respawn Hook")]
-        [SerializeField] private PickupSpawnerNet spawner;
+        // Server-only runtime back-reference.
+        // Intentionally not serialized/replicated.
+        private PickupSpawnerNet _spawner;
 
         public ItemDef ItemDefinition => itemDefinition;
         public int Quantity => quantity;
@@ -23,23 +24,28 @@ namespace HuntersAndCollectors.Items
 
         public bool IsConsumed { get; private set; }
 
-        // Debug helpers (super useful in logs)
-        public bool HasSpawner => spawner != null;
-        public string SpawnerName => spawner != null ? spawner.name : "<none>";
+        public bool HasSpawner => _spawner != null;
+        public string SpawnerName => _spawner != null ? _spawner.name : "<none>";
 
         private Coroutine _autoDespawnRoutine;
         private Coroutine _consumeDespawnRoutine;
 
+        private static bool HasServerAuthority()
+        {
+            var nm = NetworkManager.Singleton;
+            return nm != null && nm.IsServer;
+        }
+
         /// <summary>
-        /// SERVER: Configure runtime state. Safe to call any time on server.
+        /// SERVER: Configure runtime state. Safe to call before or after net spawn.
         /// </summary>
         public void ServerInitialize(int newQuantity, PickupSpawnerNet newSpawner = null)
         {
-            if (!IsServer)
+            // Use singleton authority check so this can run before netObj.Spawn().
+            if (!HasServerAuthority())
                 return;
 
             quantity = Mathf.Max(1, newQuantity);
-            spawner = newSpawner;
             IsConsumed = false;
 
             // Ensure interactable when (re)spawned.
@@ -52,19 +58,35 @@ namespace HuntersAndCollectors.Items
             _autoDespawnRoutine = null;
             _consumeDespawnRoutine = null;
 
-            Debug.Log($"[ResourceDrop][SERVER] INIT name='{name}' netId={(NetworkObject != null ? NetworkObject.NetworkObjectId : 0)} item='{ItemId}' qty={quantity} spawner={SpawnerName}", this);
+            // Harvested drops should remain unbound, spawner drops attach explicitly.
+            _spawner = null;
+            if (newSpawner != null)
+                ServerAttachSpawner(newSpawner);
+
+            Debug.Log($"[ResourceDrop][SERVER] INIT name='{name}' netId={(NetworkObject != null && NetworkObject.IsSpawned ? NetworkObject.NetworkObjectId : 0)} item='{ItemId}' qty={quantity} hasSpawner={HasSpawner} spawner={SpawnerName}", this);
         }
 
         /// <summary>
-        /// SERVER back-compat helper
+        /// SERVER: Attach owning spawner at runtime (server-only reference).
+        /// </summary>
+        public void ServerAttachSpawner(PickupSpawnerNet newSpawner)
+        {
+            if (!HasServerAuthority())
+                return;
+
+            _spawner = newSpawner;
+
+            Debug.Log(
+                $"[ResourceDrop][SERVER] ATTACH_SPAWNER drop='{name}' netId={(NetworkObject != null && NetworkObject.IsSpawned ? NetworkObject.NetworkObjectId : 0)} item='{ItemId}' spawner='{SpawnerName}'",
+                this);
+        }
+
+        /// <summary>
+        /// SERVER back-compat helper.
         /// </summary>
         public void ServerSetSpawner(PickupSpawnerNet newSpawner)
         {
-            if (!IsServer)
-                return;
-
-            spawner = newSpawner;
-            Debug.Log($"[ResourceDrop][SERVER] Spawner assigned name='{name}' item='{ItemId}' spawner={SpawnerName}", this);
+            ServerAttachSpawner(newSpawner);
         }
 
         /// <summary>
@@ -72,12 +94,12 @@ namespace HuntersAndCollectors.Items
         /// </summary>
         public void ServerConsumeAndDespawn(float delaySeconds = 0.75f)
         {
-            if (!IsServer || IsConsumed)
+            if (!HasServerAuthority() || IsConsumed)
                 return;
 
             IsConsumed = true;
 
-            Debug.Log($"[ResourceDrop][SERVER] CONSUMED name='{name}' netId={NetworkObjectId} item='{ItemId}' qty={quantity} spawner={SpawnerName}", this);
+            Debug.Log($"[ResourceDrop][SERVER] CONSUMED name='{name}' netId={NetworkObjectId} item='{ItemId}' qty={quantity} hasSpawner={HasSpawner} spawner={SpawnerName}", this);
 
             // If we were scheduled to auto-despawn, cancel it.
             if (_autoDespawnRoutine != null)
@@ -87,15 +109,17 @@ namespace HuntersAndCollectors.Items
             }
 
             // Notify spawner immediately if this drop came from one.
-            if (spawner != null)
+            if (_spawner != null)
             {
-                spawner.NotifyConsumedOrDespawned();
+                var ownerSpawner = _spawner;
+                _spawner = null;
+                ownerSpawner.NotifyConsumedOrDespawned();
             }
             else
             {
                 // Normal for harvested drops.
                 // (Leave as Log, not Warning, so it doesn't look like a bug.)
-                Debug.Log($"[ResourceDrop][SERVER] Consumed drop has no spawner (expected for harvested drops). name='{name}' item='{ItemId}'", this);
+                Debug.Log($"[ResourceDrop][SERVER] No spawner assigned (normal for harvested drops). name='{name}' item='{ItemId}'", this);
             }
 
             // Prevent double pickup immediately.
@@ -113,7 +137,7 @@ namespace HuntersAndCollectors.Items
         /// </summary>
         public void ServerScheduleAutoDespawn(float lifetimeSeconds)
         {
-            if (!IsServer)
+            if (!HasServerAuthority())
                 return;
 
             if (lifetimeSeconds <= 0f)
@@ -132,7 +156,7 @@ namespace HuntersAndCollectors.Items
         {
             yield return new WaitForSeconds(lifetime);
 
-            if (!IsServer || IsConsumed)
+            if (!HasServerAuthority() || IsConsumed)
                 yield break;
 
             // Auto-despawn should NOT notify spawner as "consumed".
@@ -182,6 +206,23 @@ namespace HuntersAndCollectors.Items
                 if (rends[i] != null)
                     rends[i].enabled = enabled;
             }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (_autoDespawnRoutine != null)
+            {
+                StopCoroutine(_autoDespawnRoutine);
+                _autoDespawnRoutine = null;
+            }
+
+            if (_consumeDespawnRoutine != null)
+            {
+                StopCoroutine(_consumeDespawnRoutine);
+                _consumeDespawnRoutine = null;
+            }
+
+            _spawner = null;
         }
 
 #if UNITY_EDITOR

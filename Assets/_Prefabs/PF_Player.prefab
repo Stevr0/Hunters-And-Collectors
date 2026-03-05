@@ -57,6 +57,7 @@ GameObject:
   - component: {fileID: 1565120621582776068}
   - component: {fileID: -2637652869777206320}
   - component: {fileID: -133986377728519977}
+  - component: {fileID: 4545690860031361385}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -487,6 +488,29 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   animator: {fileID: 5712288911929492183}
   swingStateDuration: 0.35
+--- !u!114 &4545690860031361385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12ff7375ca5aadc4eb128e9961203743, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.AutoPickupClient
+  ShowTopMostFoldoutHeaderGroup: 1
+  harvestingNet: {fileID: 2353484698067050047}
+  autoPickupEnabled: 1
+  pickupRadius: 2.5
+  scanIntervalSeconds: 0.15
+  maxPickupsPerScan: 3
+  pickupLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  limitVerticalDifference: 1
+  maxVerticalDifference: 1.25
 --- !u!1001 &8339141353853846874
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -404,6 +404,11 @@ namespace HuntersAndCollectors.Harvesting
 
             if (!dropNetObj.TryGetComponent<ResourceDrop>(out var drop) || drop == null)
             {
+                drop = dropNetObj.GetComponentInChildren<ResourceDrop>(true);
+            }
+
+            if (drop == null)
+            {
                 SendDropResult(false, HarvestFailureReason.DropMissing, dropNetworkObjectId, string.Empty, 0);
                 return;
             }
@@ -800,6 +805,11 @@ namespace HuntersAndCollectors.Harvesting
 
             if (!go.TryGetComponent<ResourceDrop>(out var drop) || drop == null)
             {
+                drop = go.GetComponentInChildren<ResourceDrop>(true);
+            }
+
+            if (drop == null)
+            {
                 Debug.LogError($"[HarvestingNet][SERVER] Drop prefab missing ResourceDrop. prefab='{def.VisualPrefab.name}' itemId='{itemId}'");
                 Destroy(go);
                 return false;
@@ -834,7 +844,7 @@ namespace HuntersAndCollectors.Harvesting
             }
 
             // 7) Initialize quantity BEFORE spawning network object.
-            drop.ServerInitialize(quantity);
+            drop.ServerInitialize(quantity, null);
 
             // 8) Spawn network object so all clients see it.
             netObj.Spawn(true);
@@ -1245,3 +1255,4 @@ namespace HuntersAndCollectors.Harvesting
         HitRateLimited
     }
 }
+
