@@ -188,14 +188,7 @@ namespace HuntersAndCollectors.Players
 
             UpdateFocusNode();
 
-            if (currentVendorFocus != null)
-            {
-                if (vendorUI == null)
-                    vendorUI = FindObjectOfType<VendorWindowUI>(true);
 
-                vendorUI?.Open(currentVendorFocus);
-                return false;
-            }
 
             if (harvestingNet != null && currentDropFocus != null)
             {

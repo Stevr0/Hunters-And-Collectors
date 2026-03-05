@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 777404325835335842}
   serializedVersion: 2
   m_LocalRotation: {x: 0.08715578, y: 0, z: 0, w: 0.9961947}
-  m_LocalPosition: {x: 0, y: 0.7, z: 0.2}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -59,6 +59,7 @@ GameObject:
   - component: {fileID: -133986377728519977}
   - component: {fileID: 4545690860031361385}
   - component: {fileID: 8023456712345678901}
+  - component: {fileID: 6123456701234567890}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -80,6 +81,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3866871865449947061}
+  - {fileID: 6085582210013377002}
   - {fileID: 3996495201851079924}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -267,24 +269,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   harvestingNet: {fileID: 2353484698067050047}
---- !u!114 &8023456712345678901
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4492703975310421043}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0de8c07164dc44e7994b665183810968, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Combat.PlayerAttackNet
-  playerCamera: {fileID: 0}
-  attackRange: 2.5
-  interactableMask:
-    serializedVersion: 2
-    m_Bits: 0
-  attackDamage: 10
 --- !u!114 &4371911881652788264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -441,6 +425,27 @@ MonoBehaviour:
     TransitionDuration: 0.1
     TriggerNameHash: 64349995
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -378159727
+    DestinationState: 676516161
+    TransitionDuration: 0.25
+    TriggerNameHash: 1080829965
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -378159727
+    DestinationState: 1795460203
+    TransitionDuration: 0.25
+    TriggerNameHash: 1080829965
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -378159727
+    DestinationState: 1622413229
+    TransitionDuration: 0.25
+    TriggerNameHash: 1080829965
+    TransitionIndex: 2
   AnimatorParameterEntries:
     ParameterEntries:
     - name: MoveX
@@ -479,6 +484,18 @@ MonoBehaviour:
       NameHash: 1957446045
       Synchronize: 1
       ParameterType: 1
+    - name: Attack
+      NameHash: 1080829965
+      Synchronize: 1
+      ParameterType: 9
+    - name: AttackStyle
+      NameHash: -555833009
+      Synchronize: 1
+      ParameterType: 3
+    - name: IsAttacking
+      NameHash: -1130678506
+      Synchronize: 1
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!114 &-2637652869777206320
 MonoBehaviour:
@@ -532,6 +549,76 @@ MonoBehaviour:
     m_Bits: 4294967295
   limitVerticalDifference: 1
   maxVerticalDifference: 1.25
+--- !u!114 &8023456712345678901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0de8c07164dc44e7994b665183810968, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Combat.PlayerAttackNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  attackRange: 2.5
+  interactableMask:
+    serializedVersion: 2
+    m_Bits: 0
+  defaultUnarmedDamage: 1
+  defaultUnarmedSwingSpeed: 0.5
+  playerCamera: {fileID: 0}
+  equipmentNet: {fileID: 9162402046273109018}
+  playerCombatAnim: {fileID: 6123456701234567890}
+  viewOrigin: {fileID: 6085582210013377002}
+  originTolerance: 1.25
+--- !u!114 &6123456701234567890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64f3e9494ab24feda3bc5d700823be3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Combat.PlayerCombatAnimNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  animator: {fileID: 5712288911929492183}
+  attackStateDuration: 0.25
+--- !u!1 &6085582210013377001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6085582210013377002}
+  m_Layer: 0
+  m_Name: ViewOrigin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6085582210013377002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6085582210013377001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.6, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343950372854504305}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &8339141353853846874
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -600,4 +687,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4957605393579145646, guid: 4f46098734d87e24490aef9267915ad2, type: 3}
   m_PrefabInstance: {fileID: 8339141353853846874}
   m_PrefabAsset: {fileID: 0}
-
