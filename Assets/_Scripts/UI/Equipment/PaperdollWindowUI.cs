@@ -3,7 +3,6 @@ using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using Unity.Collections;
 using UnityEngine;
@@ -18,7 +17,6 @@ namespace HuntersAndCollectors.UI
 
         [Header("UI")]
         [SerializeField] private TMP_Text titleText;
-        [SerializeField] private TMP_Text infoText;
         [SerializeField] private List<PaperdollSlotUI> slots = new();
 
         [Header("Multiplayer")]
@@ -30,18 +28,11 @@ namespace HuntersAndCollectors.UI
 
         private Action equipmentChangedHandler;
         private readonly Dictionary<EquipSlot, string> lastRenderedSlotIds = new();
-        private bool hoverSubscribed;
 
         private void OnEnable()
         {
             TryBindToLocalPlayer();
             RefreshAll();
-            SubscribeHoverBus();
-        }
-
-        private void OnDisable()
-        {
-            UnsubscribeHoverBus();
         }
 
         private void OnDestroy()
@@ -124,8 +115,6 @@ namespace HuntersAndCollectors.UI
             equipmentChangedHandler = null;
             equipmentNet = null;
             inventoryNet = null;
-
-            UnsubscribeHoverBus();
         }
 
         public void OnSlotClicked(EquipSlot slot)
@@ -160,12 +149,13 @@ namespace HuntersAndCollectors.UI
                 return;
 
             if (titleText != null)
-                titleText.text = equipmentNet.IsOwner ? "Equipment" : "Equipment";
+                titleText.text = "Equipment";
 
             for (int i = 0; i < slots.Count; i++)
             {
                 var slotUI = slots[i];
-                if (slotUI == null) continue;
+                if (slotUI == null)
+                    continue;
 
                 string itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
                 var icon = ResolveIcon(itemId);
@@ -195,66 +185,16 @@ namespace HuntersAndCollectors.UI
             }
         }
 
-        private void HandleHoveredItemChanged(string itemId)
-        {
-            if (infoText == null)
-                return;
-
-            if (itemDatabase == null)
-            {
-                infoText.text = itemId ?? string.Empty;
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(itemId))
-            {
-                infoText.text = string.Empty;
-                return;
-            }
-
-            if (!itemDatabase.TryGet(itemId, out ItemDef def) || def == null)
-            {
-                infoText.text = itemId;
-                return;
-            }
-
-            infoText.text = BuildInfoText(def);
-        }
-
-        private void HandleHoverCleared()
-        {
-            if (infoText != null)
-                infoText.text = string.Empty;
-        }
-
-        private void SubscribeHoverBus()
-        {
-            if (hoverSubscribed)
-                return;
-
-            HuntersAndCollectors.UI.ItemHoverBus.HoveredItemChanged += HandleHoveredItemChanged;
-            HuntersAndCollectors.UI.ItemHoverBus.HoverCleared += HandleHoverCleared;
-            hoverSubscribed = true;
-        }
-
-        private void UnsubscribeHoverBus()
-        {
-            if (!hoverSubscribed)
-                return;
-
-            HuntersAndCollectors.UI.ItemHoverBus.HoveredItemChanged -= HandleHoveredItemChanged;
-            HuntersAndCollectors.UI.ItemHoverBus.HoverCleared -= HandleHoverCleared;
-            hoverSubscribed = false;
-        }
-
         private bool IsEquipmentVisualOutOfDate()
         {
-            if (equipmentNet == null) return false;
+            if (equipmentNet == null)
+                return false;
 
             for (int i = 0; i < slots.Count; i++)
             {
                 var slotUI = slots[i];
-                if (slotUI == null) continue;
+                if (slotUI == null)
+                    continue;
 
                 var latestId = equipmentNet.GetEquippedItemId(slotUI.Slot) ?? string.Empty;
                 if (!lastRenderedSlotIds.TryGetValue(slotUI.Slot, out var lastId))
@@ -265,48 +205,6 @@ namespace HuntersAndCollectors.UI
             }
 
             return false;
-        }
-
-        private string BuildInfoText(ItemDef def)
-        {
-            var lines = new StringBuilder(256);
-
-            lines.AppendLine(def.DisplayName);
-            lines.Append("Category: ").Append(def.Category).AppendLine();
-            lines.Append("Max Stack: ").Append(def.MaxStack).AppendLine();
-
-            if (def.IsEquippable)
-            {
-                lines.Append("Equip Slot: ").Append(def.EquipSlot).AppendLine();
-                lines.Append("Handedness: ").Append(def.Handedness).AppendLine();
-
-                if (def.ToolTags != null && def.ToolTags.Length > 0)
-                {
-                    lines.Append("Tool Tags: ");
-                    for (int i = 0; i < def.ToolTags.Length; i++)
-                    {
-                        lines.Append(def.ToolTags[i]);
-                        if (i < def.ToolTags.Length - 1)
-                            lines.Append(", ");
-                    }
-                    lines.AppendLine();
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(def.Description))
-            {
-                lines.AppendLine();
-                lines.AppendLine(def.Description.Trim());
-            }
-
-            if (!string.IsNullOrWhiteSpace(def.PropertiesText))
-            {
-                lines.AppendLine();
-                lines.AppendLine("Properties:");
-                lines.AppendLine(def.PropertiesText.Trim());
-            }
-
-            return lines.ToString();
         }
     }
 }

@@ -6281,7 +6281,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollWindowUI
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
   titleText: {fileID: 1548947158}
-  infoText: {fileID: 1025545905}
   slots:
   - {fileID: 1669373439}
   - {fileID: 1421994889}
@@ -7558,6 +7557,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1862782208}
   - component: {fileID: 1862782209}
+  - component: {fileID: 1862782210}
   m_Layer: 5
   m_Name: CharacterWindowRootUI
   m_TagString: Untagged
@@ -7602,6 +7602,21 @@ MonoBehaviour:
   startHidden: 1
   paperdollWindow: {fileID: 1466733495}
   inventoryWindow: {fileID: 122361227}
+--- !u!114 &1862782210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862782207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7aef7cf6d6f7fb4cba7b9983bffe774, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.ItemInfoTextUI
+  infoText: {fileID: 1025545905}
+  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
+  debugHover: 0
 --- !u!1 &1879679084
 GameObject:
   m_ObjectHideFlags: 0
@@ -8459,7 +8474,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.000015258789, y: 0.000007838356}
+  m_AnchoredPosition: {x: 0.000015258789, y: 0.0006599191}
   m_SizeDelta: {x: 0, y: 562.51}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2107189978

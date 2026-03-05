@@ -21,7 +21,8 @@ namespace HuntersAndCollectors.Harvesting
         None = 0,
         Axe = 1,
         Pickaxe = 2,
-        Sickle = 3
+        Sickle = 3,
+        Knife = 4,
     }
 
     /// <summary>

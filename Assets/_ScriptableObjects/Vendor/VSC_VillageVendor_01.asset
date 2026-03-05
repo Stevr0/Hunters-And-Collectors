@@ -17,3 +17,9 @@ MonoBehaviour:
     Quantity: 200
   - ItemId: it_stone
     Quantity: 200
+  - ItemId: it_stonepickaxe
+    Quantity: 1
+  - ItemId: it_stoneaxe
+    Quantity: 1
+  - ItemId: it_stoneknife
+    Quantity: 1

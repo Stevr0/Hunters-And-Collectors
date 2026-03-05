@@ -1,12 +1,12 @@
 using HuntersAndCollectors.Harvesting;
+using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Vendors;
 using HuntersAndCollectors.Vendors.UI;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using HuntersAndCollectors.Input;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace HuntersAndCollectors.Players
 {
@@ -35,9 +35,11 @@ namespace HuntersAndCollectors.Players
         public ResourceNodeNet CurrentNodeFocus => currentNodeFocus;
 
         private ResourceNodeNet currentNodeFocus;
-
         private VendorInteractable currentVendorFocus;
         private ResourceDrop currentDropFocus;
+
+        private bool primaryHeld;
+        private double nextPrimarySwingAttemptClientTime;
 
         public VendorInteractable CurrentVendorFocus => currentVendorFocus;
         public ResourceDrop CurrentDropFocus => currentDropFocus;
@@ -45,8 +47,6 @@ namespace HuntersAndCollectors.Players
         public Camera InteractCamera => playerCamera;
         public float InteractRange => interactRange;
         public LayerMask InteractableMask => interactableMask;
-
-
 
         public override void OnNetworkSpawn()
         {
@@ -56,10 +56,8 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            // Find UI even if it's inactive.
             vendorUI = FindObjectOfType<VendorWindowUI>(true);
 
-            // Default layer if mask not set.
             if (interactableMask.value == 0)
             {
                 var layer = LayerMask.NameToLayer("Interactable");
@@ -67,7 +65,6 @@ namespace HuntersAndCollectors.Players
                     interactableMask = 1 << layer;
             }
 
-            // Camera for reticle ray.
             if (playerCamera == null)
                 playerCamera = Camera.main;
 
@@ -82,17 +79,21 @@ namespace HuntersAndCollectors.Players
 
             input = new PlayerInputActions();
             input.Player.Interact.performed += OnInteractPerformed;
-            input.Player.Primary.performed += OnPrimaryPerformed;
-
+            input.Player.Primary.started += OnPrimaryStarted;
+            input.Player.Primary.canceled += OnPrimaryCanceled;
             input.Enable();
         }
 
         private void OnDisable()
         {
+            primaryHeld = false;
+            nextPrimarySwingAttemptClientTime = 0d;
+
             if (input != null)
             {
                 input.Player.Interact.performed -= OnInteractPerformed;
-                input.Player.Primary.performed -= OnPrimaryPerformed;
+                input.Player.Primary.started -= OnPrimaryStarted;
+                input.Player.Primary.canceled -= OnPrimaryCanceled;
                 input.Disable();
             }
         }
@@ -103,48 +104,89 @@ namespace HuntersAndCollectors.Players
                 return;
 
             UpdateFocusNode();
+            UpdateHeldPrimarySwing();
         }
-
-        // ------------------------------------------------------------
-        // Input callbacks
-        // ------------------------------------------------------------
 
         private void OnInteractPerformed(InputAction.CallbackContext ctx)
         {
             TryInteractTap();
         }
 
-        private void OnPrimaryPerformed(InputAction.CallbackContext ctx)
+        private void OnPrimaryStarted(InputAction.CallbackContext ctx)
         {
-            if (!ctx.performed)
+            if (!ctx.started)
                 return;
 
-            HandlePrimaryAction();
+            primaryHeld = true;
+
+            // Single-click still performs one immediate primary action.
+            bool swungAtNode = HandlePrimaryAction();
+            if (swungAtNode)
+            {
+                float interval = harvestingNet != null
+                    ? harvestingNet.GetOwnerExpectedSwingIntervalSeconds(currentNodeFocus)
+                    : 0.1f;
+
+                nextPrimarySwingAttemptClientTime = Time.timeAsDouble + Mathf.Max(0.01f, interval);
+            }
+            else
+            {
+                nextPrimarySwingAttemptClientTime = Time.timeAsDouble;
+            }
         }
 
-        private void HandlePrimaryAction()
+        private void OnPrimaryCanceled(InputAction.CallbackContext ctx)
         {
-            // ------------------------------------------------------------
-            // If UI is open, DO NOT process gameplay clicks.
-            // This prevents left click from stealing vendor button clicks.
-            // ------------------------------------------------------------
-            if (InputState.GameplayLocked)
+            if (!ctx.canceled)
                 return;
 
-            // If the mouse is over any UI element, don't treat this click as gameplay.
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            primaryHeld = false;
+            nextPrimarySwingAttemptClientTime = 0d;
+        }
+
+        private void UpdateHeldPrimarySwing()
+        {
+            if (!primaryHeld)
                 return;
 
-            if (playerCamera == null)
+            double now = Time.timeAsDouble;
+            if (now < nextPrimarySwingAttemptClientTime)
                 return;
+
+            if (!CanProcessPrimaryGameplayInput())
+            {
+                nextPrimarySwingAttemptClientTime = now + 0.05d;
+                return;
+            }
+
+            if (playerCamera == null || harvestingNet == null)
+            {
+                nextPrimarySwingAttemptClientTime = now + 0.05d;
+                return;
+            }
 
             UpdateFocusNode();
 
-            // IMPORTANT: Your focus priority is Vendor > Drop > Node,
-            // but your action priority currently hits nodes FIRST.
-            // That mismatch can cause surprises.
-            // We'll align action priority with focus priority:
-            // Vendor > Drop > Node
+            if (currentVendorFocus != null || currentDropFocus != null || currentNodeFocus == null)
+            {
+                nextPrimarySwingAttemptClientTime = now + 0.05d;
+                return;
+            }
+
+            harvestingNet.RequestHitNode(currentNodeFocus);
+            float interval = harvestingNet.GetOwnerExpectedSwingIntervalSeconds(currentNodeFocus);
+            nextPrimarySwingAttemptClientTime = now + Mathf.Max(0.01f, interval);
+        }
+
+        private bool HandlePrimaryAction()
+        {
+            if (!CanProcessPrimaryGameplayInput())
+                return false;
+
+            if (playerCamera == null)
+                return false;
+
+            UpdateFocusNode();
 
             if (currentVendorFocus != null)
             {
@@ -152,25 +194,34 @@ namespace HuntersAndCollectors.Players
                     vendorUI = FindObjectOfType<VendorWindowUI>(true);
 
                 vendorUI?.Open(currentVendorFocus);
-                return;
+                return false;
             }
 
             if (harvestingNet != null && currentDropFocus != null)
             {
                 harvestingNet.RequestPickup(currentDropFocus);
-                return;
+                return false;
             }
 
             if (harvestingNet != null && currentNodeFocus != null)
             {
                 harvestingNet.RequestHitNode(currentNodeFocus);
-                return;
+                return true;
             }
+
+            return false;
         }
 
-        // ------------------------------------------------------------
-        // Tap interaction (vendor / pickup)
-        // ------------------------------------------------------------
+        private bool CanProcessPrimaryGameplayInput()
+        {
+            if (InputState.GameplayLocked)
+                return false;
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                return false;
+
+            return true;
+        }
 
         private void TryInteractTap()
         {
@@ -182,7 +233,6 @@ namespace HuntersAndCollectors.Players
             if (!Physics.Raycast(ray, out RaycastHit hit, interactRange, interactableMask, QueryTriggerInteraction.Collide))
                 return;
 
-            // Vendor interaction (tap to open)
             var vendor = hit.collider.GetComponentInParent<VendorInteractable>();
             if (vendor != null)
             {
@@ -196,7 +246,6 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            // Drop pickup (tap)
             var pickup = hit.collider.GetComponentInParent<ResourceDrop>();
             if (pickup != null)
             {
@@ -204,16 +253,8 @@ namespace HuntersAndCollectors.Players
                     return;
 
                 harvestingNet.RequestPickup(pickup);
-                return;
             }
-
-            // NOTE: We intentionally do NOT start harvesting on tap anymore.
-            // Harvesting is a HOLD-only action driven by started/canceled.
         }
-
-        // ------------------------------------------------------------
-        // Focus / raycast helpers
-        // ------------------------------------------------------------
 
         private void UpdateFocusNode()
         {
@@ -229,7 +270,6 @@ namespace HuntersAndCollectors.Players
             if (!Physics.Raycast(ray, out RaycastHit hit, interactRange, interactableMask, QueryTriggerInteraction.Collide))
                 return;
 
-            // Priority: Vendor > Drop > Node (match your tap behavior if you want)
             currentVendorFocus = hit.collider.GetComponentInParent<VendorInteractable>();
             if (currentVendorFocus != null)
                 return;
@@ -240,7 +280,6 @@ namespace HuntersAndCollectors.Players
 
             currentNodeFocus = hit.collider.GetComponentInParent<ResourceNodeNet>();
         }
-
-
     }
 }
+

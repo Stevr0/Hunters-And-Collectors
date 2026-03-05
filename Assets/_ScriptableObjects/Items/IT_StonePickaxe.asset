@@ -31,7 +31,7 @@ MonoBehaviour:
   MaxDurability: 100
   Damage: 5
   Defence: 0
-  SwingSpeed: 2
+  SwingSpeed: 0.5
   MovementSpeed: 0.9
   IsEquippable: 1
   EquipSlot: 10

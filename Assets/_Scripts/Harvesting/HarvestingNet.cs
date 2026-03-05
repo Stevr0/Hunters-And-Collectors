@@ -63,6 +63,13 @@ namespace HuntersAndCollectors.Harvesting
         [Min(0.05f)]
         [SerializeField] private float hitCooldownSeconds = 0.35f;
 
+        [Header("Swing Rate Limiting")]
+        [Tooltip("How ItemDef.SwingSpeed should be interpreted when converting to a swing interval.")]
+        [SerializeField] private SwingSpeedUnit swingSpeedUnit = SwingSpeedUnit.SwingsPerSecond;
+
+        [Tooltip("When true, logs server/client swing rate decisions and cooldown rejects.")]
+        [SerializeField] private bool debugSwingRate = false;
+
         [Tooltip("Damage applied to a node per successful hit (node health is server-side).")]
         [Min(1)]
         [SerializeField] private int hitDamagePerSwing = 1;
@@ -180,6 +187,14 @@ namespace HuntersAndCollectors.Harvesting
         private readonly List<string> _rareDropIdsBuffer = new(4);
         private readonly List<int> _rareDropAmountsBuffer = new(4);
 
+        private enum SwingSpeedUnit
+        {
+            SwingsPerSecond = 0,
+            SecondsPerSwing = 1,
+            AutoDetect = 2
+        }
+
+
         // --------------------------------------------------------------------
         // Client entry points
         // --------------------------------------------------------------------
@@ -204,6 +219,19 @@ namespace HuntersAndCollectors.Harvesting
             HitNodeServerRpc(node.NetworkObjectId);
         }
 
+        /// <summary>
+        /// Owner-side helper used by input code to locally throttle hold-to-swing requests.
+        /// Server still validates and enforces final timing.
+        /// </summary>
+        public float GetOwnerExpectedSwingIntervalSeconds(ResourceNodeNet node)
+        {
+            if (!EnsureDependencies())
+                return Mathf.Max(0.01f, hitCooldownSeconds);
+
+            float interval = ResolveSwingIntervalSeconds(node, out _, out _, out _, out _);
+            return Mathf.Max(0.01f, interval);
+        }
+
         [ServerRpc(RequireOwnership = true)]
         private void HitNodeServerRpc(ulong nodeNetworkObjectId)
         {
@@ -216,55 +244,17 @@ namespace HuntersAndCollectors.Harvesting
                 return;
             }
 
-            // Look up the node reliably via NGO spawn table.
             if (NetworkManager.SpawnManager == null ||
                 !NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(nodeNetworkObjectId, out var nodeNetObj) ||
                 nodeNetObj == null ||
                 !nodeNetObj.TryGetComponent<ResourceNodeNet>(out var node) ||
                 node == null)
             {
-                // This replaces the registry lookup fail.
                 SendHarvestResult(false, HarvestFailureReason.NodeNotFound, nodeNetworkObjectId.ToString(), string.Empty, 0);
                 return;
             }
 
-            // ---- the rest of your existing validation stays the same ----
-
-            if (!node.IsHarvestableNow() || node.CurrentHealth <= 0)
-            {
-                SendHarvestResult(false, HarvestFailureReason.NodeOnCooldown, node.NodeId, node.DropItemId, 0);
-                return;
-            }
-
-            if (!IsWithinRange(node.transform.position, nodeMaxDistance))
-            {
-                SendHarvestResult(false, HarvestFailureReason.OutOfRange, node.NodeId, node.DropItemId, 0);
-                return;
-            }
-
-            if (!TryValidateToolRequirement(node, out var toolFailureReason))
-            {
-                SendHarvestResult(false, toolFailureReason, node.NodeId, node.DropItemId, 0);
-                return;
-            }
-
-            double now = ServerTimeNow();
-            if (now < _nextAllowedServerHitTime)
-            {
-                SendHarvestResult(false, HarvestFailureReason.HitRateLimited, node.NodeId, node.DropItemId, 0);
-                return;
-            }
-
-            _nextAllowedServerHitTime = now + Mathf.Max(0.01f, hitCooldownSeconds);
-
-            if (harvestAnim != null)
-                harvestAnim.ServerPlaySwing(ToolToAnim(node.RequiredTool));
-
-            int damage = Mathf.Max(1, hitDamagePerSwing);
-            bool depleted = node.ServerApplyDamage(damage);
-
-            if (depleted)
-                HandleNodeDepleted(node);
+            TryProcessServerHitRequest(node, node.NodeId);
         }
 
         /// <summary>
@@ -288,7 +278,6 @@ namespace HuntersAndCollectors.Harvesting
         // Server RPCs - Harvesting (node hits)
         // --------------------------------------------------------------------
         #region Server RPCs - Harvesting
-
         [ServerRpc(RequireOwnership = true)]
         private void HitNodeServerRpc(FixedString64Bytes nodeId)
         {
@@ -318,61 +307,7 @@ namespace HuntersAndCollectors.Harvesting
                 return;
             }
 
-            float distance = ComputeDistanceToNode(node);
-            LogHarvestEvent("HitNode.Begin", node, HarvestFailureReason.None, distance);
-
-            // Node must still be spawned and harvestable.
-            if (!node.IsSpawned)
-            {
-                SendHarvestResult(false, HarvestFailureReason.NodeNotFound, nodeIdString, node.DropItemId, 0);
-                return;
-            }
-
-            // Harvestable check includes cooldown.
-            if (!node.IsHarvestableNow() || node.CurrentHealth <= 0)
-            {
-                SendHarvestResult(false, HarvestFailureReason.NodeOnCooldown, nodeIdString, node.DropItemId, 0);
-                return;
-            }
-
-            // Range check.
-            if (!IsWithinRange(node.transform.position, nodeMaxDistance))
-            {
-                LogHarvestEvent("HitNode.Fail.Distance", node, HarvestFailureReason.OutOfRange, distance, $"max={nodeMaxDistance}");
-                SendHarvestResult(false, HarvestFailureReason.OutOfRange, nodeIdString, node.DropItemId, 0);
-                return;
-            }
-
-            // Tool requirement validation.
-            if (!TryValidateToolRequirement(node, out var toolFailureReason))
-            {
-                LogHarvestEvent("HitNode.Fail.Tool", node, toolFailureReason, distance);
-                SendHarvestResult(false, toolFailureReason, nodeIdString, node.DropItemId, 0);
-                return;
-            }
-
-            // Hit rate limit (server time).
-            double now = ServerTimeNow();
-            if (now < _nextAllowedServerHitTime)
-            {
-                SendHarvestResult(false, HarvestFailureReason.HitRateLimited, nodeIdString, node.DropItemId, 0);
-                return;
-            }
-
-            _nextAllowedServerHitTime = now + Mathf.Max(0.01f, hitCooldownSeconds);
-
-            // Cosmetic swing (does NOT gate damage timing).
-            if (harvestAnim != null)
-                harvestAnim.ServerPlaySwing(ToolToAnim(node.RequiredTool));
-
-            // Apply damage server-side.
-            int damage = Mathf.Max(1, hitDamagePerSwing);
-            bool depleted = node.ServerApplyDamage(damage);
-
-            if (!depleted)
-                return;
-
-            HandleNodeDepleted(node);
+            TryProcessServerHitRequest(node, nodeIdString);
         }
 
         #endregion
@@ -929,6 +864,218 @@ namespace HuntersAndCollectors.Harvesting
             return Vector3.Distance(transform.position, node.transform.position);
         }
 
+        private bool TryProcessServerHitRequest(ResourceNodeNet node, string nodeIdForResult)
+        {
+            if (node == null)
+            {
+                SendHarvestResult(false, HarvestFailureReason.NodeNotFound, nodeIdForResult ?? string.Empty, string.Empty, 0);
+                return false;
+            }
+
+            if (!node.IsSpawned)
+            {
+                SendHarvestResult(false, HarvestFailureReason.NodeNotFound, nodeIdForResult ?? string.Empty, node.DropItemId, 0);
+                return false;
+            }
+
+            if (!node.IsHarvestableNow() || node.CurrentHealth <= 0)
+            {
+                SendHarvestResult(false, HarvestFailureReason.NodeOnCooldown, nodeIdForResult ?? node.NodeId, node.DropItemId, 0);
+                return false;
+            }
+
+            if (!IsWithinRange(node.transform.position, nodeMaxDistance))
+            {
+                SendHarvestResult(false, HarvestFailureReason.OutOfRange, nodeIdForResult ?? node.NodeId, node.DropItemId, 0);
+                return false;
+            }
+
+            if (!TryValidateToolRequirement(node, out var toolFailureReason))
+            {
+                SendHarvestResult(false, toolFailureReason, nodeIdForResult ?? node.NodeId, node.DropItemId, 0);
+                return false;
+            }
+
+            double now = ServerTimeNow();
+            float intervalSeconds = ResolveSwingIntervalSeconds(node, out var equippedItemId, out var swingSpeedRaw, out var conversionMode, out var sourceLabel);
+
+            if (now < _nextAllowedServerHitTime)
+            {
+                if (debugSwingRate)
+                {
+                    Debug.Log($"[HarvestingNet][SERVER][SwingRate] REJECT owner={OwnerClientId} itemId={equippedItemId} source={sourceLabel} raw={swingSpeedRaw:0.###} interval={intervalSeconds:0.###} now={now:0.###} nextAllowed={_nextAllowedServerHitTime:0.###}");
+                }
+
+                SendHarvestResult(false, HarvestFailureReason.HitRateLimited, nodeIdForResult ?? node.NodeId, node.DropItemId, 0);
+                return false;
+            }
+
+            _nextAllowedServerHitTime = now + intervalSeconds;
+
+            if (debugSwingRate)
+            {
+                Debug.Log($"[HarvestingNet][SERVER][SwingRate] ACCEPT owner={OwnerClientId} itemId={equippedItemId} source={sourceLabel} raw={swingSpeedRaw:0.###} mode={conversionMode} interval={intervalSeconds:0.###} now={now:0.###} nextAllowed={_nextAllowedServerHitTime:0.###}");
+            }
+
+            if (harvestAnim != null)
+                harvestAnim.ServerPlaySwing(ToolToAnim(node.RequiredTool));
+
+            int damage = Mathf.Max(1, hitDamagePerSwing);
+            bool depleted = node.ServerApplyDamage(damage);
+
+            if (depleted)
+                HandleNodeDepleted(node);
+
+            return true;
+        }
+
+        private float ResolveSwingIntervalSeconds(
+            ResourceNodeNet node,
+            out string equippedItemId,
+            out float swingSpeedRaw,
+            out string conversionMode,
+            out string sourceLabel)
+        {
+            equippedItemId = string.Empty;
+            swingSpeedRaw = 0f;
+            conversionMode = "FallbackCooldown";
+            sourceLabel = "fallback";
+
+            float fallbackInterval = Mathf.Max(0.01f, hitCooldownSeconds);
+
+            if (!TryGetEquippedSwingItem(node, out equippedItemId, out var equippedDef, out sourceLabel) || equippedDef == null)
+                return fallbackInterval;
+
+            swingSpeedRaw = Mathf.Max(0.0001f, equippedDef.SwingSpeed);
+
+            float interval = ConvertSwingSpeedToIntervalSeconds(swingSpeedRaw, out conversionMode);
+            return Mathf.Max(0.01f, interval);
+        }
+
+        private bool TryGetEquippedSwingItem(ResourceNodeNet node, out string itemId, out ItemDef def, out string sourceLabel)
+        {
+            itemId = string.Empty;
+            def = null;
+            sourceLabel = "none";
+
+            if (equipment == null)
+                equipment = GetComponent<PlayerEquipmentNet>();
+
+            if (equipment == null)
+                return false;
+
+            string requiredItemId = node != null ? node.RequiredToolItemId : string.Empty;
+            if (!string.IsNullOrWhiteSpace(requiredItemId) && equipment.HasEquippedItem(requiredItemId) && equipment.TryGetItemDef(requiredItemId, out def) && def != null)
+            {
+                itemId = requiredItemId;
+                sourceLabel = "required-item";
+                return true;
+            }
+
+            ToolTag requiredTag = ToToolTag(node != null ? node.RequiredTool : ToolType.None);
+
+            if (TryGetSlotItemDef(EquipSlot.MainHand, requiredTag, out itemId, out def))
+            {
+                sourceLabel = "main-hand";
+                return true;
+            }
+
+            if (TryGetSlotItemDef(EquipSlot.OffHand, requiredTag, out itemId, out def))
+            {
+                sourceLabel = "off-hand";
+                return true;
+            }
+
+            if (requiredTag == ToolTag.None)
+            {
+                if (TryGetSlotItemDef(EquipSlot.MainHand, ToolTag.None, out itemId, out def))
+                {
+                    sourceLabel = "main-hand-any";
+                    return true;
+                }
+
+                if (TryGetSlotItemDef(EquipSlot.OffHand, ToolTag.None, out itemId, out def))
+                {
+                    sourceLabel = "off-hand-any";
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetSlotItemDef(EquipSlot slot, ToolTag requiredTag, out string itemId, out ItemDef def)
+        {
+            itemId = string.Empty;
+            def = null;
+
+            if (equipment == null)
+                return false;
+
+            string equippedId = equipment.GetEquippedItemId(slot);
+            if (string.IsNullOrWhiteSpace(equippedId))
+                return false;
+
+            if (!equipment.TryGetItemDef(equippedId, out def) || def == null)
+                return false;
+
+            if (requiredTag != ToolTag.None && !ItemHasToolTag(def, requiredTag))
+                return false;
+
+            itemId = equippedId;
+            return true;
+        }
+
+        private static bool ItemHasToolTag(ItemDef def, ToolTag requiredTag)
+        {
+            if (def == null || requiredTag == ToolTag.None)
+                return true;
+
+            var tags = def.ToolTags;
+            if (tags == null || tags.Length == 0)
+                return false;
+
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i] == requiredTag)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static ToolTag ToToolTag(ToolType tool)
+        {
+            return tool switch
+            {
+                ToolType.Axe => ToolTag.Axe,
+                ToolType.Pickaxe => ToolTag.Pickaxe,
+                ToolType.Sickle => ToolTag.Sickle,
+                ToolType.Knife => ToolTag.Knife,
+                _ => ToolTag.None
+            };
+        }
+
+        private float ConvertSwingSpeedToIntervalSeconds(float swingSpeedRaw, out string conversionMode)
+        {
+            float safeRaw = Mathf.Max(0.0001f, swingSpeedRaw);
+
+            switch (swingSpeedUnit)
+            {
+                case SwingSpeedUnit.SwingsPerSecond:
+                    conversionMode = "SwingsPerSecond";
+                    return 1f / safeRaw;
+
+                case SwingSpeedUnit.SecondsPerSwing:
+                    conversionMode = "SecondsPerSwing";
+                    return safeRaw;
+
+                default:
+                    bool looksLikePerSecond = safeRaw >= 1f;
+                    conversionMode = looksLikePerSecond ? "AutoDetect->SwingsPerSecond" : "AutoDetect->SecondsPerSwing";
+                    return looksLikePerSecond ? (1f / safeRaw) : safeRaw;
+            }
+        }
         private bool HasToolTypeEquipped(ToolType requiredTool)
         {
             if (requiredTool == ToolType.None)

@@ -4,7 +4,6 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using HuntersAndCollectors.UI;
 
-
 namespace HuntersAndCollectors.Inventory.UI
 {
     /// <summary>
@@ -12,18 +11,21 @@ namespace HuntersAndCollectors.Inventory.UI
     /// ---------------------------------------------------------
     /// Visual+clickable UI for ONE inventory slot.
     ///
-    /// Now also publishes hover events so other windows can show item details.
+    /// Also publishes hover events so other windows can show item details.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class InventoryGridSlotUI : MonoBehaviour,
-       IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler
+        IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         [Header("UI")]
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text qtyText;
         [SerializeField] private Button button;
-
         [SerializeField] private UIDragDropBroker dragDrop; // assign in prefab or auto-find
+
+        [Header("Debug")]
+        [SerializeField] private bool debugHover;
 
         // Current item in this UI slot (empty string = empty).
         private string itemId = string.Empty;
@@ -55,6 +57,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 button.onClick.RemoveListener(HandleClick);
                 button.onClick.AddListener(HandleClick);
             }
+
             if (dragDrop == null)
                 dragDrop = FindObjectOfType<UIDragDropBroker>(true);
         }
@@ -122,20 +125,20 @@ namespace HuntersAndCollectors.Inventory.UI
             onClicked?.Invoke(itemId);
         }
 
-        /// <summary>
-        /// Unity UI event: mouse entered this slot.
-        /// If the slot has an item, publish it so other UI (paperdoll) can show details.
-        /// </summary>
         public void OnPointerEnter(PointerEventData eventData)
         {
-            // If empty, clear hover (prevents stale info text).
+            if (debugHover)
+                Debug.Log($"[InventoryGridSlotUI] Hover enter slot={SlotIndex} itemId='{itemId}'");
+
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                ItemHoverBus.PublishClear();
+                return;
+            }
+
             ItemHoverBus.PublishHover(itemId);
         }
 
-        /// <summary>
-        /// Unity UI event: mouse left this slot.
-        /// Clear the hover.
-        /// </summary>
         public void OnPointerExit(PointerEventData eventData)
         {
             ItemHoverBus.PublishClear();
@@ -153,13 +156,12 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnDrag(PointerEventData eventData)
         {
-            // Drag ghost follows mouse via UIDragGhost.Update()
+            // Drag ghost follows mouse via UIDragGhost.Update().
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            // If we ended drag NOT over a valid drop target,
-            // we still want to hide the ghost.
+            // If we ended drag not over a valid drop target, hide the ghost.
             dragDrop?.CancelDrag();
         }
 

@@ -284,7 +284,7 @@ namespace HuntersAndCollectors.Harvesting
             if (maxHealth < 1) maxHealth = 1;
 
             if (resourceType == ResourceType.Fiber && requiredTool == ToolType.None)
-                requiredTool = ToolType.Sickle; // enforce MVP expectation
+                requiredTool = ToolType.Knife; // enforce MVP expectation
 
             if (requiredToolItem != null && requiredTool == ToolType.None)
                 requiredTool = GuessToolTypeFromItem(requiredToolItem);
@@ -306,6 +306,8 @@ namespace HuntersAndCollectors.Harvesting
                         return ToolType.Axe;
                     case ToolTag.Pickaxe:
                         return ToolType.Pickaxe;
+                    case ToolTag.Knife:
+                        return ToolType.Knife;
                     case ToolTag.Sickle:
                         return ToolType.Sickle;
                 }

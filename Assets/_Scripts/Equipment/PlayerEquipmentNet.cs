@@ -129,6 +129,7 @@ namespace HuntersAndCollectors.Players
                 ToolType.Axe => ToolTag.Axe,
                 ToolType.Pickaxe => ToolTag.Pickaxe,
                 ToolType.Sickle => ToolTag.Sickle,
+                ToolType.Knife => ToolTag.Knife,
                 _ => ToolTag.None
             };
         }

@@ -12,7 +12,8 @@ namespace HuntersAndCollectors.UI
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PaperdollSlotUI : MonoBehaviour,
-        IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler
+        IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         [Header("Slot Identity")]
         [SerializeField] private EquipSlot slot;
@@ -24,6 +25,7 @@ namespace HuntersAndCollectors.UI
 
         [SerializeField] private UIDragDropBroker dragDrop;
         [SerializeField] private PlayerEquipmentNet equipmentNet; // optional auto-find
+        [SerializeField] private bool debugHover;
         private string _equippedItemIdCached = string.Empty;
         private Sprite _equippedIconCached = null;
 
@@ -88,6 +90,24 @@ namespace HuntersAndCollectors.UI
             if (ownerWindow != null)
                 ownerWindow.OnSlotClicked(slot);
         }
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (debugHover)
+                Debug.Log($"[PaperdollSlotUI] Hover enter slot={slot} itemId='{_equippedItemIdCached}'");
+
+            if (string.IsNullOrWhiteSpace(_equippedItemIdCached))
+            {
+                ItemHoverBus.PublishClear();
+                return;
+            }
+
+            ItemHoverBus.PublishHover(_equippedItemIdCached);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            ItemHoverBus.PublishClear();
+        }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -112,3 +132,4 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+

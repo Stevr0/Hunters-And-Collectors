@@ -1,0 +1,18 @@
+*** Begin Patch
+*** Update File: Assets/_Scripts/Harvesting/HarvestingNet.cs
+@@
+         [Tooltip("Minimum seconds between server-validated hits for this player (anti-spam).")]
+         [Min(0.05f)]
+         [SerializeField] private float hitCooldownSeconds = 0.35f;
++
++        [Header("Swing Rate Limiting")]
++        [Tooltip("How ItemDef.SwingSpeed should be interpreted when converting to a swing interval.")]
++        [SerializeField] private SwingSpeedUnit swingSpeedUnit = SwingSpeedUnit.SwingsPerSecond;
++
++        [Tooltip("When true, logs server/client swing rate decisions and cooldown rejects.")]
++        [SerializeField] private bool debugSwingRate = false;
+ 
+         [Tooltip("Damage applied to a node per successful hit (node health is server-side).")]
+         [Min(1)]
+         [SerializeField] private int hitDamagePerSwing = 1;
+*** End Patch
