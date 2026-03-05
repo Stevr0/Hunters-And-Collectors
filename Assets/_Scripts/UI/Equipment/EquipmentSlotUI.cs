@@ -1,8 +1,9 @@
+using System;
 using HuntersAndCollectors.Items;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using HuntersAndCollectors.Players;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace HuntersAndCollectors.UI
 {
@@ -32,10 +33,13 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private UIDragDropBroker dragDrop;
         [SerializeField] private PlayerEquipmentNet equipmentNet;
         [SerializeField] private bool debugHover;
+        [SerializeField] private bool debugDurability = true;
 
         private string _equippedItemIdCached = string.Empty;
         private Sprite _equippedIconCached;
-        private PaperdollWindowUI ownerWindow;
+        private EquipmentWindowUI ownerWindow;
+
+        private static Sprite fallbackWhiteSprite;
 
         public EquipSlot Slot => slot;
 
@@ -51,13 +55,7 @@ namespace HuntersAndCollectors.UI
             ResetVisuals();
         }
 
-        private void OnEnable()
-        {
-            // Force clean state when reopening windows / reusing pooled objects.
-            ResetVisuals();
-        }
-
-        public void Bind(PaperdollWindowUI window)
+        public void Bind(EquipmentWindowUI window)
         {
             ownerWindow = window;
 
@@ -98,9 +96,6 @@ namespace HuntersAndCollectors.UI
 
         public void SetIcon(Sprite spriteOrNull)
         {
-            // Reset first, then apply icon state.
-            ResetVisuals();
-
             bool isEmpty = spriteOrNull == null;
             if (iconImage != null)
             {
@@ -118,17 +113,13 @@ namespace HuntersAndCollectors.UI
                 TryAutoBindDurabilityRefs();
 
             bool show = maxDurability > 0;
-
             SetDurabilityObjectsVisible(show);
-            if (!show)
-            {
-                if (durabilityFill != null)
-                    durabilityFill.fillAmount = 1f;
-                return;
-            }
 
-            if (durabilityFill != null)
-                durabilityFill.fillAmount = Mathf.Clamp01(durability / (float)maxDurability);
+            if (!show || durabilityFill == null)
+                return;
+
+            float fill = Mathf.Clamp01(durability / (float)Mathf.Max(1, maxDurability));
+            durabilityFill.fillAmount = fill;
         }
 
         public void ResetVisuals()
@@ -147,52 +138,145 @@ namespace HuntersAndCollectors.UI
             if (durabilityFill != null)
                 durabilityFill.fillAmount = 1f;
         }
+
         private void SetDurabilityObjectsVisible(bool visible)
         {
-            // Toggle at GameObject level so prefab default states cannot leak.
+            if (durabilityBackground == null)
+                TryAutoBindDurabilityRefs();
+
             if (durabilityBackground != null)
+            {
                 durabilityBackground.gameObject.SetActive(visible);
+                durabilityBackground.enabled = visible;
+            }
 
-            if (durabilityFill != null)
-                durabilityFill.gameObject.SetActive(visible);
-
-            // If references are missing, try best-effort transform toggles by name.
-            Transform bg = transform.Find("DurabilityBG") ?? transform.Find("Durability");
-            if (bg != null)
-                bg.gameObject.SetActive(visible);
-
-            Transform fill = transform.Find("DurabilityBG/DurFill")
-                              ?? transform.Find("DurabilityBG/DurabilityFill")
-                              ?? transform.Find("DurabilityFill")
-                              ?? transform.Find("DurFill");
-            if (fill != null)
-                fill.gameObject.SetActive(visible);
+            // DurabilityFill is a CHILD of the background, so we never toggle it directly.
+            // When the BG is hidden, the Fill is hidden automatically.
         }
 
         private void TryAutoBindDurabilityRefs()
         {
             if (durabilityBackground == null)
             {
-                Transform bg = transform.Find("DurabilityBG");
-                if (bg == null)
-                    bg = transform.Find("Durability");
+                Transform bg = transform.Find("DurabilityBG") ?? transform.Find("Durability");
                 if (bg != null)
                     durabilityBackground = bg.GetComponent<Image>();
+
+                if (durabilityBackground == null)
+                {
+                    Image[] all = GetComponentsInChildren<Image>(true);
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        if (all[i] == null)
+                            continue;
+
+                        string name = all[i].name;
+                        if (name.IndexOf("dur", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                            name.IndexOf("fill", StringComparison.OrdinalIgnoreCase) < 0)
+                        {
+                            durabilityBackground = all[i];
+                            break;
+                        }
+                    }
+                }
             }
 
             if (durabilityFill == null)
             {
-                Transform fillTransform = transform.Find("DurabilityBG/DurFill");
-                if (fillTransform == null)
-                    fillTransform = transform.Find("DurabilityBG/DurabilityFill");
-                if (fillTransform == null)
-                    fillTransform = transform.Find("DurabilityFill");
-                if (fillTransform == null)
-                    fillTransform = transform.Find("DurFill");
-
-                if (fillTransform != null)
-                    durabilityFill = fillTransform.GetComponent<Image>();
+                // 1) Direct child (your prefab case: Slot_Mainhand/DurabilityFill)
+                Transform t = transform.Find("DurabilityFill") ?? transform.Find("DurFill");
+                if (t != null)
+                    durabilityFill = t.GetComponent<Image>();
             }
+
+            if (durabilityFill == null)
+            {
+                // 2) If it's under BG for any prefab variants (older layouts)
+                Transform t = transform.Find("DurabilityBG/DurabilityFill")
+                             ?? transform.Find("DurabilityBG/DurFill");
+                if (t != null)
+                    durabilityFill = t.GetComponent<Image>();
+            }
+
+            if (durabilityFill == null)
+            {
+                // 3) Final fallback: search any child image with "fill" in name (includes inactive)
+                var images = GetComponentsInChildren<Image>(true);
+                for (int i = 0; i < images.Length; i++)
+                {
+                    var img = images[i];
+                    if (img == null) continue;
+
+                    string n = img.name;
+                    if (n.IndexOf("fill", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        n.IndexOf("dur", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        durabilityFill = img;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static Image FindBestFillCandidate(Image[] images, Image background)
+        {
+            if (images == null || images.Length == 0)
+                return null;
+
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image img = images[i];
+                if (img == null || img == background)
+                    continue;
+
+                string n = img.name;
+                bool hasDur = n.IndexOf("dur", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool hasFill = n.IndexOf("fill", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (hasFill || hasDur)
+                    return img;
+            }
+
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image img = images[i];
+                if (img != null && img != background)
+                    return img;
+            }
+
+            return null;
+        }
+
+        private void EnsureFillLayout()
+        {
+            if (durabilityBackground == null || durabilityFill == null)
+                return;
+
+            RectTransform bgRt = durabilityBackground.rectTransform;
+            RectTransform fillRt = durabilityFill.rectTransform;
+            if (bgRt == null || fillRt == null)
+                return;
+
+            if (fillRt.parent != bgRt)
+                fillRt.SetParent(bgRt, false);
+
+            fillRt.anchorMin = Vector2.zero;
+            fillRt.anchorMax = Vector2.one;
+            fillRt.offsetMin = Vector2.zero;
+            fillRt.offsetMax = Vector2.zero;
+
+            Rect bgRect = bgRt.rect;
+            if (bgRect.width < 1f || bgRect.height < 1f)
+                Debug.LogWarning($"[DurUI][Equip] Background rect too small for slot={slot}: {bgRect.width:0.#}x{bgRect.height:0.#}");
+        }
+
+        private static Sprite GetFallbackWhiteSprite()
+        {
+            if (fallbackWhiteSprite != null)
+                return fallbackWhiteSprite;
+
+            Texture2D tex = Texture2D.whiteTexture;
+            fallbackWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            return fallbackWhiteSprite;
         }
 
         private void HandleClick()
@@ -203,7 +287,7 @@ namespace HuntersAndCollectors.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (debugHover)
-                Debug.Log($"[PaperdollSlotUI] Hover enter slot={slot} itemId='{_equippedItemIdCached}'");
+                Debug.Log($"[EquipmentSlotUI] Hover enter slot={slot} itemId='{_equippedItemIdCached}'");
 
             if (string.IsNullOrWhiteSpace(_equippedItemIdCached))
             {
@@ -224,7 +308,7 @@ namespace HuntersAndCollectors.UI
             if (string.IsNullOrWhiteSpace(_equippedItemIdCached))
                 return;
 
-            dragDrop?.BeginDragFromPaperdoll(slot, _equippedItemIdCached, _equippedIconCached);
+            dragDrop?.BeginDragFromEquipment(slot, _equippedItemIdCached, _equippedIconCached);
         }
 
         public void OnDrag(PointerEventData eventData) { }
@@ -236,9 +320,11 @@ namespace HuntersAndCollectors.UI
 
         public void OnDrop(PointerEventData eventData)
         {
-            dragDrop?.CompleteDropOnPaperdollSlot(slot);
+            dragDrop?.CompleteDropOnEquipmentSlot(slot);
         }
     }
 }
+
+
 
 

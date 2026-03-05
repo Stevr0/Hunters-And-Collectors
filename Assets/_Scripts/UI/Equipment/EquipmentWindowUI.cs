@@ -10,7 +10,7 @@ using UnityEngine;
 namespace HuntersAndCollectors.UI
 {
     [DisallowMultipleComponent]
-    public sealed class PaperdollWindowUI : MonoBehaviour
+    public sealed class EquipmentWindowUI : MonoBehaviour
     {
         [Header("Data")]
         [SerializeField] private ItemDatabase itemDatabase;
@@ -76,7 +76,7 @@ namespace HuntersAndCollectors.UI
                     }
 
                     Bind(e, invOwner);
-                    Debug.Log($"[PaperdollWindowUI] Bound to local PlayerEquipmentNet. netId={e.NetworkObjectId}");
+                    Debug.Log($"[EquipmentWindowUI] Bound to local PlayerEquipmentNet. netId={e.NetworkObjectId}");
                     return;
                 }
             }
@@ -185,9 +185,9 @@ namespace HuntersAndCollectors.UI
                 string itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
                 Sprite icon = ResolveIcon(itemId);
 
-                // Reset-first rendering rule.
-                slotUI.SetIcon(icon);
+                // Set cache first, icon second, durability last.
                 slotUI.SetEquippedItemCache(itemId, icon);
+                slotUI.SetIcon(icon);
 
                 int maxDurability = 0;
                 if (!string.IsNullOrWhiteSpace(itemId))
@@ -318,3 +318,8 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
+
+

@@ -880,7 +880,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1001 &170914459
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1161,7 +1161,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1 &239130694
 GameObject:
   m_ObjectHideFlags: 0
@@ -4163,7 +4163,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1001 &987553922
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4308,7 +4308,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1 &1001916425 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7816514451244682039, guid: c3eb86a67a0486e43ab256fbfc2c9c52, type: 3}
@@ -6097,7 +6097,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1 &1431227770
 GameObject:
   m_ObjectHideFlags: 0
@@ -6278,7 +6278,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a87c19e3464512e40831935f1ca38e88, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollWindowUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentWindowUI
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
   titleText: {fileID: 1548947158}
   slots:
@@ -7369,7 +7369,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
 --- !u!1 &1682669173
 GameObject:
   m_ObjectHideFlags: 0
@@ -7601,7 +7601,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.CharacterWindowRootUI
   root: {fileID: 1862782207}
   startHidden: 1
-  paperdollWindow: {fileID: 1466733495}
+  equipmentWindow: {fileID: 1466733495}
   inventoryWindow: {fileID: 122361227}
 --- !u!114 &1862782210
 MonoBehaviour:
@@ -8909,3 +8909,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 616279238}
   - {fileID: 545439742}
+

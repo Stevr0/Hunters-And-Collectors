@@ -7,7 +7,7 @@ namespace HuntersAndCollectors.Inventory.UI
     /// <summary>
     /// InventoryInputController
     /// ---------------------------------------------------------
-    /// Handles the "I" key to toggle the CharacterWindowRoot (Inventory + Paperdoll).
+    /// Handles the "I" key to toggle the CharacterWindowRoot (Inventory + Equipment).
     /// </summary>
     public sealed class InventoryInputController : MonoBehaviour
     {

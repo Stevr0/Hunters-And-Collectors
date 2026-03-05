@@ -7,7 +7,7 @@ namespace HuntersAndCollectors.UI
     /// CharacterWindowRootUI
     /// ---------------------------------------------------------
     /// Single root that opens/closes multiple character panels together.
-    /// MVP: Inventory + Paperdoll.
+    /// MVP: Inventory + Equipment.
     /// </summary>
     public sealed class CharacterWindowRootUI : MonoBehaviour
     {
@@ -19,7 +19,7 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private bool startHidden = true;
 
         [Header("Children (optional refresh hooks)")]
-        [SerializeField] private PaperdollWindowUI paperdollWindow;
+        [SerializeField] private EquipmentWindowUI equipmentWindow;
         [SerializeField] private PlayerInventoryWindowUI inventoryWindow;
 
         private void Awake()
@@ -74,9 +74,9 @@ namespace HuntersAndCollectors.UI
         /// </summary>
         private void RefreshChildren()
         {
-            // Paperdoll: ForceRefresh should call RefreshAll() internally.
-            if (paperdollWindow != null)
-                paperdollWindow.ForceRefresh();
+            // Equipment: ForceRefresh should call RefreshAll() internally.
+            if (equipmentWindow != null)
+                equipmentWindow.ForceRefresh();
         }
     }
 }

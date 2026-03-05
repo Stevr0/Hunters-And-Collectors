@@ -43,6 +43,9 @@ namespace HuntersAndCollectors.Inventory.UI
                 gameplayLockHeld = true;
             }
 
+            if (itemDatabase == null)
+                itemDatabase = FindFirstObjectByType<ItemDatabase>();
+
             TryBindToLocalPlayerInventory();
             EnsureSlotUICount(uiSlotCount);
             ForceNextRender();
@@ -127,6 +130,7 @@ namespace HuntersAndCollectors.Inventory.UI
                     var s = snapshot.Slots[i];
                     hash = hash * 31 + (s.IsEmpty ? 1 : 0);
                     hash = hash * 31 + s.Quantity;
+                    hash = hash * 31 + s.ItemId.GetHashCode();
                     hash = hash * 31 + s.Durability;
                     hash = hash * 31 + s.MaxDurability;
                 }
@@ -205,9 +209,9 @@ namespace HuntersAndCollectors.Inventory.UI
                 return null;
 
             if (itemDatabase == null)
-                return null;
+                itemDatabase = FindFirstObjectByType<ItemDatabase>();
 
-            if (itemDatabase.TryGet(itemId, out var def) && def != null)
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
                 return def.Icon;
 
             return null;
@@ -224,6 +228,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
 
             currentInventoryNet.OnSnapshotReceived += HandleInventorySnapshotReceived;
+            currentInventoryNet.OnSnapshotChanged += HandleInventorySnapshotReceived;
             subscribedToSnapshots = true;
         }
 
@@ -233,6 +238,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
 
             currentInventoryNet.OnSnapshotReceived -= HandleInventorySnapshotReceived;
+            currentInventoryNet.OnSnapshotChanged -= HandleInventorySnapshotReceived;
             subscribedToSnapshots = false;
         }
 

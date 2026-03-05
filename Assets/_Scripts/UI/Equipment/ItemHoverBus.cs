@@ -9,7 +9,7 @@ namespace HuntersAndCollectors.UI
     ///
     /// Why this exists:
     /// - Inventory slots should not need references to other windows.
-    /// - Paperdoll (and later: crafting, vendor, tooltips) can all listen to the same hover.
+    /// - Equipment (and later: crafting, vendor, tooltips) can all listen to the same hover.
     ///
     /// Networking note:
     /// - This is purely local UI state (NO networking, NO RPCs).

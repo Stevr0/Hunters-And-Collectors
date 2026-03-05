@@ -134,10 +134,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 77764594035204353}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60659538d0e135046a2e3f87d614f6cd, type: 3}
+  m_Script: {fileID: 11500000, guid: 0f9d4f6e1a2b95748b2d0c98fa99a1f6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.PaperdollSlotUI
-  slot: 10
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
+  slot: 0
   button: {fileID: 1044723768018232573}
   iconImage: {fileID: 3217428479027371272}
   emptyBackground: {fileID: 7533791418692211726}
@@ -146,6 +146,7 @@ MonoBehaviour:
   dragDrop: {fileID: 0}
   equipmentNet: {fileID: 0}
   debugHover: 0
+  debugDurability: 1
 --- !u!1 &2368884964917325769
 GameObject:
   m_ObjectHideFlags: 0
@@ -331,8 +332,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00012398, y: 2.189}
-  m_SizeDelta: {x: 64, y: 68.378}
+  m_AnchoredPosition: {x: -0.000038862, y: 0}
+  m_SizeDelta: {x: 72, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8314232142498594022
 CanvasRenderer:
@@ -407,7 +408,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 70, y: 70}
+  m_SizeDelta: {x: 72, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &116111359675698100
 CanvasRenderer:

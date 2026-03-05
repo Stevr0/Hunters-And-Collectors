@@ -67,14 +67,14 @@ namespace HuntersAndCollectors.UI
             dragGhost?.Show(icon);
         }
 
-        public void BeginDragFromPaperdoll(EquipSlot slot, string itemId, Sprite icon)
+        public void BeginDragFromEquipment(EquipSlot slot, string itemId, Sprite icon)
         {
             EnsureLocalRefs();
 
             if (slot == EquipSlot.None || string.IsNullOrWhiteSpace(itemId))
                 return;
 
-            _payload = DragPayload.FromPaperdoll(slot, itemId);
+            _payload = DragPayload.FromEquipment(slot, itemId);
             dragGhost?.Show(icon);
         }
 
@@ -94,8 +94,8 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            // Paperdoll -> Inventory = unequip (MVP: server decides where it lands)
-            if (_payload.SourceKind == DragSourceKind.Paperdoll)
+            // Equipment -> Inventory = unequip (MVP: server decides where it lands)
+            if (_payload.SourceKind == DragSourceKind.Equipment)
             {
                 if (_localEquipmentNet != null)
                     _localEquipmentNet.RequestUnequipSlotServerRpc(_payload.SourceEquipSlot, targetInventoryIndex);
@@ -121,7 +121,7 @@ namespace HuntersAndCollectors.UI
             CancelDrag();
         }
 
-        public void CompleteDropOnPaperdollSlot(EquipSlot targetSlot)
+        public void CompleteDropOnEquipmentSlot(EquipSlot targetSlot)
         {
             EnsureLocalRefs();
 
@@ -131,7 +131,7 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            // Inventory -> Paperdoll = equip
+            // Inventory -> Equipment = equip
             // MVP: ignore targetSlot and just ask server to equip by rules.
             if (_payload.SourceKind == DragSourceKind.Inventory)
             {
@@ -142,8 +142,8 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            // Paperdoll -> Paperdoll (swap between slots)
-            if (_payload.SourceKind == DragSourceKind.Paperdoll && _payload.SourceEquipSlot != targetSlot)
+            // Equipment -> Equipment (swap between slots)
+            if (_payload.SourceKind == DragSourceKind.Equipment && _payload.SourceEquipSlot != targetSlot)
             {
                 if (_localEquipmentNet != null)
                     _localEquipmentNet.RequestSwapEquipSlotsServerRpc(_payload.SourceEquipSlot, targetSlot);
@@ -159,7 +159,7 @@ namespace HuntersAndCollectors.UI
         // Payload struct
         // ------------------------
 
-        private enum DragSourceKind { None, Inventory, Paperdoll }
+        private enum DragSourceKind { None, Inventory, Equipment }
 
         private struct DragPayload
         {
@@ -181,11 +181,11 @@ namespace HuntersAndCollectors.UI
                 };
             }
 
-            public static DragPayload FromPaperdoll(EquipSlot slot, string itemId)
+            public static DragPayload FromEquipment(EquipSlot slot, string itemId)
             {
                 return new DragPayload
                 {
-                    SourceKind = DragSourceKind.Paperdoll,
+                    SourceKind = DragSourceKind.Equipment,
                     SourceInventoryIndex = -1,
                     SourceEquipSlot = slot,
                     ItemId = new Unity.Collections.FixedString64Bytes(itemId ?? "")
@@ -194,3 +194,4 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+

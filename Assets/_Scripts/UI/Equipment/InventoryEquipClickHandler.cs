@@ -11,7 +11,7 @@ namespace HuntersAndCollectors.UI
     public sealed class InventoryEquipClickHandler : MonoBehaviour
     {
         [SerializeField] private Button button;
-        [SerializeField] private PaperdollWindowUI paperdollWindow;
+        [SerializeField] private EquipmentWindowUI equipmentWindow;
         [SerializeField] private ItemDatabase itemDatabase;
 
         private string itemId;
@@ -43,7 +43,7 @@ namespace HuntersAndCollectors.UI
 
         private void HandleClick()
         {
-            if (paperdollWindow == null || itemDatabase == null)
+            if (equipmentWindow == null || itemDatabase == null)
                 return;
 
             if (string.IsNullOrWhiteSpace(itemId))
@@ -53,9 +53,10 @@ namespace HuntersAndCollectors.UI
                 return;
 
             if (slotIndex >= 0)
-                paperdollWindow.RequestEquipFromInventorySlot(slotIndex);
+                equipmentWindow.RequestEquipFromInventorySlot(slotIndex);
             else
-                paperdollWindow.RequestEquipFromInventory(itemId);
+                equipmentWindow.RequestEquipFromInventory(itemId);
         }
     }
 }
+

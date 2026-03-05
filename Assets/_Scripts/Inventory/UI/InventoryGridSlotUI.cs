@@ -67,12 +67,6 @@ namespace HuntersAndCollectors.Inventory.UI
             ResetVisuals();
         }
 
-        private void OnEnable()
-        {
-            // Enforce a clean base state even if prefab defaults were saved incorrectly.
-            ResetVisuals();
-        }
-
         public void BindClick(System.Action<string> onClick)
         {
             onClicked = onClick;
@@ -233,3 +227,4 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
