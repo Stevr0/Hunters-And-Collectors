@@ -42,9 +42,6 @@ namespace HuntersAndCollectors.Stats
         /// </summary>
         public static EffectiveStats Compute(PlayerBaseStats baseStats, PlayerEquipmentNet equipment, SkillsNet skills, ItemDatabase itemDatabase)
         {
-            // -----------------------------------------------------------------
-            // Step 1: Start from base attributes + base combat values.
-            // -----------------------------------------------------------------
             int baseStrength = baseStats != null ? Mathf.Max(0, baseStats.BaseStrength) : 0;
             int baseDexterity = baseStats != null ? Mathf.Max(0, baseStats.BaseDexterity) : 0;
             int baseIntelligence = baseStats != null ? Mathf.Max(0, baseStats.BaseIntelligence) : 0;
@@ -54,9 +51,6 @@ namespace HuntersAndCollectors.Stats
             float baseDefence = baseStats != null ? Mathf.Max(0f, baseStats.BaseDefence) : DefaultBaseDefence;
             float baseSwingSpeed = baseStats != null ? Mathf.Max(0.0001f, baseStats.BaseSwingSpeed) : DefaultBaseSwingSpeed;
 
-            // -----------------------------------------------------------------
-            // Step 2: Aggregate equipped item contributions.
-            // -----------------------------------------------------------------
             float equipDamage = 0f;
             float equipDefence = 0f;
             float equipMoveMult = 1f;
@@ -84,9 +78,10 @@ namespace HuntersAndCollectors.Stats
                     equipDefence += def.Defence;
                     equipMoveMult *= def.MovementSpeed <= 0f ? 1f : def.MovementSpeed;
 
-                    equipStr += Mathf.Max(0, def.Strength);
-                    equipDex += Mathf.Max(0, def.Dexterity);
-                    equipInt += Mathf.Max(0, def.Intelligence);
+                    // ItemDef base attributes + crafted per-instance bonus attributes.
+                    equipStr += Mathf.Max(0, def.Strength) + Mathf.Max(0, equipment.GetEquippedBonusStrength(slot));
+                    equipDex += Mathf.Max(0, def.Dexterity) + Mathf.Max(0, equipment.GetEquippedBonusDexterity(slot));
+                    equipInt += Mathf.Max(0, def.Intelligence) + Mathf.Max(0, equipment.GetEquippedBonusIntelligence(slot));
 
                     if (slot == EquipSlot.MainHand)
                     {
@@ -96,16 +91,10 @@ namespace HuntersAndCollectors.Stats
                 }
             }
 
-            // -----------------------------------------------------------------
-            // Step 3: Resolve active combat skill from main-hand tool tag.
-            // -----------------------------------------------------------------
             string activeCombatSkillId = string.Empty;
             if (mainHandDef != null)
                 activeCombatSkillId = ResolveCombatSkillIdFromToolTags(mainHandDef.ToolTags);
 
-            // -----------------------------------------------------------------
-            // Step 4: Apply skill multipliers (MVP tuning constants).
-            // -----------------------------------------------------------------
             int runningLevel = 0;
             int weaponLevel = 0;
 
@@ -121,9 +110,6 @@ namespace HuntersAndCollectors.Stats
             float damageSkillMult = 1f + (weaponLevel / 100f) * 0.25f;
             float swingSkillMult = 1f + (weaponLevel / 100f) * 0.15f;
 
-            // -----------------------------------------------------------------
-            // Step 5: Combine totals + derive max vitals from attributes.
-            // -----------------------------------------------------------------
             EffectiveStats result = new EffectiveStats();
 
             result.Strength = baseStrength + equipStr;

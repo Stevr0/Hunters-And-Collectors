@@ -13,6 +13,10 @@ namespace HuntersAndCollectors.Crafting
     /// CraftingNet
     /// ------------------------------------------------------------
     /// Server-authoritative crafting endpoint with skill-based success.
+    ///
+    /// Important for item quality progression:
+    /// - Crafted equippable/tool items can receive per-instance attribute bonuses.
+    /// - Bonuses are rolled on the server only and stored in inventory slot instance data.
     /// </summary>
     public sealed class CraftingNet : NetworkBehaviour
     {
@@ -116,9 +120,17 @@ namespace HuntersAndCollectors.Crafting
 
                     if (success)
                     {
+                        BuildCraftingBonuses(recipe.OutputItem, level, out int bonusStr, out int bonusDex, out int bonusInt);
+                        FixedString64Bytes craftedBy = ResolveCrafterName();
+
                         int remainder = inventoryNet.ServerAddItem(
                             recipe.OutputItem.ItemId,
-                            Mathf.Max(1, recipe.OutputQuantity));
+                            Mathf.Max(1, recipe.OutputQuantity),
+                            -1,
+                            bonusStr,
+                            bonusDex,
+                            bonusInt,
+                            craftedBy);
 
                         if (remainder > 0)
                         {
@@ -148,6 +160,75 @@ namespace HuntersAndCollectors.Crafting
             {
                 inventoryNet.EndServerBatchAndSendSnapshotToOwner();
             }
+        }
+
+        private void BuildCraftingBonuses(Items.ItemDef outputItem, int skillLevel, out int bonusStrength, out int bonusDexterity, out int bonusIntelligence)
+        {
+            bonusStrength = 0;
+            bonusDexterity = 0;
+            bonusIntelligence = 0;
+
+            if (outputItem == null)
+                return;
+
+            // Non-equippables/non-tools remain stackable and do not receive instance bonuses.
+            bool canReceiveBonus = outputItem.IsEquippable || (outputItem.ToolTags != null && outputItem.ToolTags.Length > 0);
+            if (!canReceiveBonus)
+                return;
+
+            int bonusPoints = Mathf.FloorToInt(Mathf.Clamp(skillLevel, 0, MaxSkillLevel) / 10f);
+            if (bonusPoints <= 0)
+                return;
+
+            bool prefersStrength = HasToolTag(outputItem.ToolTags, Items.ToolTag.Axe)
+                                  || HasToolTag(outputItem.ToolTags, Items.ToolTag.Pickaxe)
+                                  || HasToolTag(outputItem.ToolTags, Items.ToolTag.Club);
+
+            bool prefersDexterity = HasToolTag(outputItem.ToolTags, Items.ToolTag.Knife)
+                                   || HasToolTag(outputItem.ToolTags, Items.ToolTag.Sickle);
+
+            if (prefersStrength)
+            {
+                bonusStrength = bonusPoints;
+                return;
+            }
+
+            if (prefersDexterity)
+            {
+                bonusDexterity = bonusPoints;
+                return;
+            }
+
+            // Even split across STR/DEX/INT; any remainder goes to Strength.
+            int per = bonusPoints / 3;
+            int rem = bonusPoints % 3;
+
+            bonusStrength = per + rem;
+            bonusDexterity = per;
+            bonusIntelligence = per;
+        }
+
+        private static bool HasToolTag(Items.ToolTag[] tags, Items.ToolTag wanted)
+        {
+            if (tags == null || tags.Length == 0)
+                return false;
+
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i] == wanted)
+                    return true;
+            }
+
+            return false;
+        }
+
+                private FixedString64Bytes ResolveCrafterName()
+        {
+            // Replace with real display-name source when available.
+            if (playerRoot != null && !string.IsNullOrWhiteSpace(playerRoot.PlayerKey))
+                return new FixedString64Bytes(playerRoot.PlayerKey);
+
+            return new FixedString64Bytes($"Player_{OwnerClientId}");
         }
 
         private void SendImmediateFailure(string recipeId, CraftingCategory category, FailureReason reason, int attemptsRequested,
@@ -280,3 +361,4 @@ namespace HuntersAndCollectors.Crafting
         }
     }
 }
+

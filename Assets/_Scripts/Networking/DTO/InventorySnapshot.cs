@@ -21,6 +21,9 @@ namespace HuntersAndCollectors.Networking.DTO
             public int BonusDexterity;
             public int BonusIntelligence;
 
+            // Maker's mark (empty for non-crafted items).
+            public FixedString64Bytes CraftedBy;
+
             public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
             {
                 serializer.SerializeValue(ref IsEmpty);
@@ -31,6 +34,7 @@ namespace HuntersAndCollectors.Networking.DTO
                 serializer.SerializeValue(ref BonusStrength);
                 serializer.SerializeValue(ref BonusDexterity);
                 serializer.SerializeValue(ref BonusIntelligence);
+                serializer.SerializeValue(ref CraftedBy);
             }
         }
 

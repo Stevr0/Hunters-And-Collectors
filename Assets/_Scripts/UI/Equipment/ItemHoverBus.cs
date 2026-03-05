@@ -5,30 +5,37 @@ namespace HuntersAndCollectors.UI
     /// <summary>
     /// ItemHoverBus
     /// --------------------------------------------------------------------
-    /// A tiny client-only "event bus" for UI hover state.
-    ///
-    /// Why this exists:
-    /// - Inventory slots should not need references to other windows.
-    /// - Equipment (and later: crafting, vendor, tooltips) can all listen to the same hover.
+    /// A tiny client-only event bus for hover tooltip payloads.
     ///
     /// Networking note:
-    /// - This is purely local UI state (NO networking, NO RPCs).
+    /// - Pure local UI state (no networking, no RPC).
     /// </summary>
     public static class ItemHoverBus
     {
         /// <summary>
-        /// Fired when the mouse is over an item slot that contains an item.
-        /// Parameter: hovered itemId (stable string id, e.g., "IT_StoneAxe")
+        /// Fired when the mouse is over a slot containing an item.
+        /// Payload already includes instance-aware tooltip values.
         /// </summary>
-        public static event Action<string> HoveredItemChanged;
+        public static event Action<ItemTooltipData> HoveredItemChanged;
 
         /// <summary>
-        /// Fired when the mouse leaves an item slot (or hovers an empty slot).
+        /// Fired when the mouse leaves an item slot.
         /// </summary>
         public static event Action HoverCleared;
 
+        public static void PublishHover(ItemTooltipData tooltipData)
+        {
+            if (string.IsNullOrWhiteSpace(tooltipData.ItemId))
+            {
+                PublishClear();
+                return;
+            }
+
+            HoveredItemChanged?.Invoke(tooltipData);
+        }
+
         /// <summary>
-        /// Call when a UI element is hovered and you want the rest of the UI to know which item it is.
+        /// Legacy helper for older callers that only know itemId.
         /// </summary>
         public static void PublishHover(string itemId)
         {
@@ -38,12 +45,10 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            HoveredItemChanged?.Invoke(itemId);
+            ItemTooltipData data = new ItemTooltipData { ItemId = itemId };
+            HoveredItemChanged?.Invoke(data);
         }
 
-        /// <summary>
-        /// Call when hover ends (mouse leaves slot).
-        /// </summary>
         public static void PublishClear()
         {
             HoverCleared?.Invoke();

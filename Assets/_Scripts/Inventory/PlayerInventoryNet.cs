@@ -89,18 +89,18 @@ namespace HuntersAndCollectors.Inventory
             return true;
         }
 
-        public int ServerAddItem(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
+        public int ServerAddItem(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
             if (!IsServer) return quantity;
-            return AddItemServer(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence);
+            return AddItemServer(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy);
         }
 
-        public bool ServerTryAddItemToSlot(string itemId, int slotIndex, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
+        public bool ServerTryAddItemToSlot(string itemId, int slotIndex, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
             if (!IsServer || grid == null) return false;
             if (slotIndex < 0) return false;
 
-            if (!grid.TryAddOneToSlot(itemId, slotIndex, durability, bonusStrength, bonusDexterity, bonusIntelligence))
+            if (!grid.TryAddOneToSlot(itemId, slotIndex, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy))
                 return false;
 
             MarkDirtyAndMaybeSendSnapshot();
@@ -202,7 +202,7 @@ namespace HuntersAndCollectors.Inventory
         /// <summary>
         /// SERVER: overwrite a slot with validated state.
         /// </summary>
-        public bool ServerTrySetSlot(int slotIndex, string itemId, int qty, int durability, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
+        public bool ServerTrySetSlot(int slotIndex, string itemId, int qty, int durability, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
             if (!IsServer || grid == null)
                 return false;
@@ -244,6 +244,7 @@ namespace HuntersAndCollectors.Inventory
                 instanceData.BonusStrength = bonusStrength;
                 instanceData.BonusDexterity = bonusDexterity;
                 instanceData.BonusIntelligence = bonusIntelligence;
+                instanceData.CraftedBy = craftedBy;
             }
 
             grid.Slots[slotIndex] = new InventorySlot
@@ -381,11 +382,11 @@ namespace HuntersAndCollectors.Inventory
             OnSnapshotReceived?.Invoke(snapshot);
         }
 
-        public int AddItemServer(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0)
+        public int AddItemServer(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
             if (!IsServer || grid == null || quantity <= 0) return quantity;
 
-            var remainder = grid.Add(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence);
+            var remainder = grid.Add(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy);
 
             if (remainder < quantity)
                 knownItems?.EnsureKnown(itemId);
@@ -413,7 +414,8 @@ namespace HuntersAndCollectors.Inventory
                         MaxDurability = 0,
                         BonusStrength = 0,
                         BonusDexterity = 0,
-                        BonusIntelligence = 0
+                        BonusIntelligence = 0,
+                        CraftedBy = default
                     };
                     continue;
                 }
@@ -435,7 +437,8 @@ namespace HuntersAndCollectors.Inventory
                     MaxDurability = maxDurability,
                     BonusStrength = s.InstanceData.BonusStrength,
                     BonusDexterity = s.InstanceData.BonusDexterity,
-                    BonusIntelligence = s.InstanceData.BonusIntelligence
+                    BonusIntelligence = s.InstanceData.BonusIntelligence,
+                    CraftedBy = s.InstanceData.CraftedBy
                 };
             }
 
@@ -457,3 +460,5 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+

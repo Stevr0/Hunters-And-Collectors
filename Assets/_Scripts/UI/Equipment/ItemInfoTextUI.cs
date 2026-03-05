@@ -6,8 +6,10 @@ using UnityEngine;
 namespace HuntersAndCollectors.UI
 {
     /// <summary>
-    /// Central controller for the shared item info text (tooltip/details panel).
-    /// Listens to local UI hover events and renders resolved ItemDef info.
+    /// Shared tooltip/details text panel renderer.
+    ///
+    /// Reads ItemTooltipData payload from UI hover sources.
+    /// Never writes gameplay state.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ItemInfoTextUI : MonoBehaviour
@@ -39,9 +41,9 @@ namespace HuntersAndCollectors.UI
             ItemHoverBus.HoverCleared -= HandleHoverCleared;
         }
 
-        private void HandleHoveredItemChanged(string itemId)
+        private void HandleHoveredItemChanged(ItemTooltipData tooltipData)
         {
-            SetFromItemId(itemId);
+            SetFromTooltipData(tooltipData);
         }
 
         private void HandleHoverCleared()
@@ -49,45 +51,52 @@ namespace HuntersAndCollectors.UI
             Clear();
         }
 
-        public void SetFromItemId(string itemId)
+        public void SetFromTooltipData(ItemTooltipData tooltipData)
         {
             if (infoText == null)
                 return;
 
-            if (string.IsNullOrWhiteSpace(itemId))
+            if (string.IsNullOrWhiteSpace(tooltipData.ItemId))
             {
                 Clear();
                 return;
             }
 
-            EnsureItemDatabase();
-
-            if (itemDatabase == null)
-            {
-                if (debugHover)
-                    Debug.LogWarning($"[ItemInfoTextUI] Tooltip set failed. itemId='{itemId}' (ItemDatabase missing)");
-                infoText.text = itemId;
-                return;
-            }
-
-            if (!itemDatabase.TryGet(itemId, out ItemDef def) || def == null)
-            {
-                if (debugHover)
-                    Debug.LogWarning($"[ItemInfoTextUI] Tooltip set failed. itemId='{itemId}' (not found)");
-                infoText.text = itemId;
-                return;
-            }
+            // If source payload did not include ItemDef-resolved fields, resolve here.
+            if (string.IsNullOrWhiteSpace(tooltipData.DisplayName))
+                EnrichFromItemDef(ref tooltipData);
 
             if (debugHover)
-                Debug.Log($"[ItemInfoTextUI] Tooltip set success. itemId='{itemId}'");
+                Debug.Log($"[ItemInfoTextUI] Tooltip set itemId='{tooltipData.ItemId}'");
 
-            infoText.text = BuildInfoText(def);
+            infoText.text = BuildInfoText(tooltipData);
         }
 
         public void Clear()
         {
             if (infoText != null)
                 infoText.text = string.Empty;
+        }
+
+        private void EnrichFromItemDef(ref ItemTooltipData data)
+        {
+            EnsureItemDatabase();
+            if (itemDatabase == null)
+                return;
+
+            if (!itemDatabase.TryGet(data.ItemId, out ItemDef def) || def == null)
+                return;
+
+            data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
+            data.Description = def.Description;
+            data.Damage = def.Damage;
+            data.Defence = def.Defence;
+            data.SwingSpeed = def.SwingSpeed;
+            data.MoveSpeed = def.MovementSpeed;
+
+            data.Strength = Mathf.Max(0, def.Strength) + data.BonusStrength;
+            data.Dexterity = Mathf.Max(0, def.Dexterity) + data.BonusDexterity;
+            data.Intelligence = Mathf.Max(0, def.Intelligence) + data.BonusIntelligence;
         }
 
         private void EnsureItemDatabase()
@@ -103,9 +112,6 @@ namespace HuntersAndCollectors.UI
                 if (all != null && all.Length > 0)
                     itemDatabase = all[0];
             }
-
-            if (itemDatabase == null)
-                Debug.LogError("[ItemInfoTextUI] ItemDatabase reference missing. Assign it in inspector.");
         }
 
         private TMP_Text FindInfoTextReference()
@@ -129,73 +135,51 @@ namespace HuntersAndCollectors.UI
             return GetComponentInChildren<TMP_Text>(true);
         }
 
-        private static string BuildInfoText(ItemDef def)
+        private static string BuildInfoText(ItemTooltipData data)
         {
-            var lines = new StringBuilder(256);
+            var sb = new StringBuilder(384);
 
-            string title = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
-            lines.AppendLine(title);
+            string title = string.IsNullOrWhiteSpace(data.DisplayName) ? data.ItemId : data.DisplayName;
+            sb.AppendLine(title);
 
-            if (!string.IsNullOrWhiteSpace(def.Description))
+            if (!string.IsNullOrWhiteSpace(data.CraftedBy))
             {
-                lines.AppendLine();
-                lines.AppendLine(def.Description.Trim());
+                sb.Append("Crafted by: ").AppendLine(data.CraftedBy);
             }
 
-            string properties = BuildGeneratedProperties(def);
-            if (!string.IsNullOrWhiteSpace(properties))
+            if (!string.IsNullOrWhiteSpace(data.Description))
             {
-                lines.AppendLine();
-                lines.AppendLine("Properties:");
-                lines.AppendLine(properties);
+                sb.AppendLine();
+                sb.AppendLine(data.Description.Trim());
             }
 
-            return lines.ToString();
-        }
+            sb.AppendLine();
+            sb.AppendLine("Attributes:");
+            AppendAttributeLine(sb, "Strength", data.Strength, data.BonusStrength);
+            AppendAttributeLine(sb, "Dexterity", data.Dexterity, data.BonusDexterity);
+            AppendAttributeLine(sb, "Intelligence", data.Intelligence, data.BonusIntelligence);
 
-        private static string BuildGeneratedProperties(ItemDef def)
-        {
-            var sb = new StringBuilder(256);
 
-            void AddLine(string label, string value)
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    return;
+            sb.AppendLine();
+            sb.AppendLine("Combat:");
+            sb.Append("Damage: ").AppendLine(data.Damage.ToString("0.##"));
+            sb.Append("Defence: ").AppendLine(data.Defence.ToString("0.##"));
+            sb.Append("Swing Speed: ").AppendLine(data.SwingSpeed.ToString("0.##"));
+            sb.Append("Move Speed: ").AppendLine(data.MoveSpeed.ToString("0.##"));
 
-                if (sb.Length > 0)
-                    sb.AppendLine();
-
-                sb.Append(label).Append(": ").Append(value);
-            }
-
-            AddLine("Category", def.Category.ToString());
-            AddLine("Max Stack", def.MaxStack.ToString());
-
-            if (def.IsEquippable)
-            {
-                AddLine("Equip Slot", def.EquipSlot.ToString());
-                if (def.Handedness != Handedness.None)
-                    AddLine("Handedness", def.Handedness.ToString());
-            }
-
-            if (def.Damage > 0f)
-                AddLine("Damage", def.Damage.ToString("0.##"));
-            if (def.Defence > 0f)
-                AddLine("Defence", def.Defence.ToString("0.##"));
-            if (def.SwingSpeed > 0f)
-                AddLine("Swing Speed", def.SwingSpeed.ToString("0.##"));
-
-            if (def.ToolTags != null && def.ToolTags.Length > 0)
-                AddLine("Tool Tags", string.Join(", ", def.ToolTags));
-
-            if (!string.IsNullOrWhiteSpace(def.PropertiesText))
-            {
-                if (sb.Length > 0)
-                    sb.AppendLine();
-                sb.AppendLine(def.PropertiesText.Trim());
-            }
+            if (data.Durability > 0)
+                sb.Append("Durability: ").Append(data.Durability.ToString());
 
             return sb.ToString().TrimEnd();
         }
+
+        private static void AppendAttributeLine(StringBuilder sb, string label, int total, int bonus)
+        {
+            sb.Append(label).Append(": ").Append(total);
+            if (bonus != 0)
+                sb.Append(" (+").Append(bonus).Append(')');
+            sb.AppendLine();
+        }
     }
 }
+

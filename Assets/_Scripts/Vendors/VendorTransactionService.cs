@@ -3,6 +3,7 @@ using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
+using Unity.Collections;
 
 namespace HuntersAndCollectors.Vendors
 {
@@ -22,14 +23,24 @@ namespace HuntersAndCollectors.Vendors
             public readonly int Qty;
             public readonly int UnitPrice;
             public readonly int LineTotal;
+            public readonly int Durability;
+            public readonly int BonusStrength;
+            public readonly int BonusDexterity;
+            public readonly int BonusIntelligence;
+            public readonly FixedString64Bytes CraftedBy;
 
-            public PlannedLine(int slotIndex, string itemId, int qty, int unitPrice, int lineTotal)
+            public PlannedLine(int slotIndex, string itemId, int qty, int unitPrice, int lineTotal, int durability, int bonusStrength, int bonusDexterity, int bonusIntelligence, FixedString64Bytes craftedBy)
             {
                 SlotIndex = slotIndex;
                 ItemId = itemId;
                 Qty = qty;
                 UnitPrice = unitPrice;
                 LineTotal = lineTotal;
+                Durability = durability;
+                BonusStrength = bonusStrength;
+                BonusDexterity = bonusDexterity;
+                BonusIntelligence = bonusIntelligence;
+                CraftedBy = craftedBy;
             }
         }
 
@@ -144,7 +155,17 @@ namespace HuntersAndCollectors.Vendors
                 if (!TryAddInt(totalPrice, lineTotal, out totalPrice))
                     return Fail(FailureReason.InvalidRequest);
 
-                plan.Add(new PlannedLine(slotIndex, itemId, qty, unitPrice, lineTotal));
+                plan.Add(new PlannedLine(
+                    slotIndex,
+                    itemId,
+                    qty,
+                    unitPrice,
+                    lineTotal,
+                    slot.Durability,
+                    slot.InstanceData.BonusStrength,
+                    slot.InstanceData.BonusDexterity,
+                    slot.InstanceData.BonusIntelligence,
+                    slot.InstanceData.CraftedBy));
             }
 
             // ---------------------------------------------------------
@@ -229,7 +250,14 @@ namespace HuntersAndCollectors.Vendors
 
                     // With CanAdd validated, remainder should be 0.
                     // If non-zero, treat as atomicity failure.
-                    int remainder = buyer.Inventory.AddItemServer(line.ItemId, line.Qty);
+                    int remainder = buyer.Inventory.AddItemServer(
+                        line.ItemId,
+                        line.Qty,
+                        line.Durability,
+                        line.BonusStrength,
+                        line.BonusDexterity,
+                        line.BonusIntelligence,
+                        line.CraftedBy);
                     if (remainder != 0)
                         return Fail(FailureReason.NotEnoughInventorySpace, totalPrice);
 

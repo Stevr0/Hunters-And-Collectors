@@ -9,12 +9,7 @@ namespace HuntersAndCollectors.Inventory.UI
     /// <summary>
     /// InventoryGridSlotUI
     /// ---------------------------------------------------------
-    /// Visual+clickable UI for ONE inventory slot.
-    ///
-    /// Strict rendering rule:
-    /// - Always reset visuals first.
-    /// - Then apply item visuals for current slot data.
-    /// This prevents stale UI state leaking between refreshes.
+    /// Visual+clickable UI for one inventory slot.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class InventoryGridSlotUI : MonoBehaviour,
@@ -25,7 +20,7 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text qtyText;
         [SerializeField] private Button button;
-        [SerializeField] private UIDragDropBroker dragDrop; // assign in prefab or auto-find
+        [SerializeField] private UIDragDropBroker dragDrop;
 
         [Header("Durability")]
         [SerializeField] private Image durabilityBackground;
@@ -36,6 +31,7 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private string itemId = string.Empty;
         private int quantity;
+        private ItemTooltipData tooltipData;
 
         public int SlotIndex { get; private set; } = -1;
 
@@ -76,19 +72,20 @@ namespace HuntersAndCollectors.Inventory.UI
         {
             itemId = string.Empty;
             quantity = 0;
+            tooltipData = default;
             ResetVisuals();
 
             if (button != null)
                 button.interactable = false;
         }
 
-        public void SetItem(string newItemId, Sprite iconSprite, int qty, int durability, int maxDurability)
+        public void SetItem(string newItemId, Sprite iconSprite, int qty, int durability, int maxDurability, ItemTooltipData newTooltipData)
         {
-            // Reset-first rule: clear all old state before applying this slot's data.
             ResetVisuals();
 
             itemId = newItemId ?? string.Empty;
             quantity = Mathf.Max(0, qty);
+            tooltipData = newTooltipData;
 
             bool hasItem = !string.IsNullOrWhiteSpace(itemId);
             if (!hasItem)
@@ -110,7 +107,6 @@ namespace HuntersAndCollectors.Inventory.UI
                 qtyText.enabled = true;
             }
 
-            // Durable item overlay is only valid for single durable items.
             bool showDurability = maxDurability > 0 && quantity == 1 && durability > 0;
             if (showDurability)
             {
@@ -196,7 +192,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            ItemHoverBus.PublishHover(itemId);
+            ItemHoverBus.PublishHover(tooltipData);
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -227,4 +223,3 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
-

@@ -37,6 +37,7 @@ namespace HuntersAndCollectors.UI
 
         private string _equippedItemIdCached = string.Empty;
         private Sprite _equippedIconCached;
+        private ItemTooltipData _tooltipDataCached;
         private EquipmentWindowUI ownerWindow;
 
         private static Sprite fallbackWhiteSprite;
@@ -92,6 +93,11 @@ namespace HuntersAndCollectors.UI
         {
             _equippedItemIdCached = itemId ?? string.Empty;
             _equippedIconCached = icon;
+        }
+
+        public void SetTooltipData(ItemTooltipData tooltipData)
+        {
+            _tooltipDataCached = tooltipData;
         }
 
         public void SetIcon(Sprite spriteOrNull)
@@ -295,7 +301,7 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            ItemHoverBus.PublishHover(_equippedItemIdCached);
+            ItemHoverBus.PublishHover(_tooltipDataCached);
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -324,6 +330,9 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
 
 
 

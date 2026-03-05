@@ -33,6 +33,10 @@ MonoBehaviour:
   Defence: 0
   SwingSpeed: 2
   MovementSpeed: 1
+  Strength: 3
+  Dexterity: 2
+  LegacyDexterity: 0
+  Intelligence: 1
   IsEquippable: 1
   EquipSlot: 10
   Handedness: 1

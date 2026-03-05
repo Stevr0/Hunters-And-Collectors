@@ -13,12 +13,7 @@ namespace HuntersAndCollectors.UI
     /// <summary>
     /// StatsWindowUI (Totals text only)
     /// -----------------------------------------------------------------------------
-    /// Renders read-only totals for the local player:
-    /// - Combat totals
-    /// - Attribute totals (Strength/Dexterity/Intelligence)
-    /// - Derived max vitals from attributes
-    ///
-    /// This script does not write authoritative state.
+    /// Renders read-only totals for the local player.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class StatsWindowUI : MonoBehaviour
@@ -165,7 +160,8 @@ namespace HuntersAndCollectors.UI
             textBuilder.AppendLine("== VITALS (DERIVED) ==");
             textBuilder.Append("Health Max: ").AppendLine(effective.MaxHealth.ToString());
             textBuilder.Append("Stamina Max: ").AppendLine(effective.MaxStamina.ToString());
-            textBuilder.Append("Mana Max: ").Append(effective.MaxMana.ToString());
+            textBuilder.Append("Mana Max: ").AppendLine(effective.MaxMana.ToString());
+            textBuilder.Append("Crafting Bonus Included: Yes");
 
             SetTotalsTextIfChanged(textBuilder.ToString());
         }

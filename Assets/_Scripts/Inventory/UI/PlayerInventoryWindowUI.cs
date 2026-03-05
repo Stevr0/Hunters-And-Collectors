@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
+using HuntersAndCollectors.UI;
 using TMPro;
 using UnityEngine;
 
@@ -133,6 +134,10 @@ namespace HuntersAndCollectors.Inventory.UI
                     hash = hash * 31 + s.ItemId.GetHashCode();
                     hash = hash * 31 + s.Durability;
                     hash = hash * 31 + s.MaxDurability;
+                    hash = hash * 31 + s.BonusStrength;
+                    hash = hash * 31 + s.BonusDexterity;
+                    hash = hash * 31 + s.BonusIntelligence;
+                    hash = hash * 31 + s.CraftedBy.GetHashCode();
                 }
 
                 return hash;
@@ -167,20 +172,49 @@ namespace HuntersAndCollectors.Inventory.UI
                 int maxDurability = netSlot.MaxDurability;
                 int durability = netSlot.Durability;
 
-                // Backward-safe fallback if an older snapshot source omitted max durability.
-                if (maxDurability <= 0 && itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
+                if (maxDurability <= 0 && itemDatabase != null && itemDatabase.TryGet(itemId, out var defFromDb) && defFromDb != null)
                 {
-                    maxDurability = Mathf.Max(0, def.MaxDurability);
+                    maxDurability = Mathf.Max(0, defFromDb.MaxDurability);
                     if (maxDurability > 0 && durability <= 0)
                         durability = maxDurability;
                 }
 
                 Sprite icon = ResolveIcon(itemId);
-                uiSlot.SetItem(itemId, icon, qty, durability, maxDurability);
+                ItemTooltipData tooltip = BuildTooltipData(itemId, netSlot, durability);
+                uiSlot.SetItem(itemId, icon, qty, durability, maxDurability, tooltip);
             }
 
             for (int i = renderCount; i < uiSlotCount; i++)
                 slotUIs[i].SetEmpty();
+        }
+
+        private ItemTooltipData BuildTooltipData(string itemId, InventorySnapshot.SlotDto slot, int durability)
+        {
+            ItemTooltipData data = new ItemTooltipData
+            {
+                ItemId = itemId,
+                BonusStrength = slot.BonusStrength,
+                BonusDexterity = slot.BonusDexterity,
+                BonusIntelligence = slot.BonusIntelligence,
+                Durability = durability,
+                CraftedBy = slot.CraftedBy.ToString()
+            };
+
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
+            {
+                data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
+                data.Description = def.Description;
+                data.Damage = def.Damage;
+                data.Defence = def.Defence;
+                data.SwingSpeed = def.SwingSpeed;
+                data.MoveSpeed = def.MovementSpeed;
+
+                data.Strength = Mathf.Max(0, def.Strength) + slot.BonusStrength;
+                data.Dexterity = Mathf.Max(0, def.Dexterity) + slot.BonusDexterity;
+                data.Intelligence = Mathf.Max(0, def.Intelligence) + slot.BonusIntelligence;
+            }
+
+            return data;
         }
 
         private void EnsureSlotUICount(int desiredCount)

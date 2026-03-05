@@ -38,7 +38,40 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<int> headDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> chestDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> legsDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        private readonly NetworkVariable<int> feetDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        // Per-slot crafted instance attribute bonuses (server writes, all clients read).`r`n        private readonly NetworkVariable<int> mainHandBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> mainHandBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> mainHandBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        private readonly NetworkVariable<int> offHandBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> offHandBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> offHandBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        private readonly NetworkVariable<int> headBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> headBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> headBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        private readonly NetworkVariable<int> chestBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> chestBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> chestBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        private readonly NetworkVariable<int> legsBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> legsBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> legsBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n`r`n        private readonly NetworkVariable<int> feetBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> feetBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);`r`n        private readonly NetworkVariable<int> feetBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> feetDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        // Per-slot crafted instance attribute bonuses (server writes, all clients read).
+        private readonly NetworkVariable<int> mainHandBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> mainHandBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> mainHandBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private readonly NetworkVariable<int> offHandBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> offHandBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> offHandBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private readonly NetworkVariable<int> headBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> headBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> headBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private readonly NetworkVariable<int> chestBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> chestBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> chestBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private readonly NetworkVariable<int> legsBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> legsBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> legsBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        private readonly NetworkVariable<int> feetBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> feetBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> feetBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        // Per-slot maker marks. Empty when item was not crafted by a player.
+        private readonly NetworkVariable<FixedString64Bytes> mainHandCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> offHandCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> headCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> chestCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> legsCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> feetCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public event Action OnEquipmentChanged;
 
@@ -85,6 +118,11 @@ namespace HuntersAndCollectors.Players
                 _ => 0
             };
         }
+
+        public int GetEquippedBonusStrength(EquipSlot slot) => GetEquippedBonusData(slot).BonusStrength;
+        public int GetEquippedBonusDexterity(EquipSlot slot) => GetEquippedBonusData(slot).BonusDexterity;
+        public int GetEquippedBonusIntelligence(EquipSlot slot) => GetEquippedBonusData(slot).BonusIntelligence;
+        public string GetEquippedCraftedBy(EquipSlot slot) => GetEquippedBonusData(slot).CraftedBy.ToString();
 
         /// <summary>
         /// True if any equipped item satisfies the requested tool category (server authoritative).
@@ -186,6 +224,32 @@ namespace HuntersAndCollectors.Players
             legsDurability.OnValueChanged += OnAnyDurabilityChanged;
             feetDurability.OnValueChanged += OnAnyDurabilityChanged;
 
+            mainHandBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            mainHandBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            mainHandBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            offHandBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            offHandBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            offHandBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            headBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            headBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            headBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            chestBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            chestBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            chestBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            legsBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            legsBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            legsBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            feetBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            feetBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            feetBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+
+            mainHandCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            offHandCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            headCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            chestCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            legsCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            feetCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+
             OnEquipmentChanged?.Invoke();
         }
 
@@ -204,6 +268,32 @@ namespace HuntersAndCollectors.Players
             chestDurability.OnValueChanged -= OnAnyDurabilityChanged;
             legsDurability.OnValueChanged -= OnAnyDurabilityChanged;
             feetDurability.OnValueChanged -= OnAnyDurabilityChanged;
+
+            mainHandBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            mainHandBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            mainHandBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            offHandBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            offHandBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            offHandBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            headBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            headBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            headBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            chestBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            chestBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            chestBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            legsBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            legsBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            legsBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            feetBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            feetBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            feetBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+
+            mainHandCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            offHandCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            headCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            chestCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            legsCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            feetCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
         }
 
         private void OnAnySlotChanged(FixedString64Bytes prev, FixedString64Bytes next)
@@ -212,6 +302,16 @@ namespace HuntersAndCollectors.Players
         }
 
         private void OnAnyDurabilityChanged(int prev, int next)
+        {
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private void OnAnyBonusChanged(int prev, int next)
+        {
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private void OnAnyCraftedByChanged(FixedString64Bytes prev, FixedString64Bytes next)
         {
             OnEquipmentChanged?.Invoke();
         }
@@ -307,9 +407,11 @@ namespace HuntersAndCollectors.Players
 
             int fromDurability = GetEquippedDurability(fromSlot);
             int toDurability = GetEquippedDurability(toSlot);
+            ItemInstanceData fromBonus = GetEquippedBonusData(fromSlot);
+            ItemInstanceData toBonus = GetEquippedBonusData(toSlot);
 
-            SetSlot(toSlot, fromItemId, fromDurability);
-            SetSlot(fromSlot, toItemId, toDurability);
+            SetSlot(toSlot, fromItemId, fromDurability, fromBonus);
+            SetSlot(fromSlot, toItemId, toDurability, toBonus);
         }
 
         /// <summary>
@@ -405,7 +507,7 @@ namespace HuntersAndCollectors.Players
             if (!IsServer || inventoryNet == null)
                 return false;
 
-            if (!inventoryNet.ServerTryGetSlotItem(inventorySlotIndex, out string slotItemId, out int qty, out int slotDurability))
+            if (!inventoryNet.ServerTryGetSlotItem(inventorySlotIndex, out string slotItemId, out int qty, out int slotDurability, out ItemInstanceData slotInstanceData))
             {
                 Debug.LogWarning($"[Equipment][SERVER] Equip denied: invalid inventory slot={inventorySlotIndex}");
                 return false;
@@ -436,7 +538,7 @@ namespace HuntersAndCollectors.Players
             if (!TryServerUnequipIfNeeded(toUnequipA)) return false;
             if (!TryServerUnequipIfNeeded(toUnequipB)) return false;
 
-            if (!inventoryNet.ServerRemoveOneAtSlot(inventorySlotIndex, out string removedItemId, out int removedDurability))
+            if (!inventoryNet.ServerRemoveOneAtSlot(inventorySlotIndex, out string removedItemId, out int removedDurability, out ItemInstanceData removedInstanceData))
             {
                 Debug.LogWarning($"[Equipment][SERVER] Equip denied: could not remove from inventory slot={inventorySlotIndex} itemId={itemId}");
                 return false;
@@ -449,7 +551,10 @@ namespace HuntersAndCollectors.Players
             }
 
             int finalDurability = ResolveInitialDurability(def, removedDurability);
-            ApplyEquip(def, finalDurability);
+            if (!removedInstanceData.HasAnyBonus && slotInstanceData.HasAnyBonus)
+                removedInstanceData = slotInstanceData;
+
+            ApplyEquip(def, finalDurability, removedInstanceData);
             LogServerEquipmentState($"Equipped itemId={def.ItemId} slot={def.EquipSlot} fromInventorySlot={inventorySlotIndex}");
             return true;
         }
@@ -565,14 +670,29 @@ namespace HuntersAndCollectors.Players
                 return true;
 
             int equippedDurability = GetEquippedDurability(slot);
+            ItemInstanceData equippedBonus = GetEquippedBonusData(slot);
 
             bool stored = false;
             if (preferredInventoryIndex >= 0)
-                stored = inventoryNet.ServerTryAddItemToSlot(equippedId, preferredInventoryIndex, equippedDurability);
+                stored = inventoryNet.ServerTryAddItemToSlot(
+                    equippedId,
+                    preferredInventoryIndex,
+                    equippedDurability,
+                    equippedBonus.BonusStrength,
+                    equippedBonus.BonusDexterity,
+                    equippedBonus.BonusIntelligence,
+                    equippedBonus.CraftedBy);
 
             if (!stored)
             {
-                var remainder = inventoryNet.ServerAddItem(equippedId, 1, equippedDurability);
+                var remainder = inventoryNet.ServerAddItem(
+                    equippedId,
+                    1,
+                    equippedDurability,
+                    equippedBonus.BonusStrength,
+                    equippedBonus.BonusDexterity,
+                    equippedBonus.BonusIntelligence,
+                    equippedBonus.CraftedBy);
                 if (remainder > 0)
                 {
                     Debug.LogWarning($"[Equipment][SERVER] Unequip denied: inventory full. slot={slot} itemId={equippedId}");
@@ -586,7 +706,7 @@ namespace HuntersAndCollectors.Players
             return true;
         }
 
-        private void ApplyEquip(ItemDef def, int durability)
+        private void ApplyEquip(ItemDef def, int durability, ItemInstanceData instanceData)
         {
             if (def == null)
                 return;
@@ -596,20 +716,20 @@ namespace HuntersAndCollectors.Players
 
             if (def.EquipSlot is EquipSlot.Head or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Feet)
             {
-                SetSlot(def.EquipSlot, itemId, finalDurability);
+                SetSlot(def.EquipSlot, itemId, finalDurability, instanceData);
             }
             else if (def.Handedness == Handedness.BothHands)
             {
-                SetSlot(EquipSlot.MainHand, itemId, finalDurability);
-                SetSlot(EquipSlot.OffHand, itemId, finalDurability);
+                SetSlot(EquipSlot.MainHand, itemId, finalDurability, instanceData);
+                SetSlot(EquipSlot.OffHand, itemId, finalDurability, instanceData);
             }
             else if (def.Handedness == Handedness.MainHand)
             {
-                SetSlot(EquipSlot.MainHand, itemId, finalDurability);
+                SetSlot(EquipSlot.MainHand, itemId, finalDurability, instanceData);
             }
             else if (def.Handedness == Handedness.OffHand)
             {
-                SetSlot(EquipSlot.OffHand, itemId, finalDurability);
+                SetSlot(EquipSlot.OffHand, itemId, finalDurability, instanceData);
             }
             else
             {
@@ -631,38 +751,111 @@ namespace HuntersAndCollectors.Players
             return Mathf.Clamp(durability, 1, def.MaxDurability);
         }
 
-        private void SetSlot(EquipSlot slot, string itemId, int durability)
+        private void SetSlot(EquipSlot slot, string itemId, int durability, ItemInstanceData instanceData = default)
         {
             var fs = new FixedString64Bytes(itemId ?? "");
             bool clear = string.IsNullOrWhiteSpace(itemId);
             int finalDurability = clear ? 0 : Mathf.Max(0, durability);
+
+            if (clear)
+                instanceData = default;
 
             switch (slot)
             {
                 case EquipSlot.MainHand:
                     mainHand.Value = fs;
                     mainHandDurability.Value = finalDurability;
+                    mainHandBonusStrength.Value = instanceData.BonusStrength;
+                    mainHandBonusDexterity.Value = instanceData.BonusDexterity;
+                    mainHandBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    mainHandCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.OffHand:
                     offHand.Value = fs;
                     offHandDurability.Value = finalDurability;
+                    offHandBonusStrength.Value = instanceData.BonusStrength;
+                    offHandBonusDexterity.Value = instanceData.BonusDexterity;
+                    offHandBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    offHandCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.Head:
                     head.Value = fs;
                     headDurability.Value = finalDurability;
+                    headBonusStrength.Value = instanceData.BonusStrength;
+                    headBonusDexterity.Value = instanceData.BonusDexterity;
+                    headBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    headCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.Chest:
                     chest.Value = fs;
                     chestDurability.Value = finalDurability;
+                    chestBonusStrength.Value = instanceData.BonusStrength;
+                    chestBonusDexterity.Value = instanceData.BonusDexterity;
+                    chestBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    chestCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.Legs:
                     legs.Value = fs;
                     legsDurability.Value = finalDurability;
+                    legsBonusStrength.Value = instanceData.BonusStrength;
+                    legsBonusDexterity.Value = instanceData.BonusDexterity;
+                    legsBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    legsCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.Feet:
                     feet.Value = fs;
                     feetDurability.Value = finalDurability;
+                    feetBonusStrength.Value = instanceData.BonusStrength;
+                    feetBonusDexterity.Value = instanceData.BonusDexterity;
+                    feetBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    feetCraftedBy.Value = instanceData.CraftedBy;
                     break;
+            }
+        }
+
+        private ItemInstanceData GetEquippedBonusData(EquipSlot slot)
+        {
+            ItemInstanceData data;
+            switch (slot)
+            {
+                case EquipSlot.MainHand:
+                    data.BonusStrength = mainHandBonusStrength.Value;
+                    data.BonusDexterity = mainHandBonusDexterity.Value;
+                    data.BonusIntelligence = mainHandBonusIntelligence.Value;
+                    data.CraftedBy = mainHandCraftedBy.Value;
+                    return data;
+                case EquipSlot.OffHand:
+                    data.BonusStrength = offHandBonusStrength.Value;
+                    data.BonusDexterity = offHandBonusDexterity.Value;
+                    data.BonusIntelligence = offHandBonusIntelligence.Value;
+                    data.CraftedBy = offHandCraftedBy.Value;
+                    return data;
+                case EquipSlot.Head:
+                    data.BonusStrength = headBonusStrength.Value;
+                    data.BonusDexterity = headBonusDexterity.Value;
+                    data.BonusIntelligence = headBonusIntelligence.Value;
+                    data.CraftedBy = headCraftedBy.Value;
+                    return data;
+                case EquipSlot.Chest:
+                    data.BonusStrength = chestBonusStrength.Value;
+                    data.BonusDexterity = chestBonusDexterity.Value;
+                    data.BonusIntelligence = chestBonusIntelligence.Value;
+                    data.CraftedBy = chestCraftedBy.Value;
+                    return data;
+                case EquipSlot.Legs:
+                    data.BonusStrength = legsBonusStrength.Value;
+                    data.BonusDexterity = legsBonusDexterity.Value;
+                    data.BonusIntelligence = legsBonusIntelligence.Value;
+                    data.CraftedBy = legsCraftedBy.Value;
+                    return data;
+                case EquipSlot.Feet:
+                    data.BonusStrength = feetBonusStrength.Value;
+                    data.BonusDexterity = feetBonusDexterity.Value;
+                    data.BonusIntelligence = feetBonusIntelligence.Value;
+                    data.CraftedBy = feetCraftedBy.Value;
+                    return data;
+                default:
+                    return default;
             }
         }
 
@@ -791,6 +984,22 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

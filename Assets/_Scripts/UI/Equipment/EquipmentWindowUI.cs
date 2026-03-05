@@ -187,7 +187,7 @@ namespace HuntersAndCollectors.UI
 
                 // Set cache first, icon second, durability last.
                 slotUI.SetEquippedItemCache(itemId, icon);
-                slotUI.SetIcon(icon);
+                slotUI.SetTooltipData(BuildTooltipData(slotUI.Slot, itemId));
 
                 int maxDurability = 0;
                 if (!string.IsNullOrWhiteSpace(itemId))
@@ -221,6 +221,44 @@ namespace HuntersAndCollectors.UI
             }
         }
 
+        private ItemTooltipData BuildTooltipData(EquipSlot slot, string itemId)
+        {
+            ItemTooltipData data = new ItemTooltipData
+            {
+                ItemId = itemId,
+                Durability = equipmentNet != null ? equipmentNet.GetEquippedDurability(slot) : 0,
+                BonusStrength = equipmentNet != null ? equipmentNet.GetEquippedBonusStrength(slot) : 0,
+                BonusDexterity = equipmentNet != null ? equipmentNet.GetEquippedBonusDexterity(slot) : 0,
+                BonusIntelligence = equipmentNet != null ? equipmentNet.GetEquippedBonusIntelligence(slot) : 0,
+                CraftedBy = equipmentNet != null ? equipmentNet.GetEquippedCraftedBy(slot) : string.Empty
+            };
+
+            if (string.IsNullOrWhiteSpace(itemId))
+                return data;
+
+            ItemDef def = null;
+            if (itemDatabase != null)
+                itemDatabase.TryGet(itemId, out def);
+
+            if (def == null && equipmentNet != null)
+                equipmentNet.TryGetItemDef(itemId, out def);
+
+            if (def == null)
+                return data;
+
+            data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
+            data.Description = def.Description;
+            data.Damage = def.Damage;
+            data.Defence = def.Defence;
+            data.SwingSpeed = def.SwingSpeed;
+            data.MoveSpeed = def.MovementSpeed;
+
+            data.Strength = Mathf.Max(0, def.Strength) + data.BonusStrength;
+            data.Dexterity = Mathf.Max(0, def.Dexterity) + data.BonusDexterity;
+            data.Intelligence = Mathf.Max(0, def.Intelligence) + data.BonusIntelligence;
+
+            return data;
+        }
         private Sprite ResolveIcon(string itemId)
         {
             if (string.IsNullOrWhiteSpace(itemId))
@@ -318,6 +356,8 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
 
 
 
