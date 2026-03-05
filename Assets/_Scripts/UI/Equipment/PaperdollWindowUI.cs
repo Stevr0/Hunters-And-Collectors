@@ -17,11 +17,14 @@ namespace HuntersAndCollectors.UI
 
         [Header("UI")]
         [SerializeField] private TMP_Text titleText;
-        [SerializeField] private List<PaperdollSlotUI> slots = new();
+        [SerializeField] private List<EquipmentSlotUI> slots = new();
 
         [Header("Multiplayer")]
         [Tooltip("If true: non-owner can view but cannot click.")]
         [SerializeField] private bool viewOnlyForNonOwner = true;
+
+        [Header("Debug")]
+        [SerializeField] private bool debugDurabilityRefresh = true;
 
         private PlayerEquipmentNet equipmentNet;
         private PlayerInventoryNet inventoryNet;
@@ -101,8 +104,13 @@ namespace HuntersAndCollectors.UI
 
             if (equipmentNet != null)
             {
+                // Keep existing aggregate callback.
                 equipmentChangedHandler = RefreshAll;
                 equipmentNet.OnEquipmentChanged += equipmentChangedHandler;
+
+                // Also subscribe to per-slot item and durability netvars so UI updates immediately
+                // when server replication changes either field.
+                SubscribeToSlotNetVars();
             }
 
             RefreshAll();
@@ -110,8 +118,13 @@ namespace HuntersAndCollectors.UI
 
         public void Unbind()
         {
-            if (equipmentNet != null && equipmentChangedHandler != null)
-                equipmentNet.OnEquipmentChanged -= equipmentChangedHandler;
+            if (equipmentNet != null)
+            {
+                if (equipmentChangedHandler != null)
+                    equipmentNet.OnEquipmentChanged -= equipmentChangedHandler;
+
+                UnsubscribeFromSlotNetVars();
+            }
 
             equipmentChangedHandler = null;
             equipmentNet = null;
@@ -170,19 +183,38 @@ namespace HuntersAndCollectors.UI
                     continue;
 
                 string itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
-                var icon = ResolveIcon(itemId);
+                Sprite icon = ResolveIcon(itemId);
+
+                // Reset-first rendering rule.
                 slotUI.SetIcon(icon);
                 slotUI.SetEquippedItemCache(itemId, icon);
 
                 int maxDurability = 0;
-                if (!string.IsNullOrWhiteSpace(itemId) && itemDatabase != null && itemDatabase.TryGet(itemId, out var def) && def != null)
-                    maxDurability = Mathf.Max(0, def.MaxDurability);
+                if (!string.IsNullOrWhiteSpace(itemId))
+                {
+                    if (itemDatabase != null && itemDatabase.TryGet(itemId, out var defFromDb) && defFromDb != null)
+                    {
+                        maxDurability = Mathf.Max(0, defFromDb.MaxDurability);
+                    }
+                    else if (equipmentNet.TryGetItemDef(itemId, out var defFromEquip) && defFromEquip != null)
+                    {
+                        // Fallback when ItemDatabase isn't bound on this UI.
+                        maxDurability = Mathf.Max(0, defFromEquip.MaxDurability);
+                    }
+                }
 
                 int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
                 if (maxDurability > 0 && durability <= 0)
                     durability = maxDurability;
 
-                slotUI.SetDurability(durability, maxDurability);
+                bool showDurability = !string.IsNullOrWhiteSpace(itemId) && maxDurability > 0;
+                slotUI.SetDurability(durability, showDurability ? maxDurability : 0);
+
+                if (debugDurabilityRefresh)
+                {
+                    string itemLabel = string.IsNullOrWhiteSpace(itemId) ? "<empty>" : itemId;
+                    Debug.Log($"[DurUI] Slot={slotUI.Slot} item={itemLabel} dur={durability}/{maxDurability} show={showDurability}");
+                }
 
                 lastRenderedSlotIds[slotUI.Slot] = itemId ?? string.Empty;
                 lastRenderedSlotDurability[slotUI.Slot] = durability;
@@ -194,10 +226,13 @@ namespace HuntersAndCollectors.UI
             if (string.IsNullOrWhiteSpace(itemId))
                 return null;
 
-            if (itemDatabase == null)
-                return null;
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out ItemDef def) && def != null)
+                return def.Icon;
 
-            return itemDatabase.TryGet(itemId, out ItemDef def) ? def.Icon : null;
+            if (equipmentNet != null && equipmentNet.TryGetItemDef(itemId, out ItemDef fallbackDef) && fallbackDef != null)
+                return fallbackDef.Icon;
+
+            return null;
         }
 
         private void SetSlotsInteractable(bool canInteract)
@@ -230,6 +265,56 @@ namespace HuntersAndCollectors.UI
             }
 
             return false;
+        }
+
+        private void SubscribeToSlotNetVars()
+        {
+            if (equipmentNet == null)
+                return;
+
+            equipmentNet.MainHandNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.OffHandNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.HeadNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.ChestNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.LegsNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.FeetNetVar.OnValueChanged += OnAnyEquipItemChanged;
+
+            equipmentNet.MainHandDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.OffHandDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.HeadDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.ChestDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.LegsDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.FeetDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+        }
+
+        private void UnsubscribeFromSlotNetVars()
+        {
+            if (equipmentNet == null)
+                return;
+
+            equipmentNet.MainHandNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.OffHandNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.HeadNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.ChestNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.LegsNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.FeetNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+
+            equipmentNet.MainHandDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.OffHandDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.HeadDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.ChestDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.LegsDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.FeetDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+        }
+
+        private void OnAnyEquipItemChanged(FixedString64Bytes previous, FixedString64Bytes next)
+        {
+            RefreshAll();
+        }
+
+        private void OnAnyEquipDurabilityChanged(int previous, int next)
+        {
+            RefreshAll();
         }
     }
 }

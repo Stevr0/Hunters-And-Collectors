@@ -43,6 +43,12 @@ namespace HuntersAndCollectors.Players
         public event Action OnEquipmentChanged;
 
         public NetworkVariable<FixedString64Bytes> MainHandNetVar => mainHand;
+        public NetworkVariable<FixedString64Bytes> OffHandNetVar => offHand;
+        public NetworkVariable<FixedString64Bytes> HeadNetVar => head;
+        public NetworkVariable<FixedString64Bytes> ChestNetVar => chest;
+        public NetworkVariable<FixedString64Bytes> LegsNetVar => legs;
+        public NetworkVariable<FixedString64Bytes> FeetNetVar => feet;
+
         public NetworkVariable<int> MainHandDurabilityNetVar => mainHandDurability;
         public NetworkVariable<int> OffHandDurabilityNetVar => offHandDurability;
         public NetworkVariable<int> HeadDurabilityNetVar => headDurability;
@@ -785,3 +791,4 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
