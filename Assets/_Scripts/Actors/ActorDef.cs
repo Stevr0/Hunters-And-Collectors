@@ -38,6 +38,9 @@ namespace HuntersAndCollectors.Actors
         public float BaseDefence = 0f;
         public float BaseSwingSpeed = 1f;
 
+        [Header("AI (Optional)")]
+        public ActorAIDef AiDef;
+
         [Header("Starting Skills")]
         public StartingSkill[] StartingSkills;
 
@@ -66,3 +69,6 @@ namespace HuntersAndCollectors.Actors
 #endif
     }
 }
+
+
+

@@ -42,6 +42,7 @@ namespace HuntersAndCollectors.Skills
             EnsureSkill(SkillId.CombatPickaxe);
             EnsureSkill(SkillId.CombatKnife);
             EnsureSkill(SkillId.CombatClub);
+            EnsureSkill(SkillId.CombatUnarmed);
         }
 
         /// <summary>
@@ -179,3 +180,4 @@ namespace HuntersAndCollectors.Skills
         }
     }
 }
+

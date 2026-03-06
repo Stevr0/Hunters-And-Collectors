@@ -15,6 +15,7 @@ namespace HuntersAndCollectors.UI
 
         public float Damage;
         public float Defence;
+        public int AttackBonus;
         public float SwingSpeed;
         public float MoveSpeed;
 
@@ -32,3 +33,4 @@ namespace HuntersAndCollectors.UI
         public string CraftedBy;
     }
 }
+

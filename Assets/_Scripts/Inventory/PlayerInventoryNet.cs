@@ -384,7 +384,12 @@ namespace HuntersAndCollectors.Inventory
 
         public int AddItemServer(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
-            if (!IsServer || grid == null || quantity <= 0) return quantity;
+            if (!IsServer || grid == null || quantity <= 0)
+                return quantity;
+
+            // Prevent partial adds for server systems that assume atomic inventory writes.
+            if (!grid.CanAdd(itemId, quantity, out _, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy))
+                return quantity;
 
             var remainder = grid.Add(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy);
 
@@ -460,5 +465,6 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
 
 

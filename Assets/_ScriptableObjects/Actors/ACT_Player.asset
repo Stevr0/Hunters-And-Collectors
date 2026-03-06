@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
   m_Name: ACT_Player
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
-  ActorId: 
-  DisplayName: 
-  DefaultFactionId: 0
+  ActorId: Player
+  DisplayName: Player
+  DefaultFactionId: 1
   DefaultPvpEnabled: 0
   BaseStrength: 10
   BaseDexterity: 10
@@ -22,5 +22,6 @@ MonoBehaviour:
   BaseMoveSpeedMult: 1
   BaseDamage: 0
   BaseDefence: 0
-  BaseSwingSpeed: 1
+  BaseSwingSpeed: 0.5
+  AiDef: {fileID: 0}
   StartingSkills: []

@@ -97,6 +97,10 @@ namespace HuntersAndCollectors.Items
         [Min(0f)]
         public float Defence = 0f;
 
+        [Tooltip("Flat attack bonus added to d20 attack rolls when this item is used to attack.")]
+        [Min(0)]
+        public int AttackBonus = 0;
+
         [Tooltip("Attacks per second (or swings per second).")]
         [Min(0.01f)]
         public float SwingSpeed = 1f;
@@ -148,6 +152,7 @@ namespace HuntersAndCollectors.Items
             if (Strength < 0) Strength = 0;
             if (Dexterity < 0) Dexterity = 0;
             if (Intelligence < 0) Intelligence = 0;
+            if (AttackBonus < 0) AttackBonus = 0;
             if (BaseValue < 0) BaseValue = 0;
             if (BaseQuality < 0f) BaseQuality = 0f;
             if (MaxDurability < 0) MaxDurability = 0;
@@ -192,6 +197,7 @@ namespace HuntersAndCollectors.Items
 
             if (Damage > 0f) AddLine("Damage", Damage.ToString("0.##"));
             if (Defence > 0f) AddLine("Defence", Defence.ToString("0.##"));
+            if (AttackBonus > 0) AddLine("Attack Bonus", AttackBonus.ToString());
             if (SwingSpeed > 0f) AddLine("Swing Speed", SwingSpeed.ToString("0.##"));
             if (MovementSpeed != 1f) AddLine("Move Speed", $"{MovementSpeed:0.##}x");
 
@@ -217,3 +223,7 @@ namespace HuntersAndCollectors.Items
 #endif
     }
 }
+
+
+
+

@@ -181,7 +181,7 @@ namespace HuntersAndCollectors.Vendors
             {
                 var line = plan[i];
 
-                if (!buyer.Inventory.Grid.CanAdd(line.ItemId, line.Qty, out _))
+                if (!buyer.Inventory.Grid.CanAdd(line.ItemId, line.Qty, out _, line.Durability, line.BonusStrength, line.BonusDexterity, line.BonusIntelligence, line.CraftedBy))
                     return Fail(FailureReason.NotEnoughInventorySpace, totalPrice);
             }
 
@@ -261,12 +261,12 @@ namespace HuntersAndCollectors.Vendors
                     if (remainder != 0)
                         return Fail(FailureReason.NotEnoughInventorySpace, totalPrice);
 
-                    buyer.KnownItems.EnsureKnown(line.ItemId);
+                    buyer.KnownItems?.EnsureKnown(line.ItemId);
                 }
 
                 // XP awards after commit so they cannot be exploited on failures
-                buyer.Skills.AddXp(SkillId.Negotiation, 1);
-                vendor.Seller?.Skills.AddXp(SkillId.Sales, 1);
+                buyer.Skills?.AddXp(SkillId.Negotiation, 1);
+                vendor.Seller?.Skills?.AddXp(SkillId.Sales, 1);
 
                 committed = true;
 
@@ -313,3 +313,4 @@ namespace HuntersAndCollectors.Vendors
         }
     }
 }
+

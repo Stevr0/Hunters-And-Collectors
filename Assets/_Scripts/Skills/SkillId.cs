@@ -24,5 +24,7 @@ namespace HuntersAndCollectors.Skills
         public const string CombatPickaxe = "Combat_Pickaxe";
         public const string CombatKnife = "Combat_Knife";
         public const string CombatClub = "Combat_Club";
+        public const string CombatUnarmed = "Combat_Unarmed";
     }
 }
+

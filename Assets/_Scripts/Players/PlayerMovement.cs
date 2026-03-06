@@ -65,6 +65,7 @@ namespace HuntersAndCollectors.Players
         private Vector2 lookInput;
         private bool sprintHeld;
         private float pitch;
+        private bool sentLockedStop;
 
         // --- Server-side cached intent (authoritative movement uses these) ---
         private Vector2 serverMoveInput;
@@ -132,6 +133,10 @@ namespace HuntersAndCollectors.Players
         private void OnDisable()
         {
             input?.Disable();
+            moveInput = Vector2.zero;
+            lookInput = Vector2.zero;
+            sprintHeld = false;
+            sentLockedStop = false;
 
             if (IsOwner)
             {
@@ -145,16 +150,39 @@ namespace HuntersAndCollectors.Players
             // Owner: handle local camera pitch and send intent to server.
             if (IsOwner)
             {
-                if (HuntersAndCollectors.Input.InputState.GameplayLocked)
-                    return;
+                bool gameplayLocked = HuntersAndCollectors.Input.InputState.GameplayLocked;
+                if (gameplayLocked)
+                {
+                    // While UI is open, push neutral intent so the server does not keep stale movement.
+                    if (!sentLockedStop || moveInput != Vector2.zero || sprintHeld || lookInput != Vector2.zero)
+                    {
+                        moveInput = Vector2.zero;
+                        lookInput = Vector2.zero;
+                        sprintHeld = false;
+                        SendMoveIntentServerRpc(Vector2.zero, false, 0f);
+                        sentLockedStop = true;
+                    }
 
-                HandleLocalPitchOnly();
+                    // Host path: zero server intent immediately this frame.
+                    if (IsServer)
+                    {
+                        serverMoveInput = Vector2.zero;
+                        serverSprintHeld = false;
+                        serverYawDelta = 0f;
+                    }
+                }
+                else
+                {
+                    sentLockedStop = false;
 
-                // Yaw should be authoritative, so compute yaw delta and send to server.
-                float yawDelta = lookInput.x * mouseSensitivity;
+                    HandleLocalPitchOnly();
 
-                // Send intent to server (unreliable is fine for input streams).
-                SendMoveIntentServerRpc(moveInput, sprintHeld, yawDelta);
+                    // Yaw should be authoritative, so compute yaw delta and send to server.
+                    float yawDelta = lookInput.x * mouseSensitivity;
+
+                    // Send intent to server (unreliable is fine for input streams).
+                    SendMoveIntentServerRpc(moveInput, sprintHeld, yawDelta);
+                }
             }
 
             // Server: apply movement every frame from the latest intent.
@@ -171,7 +199,6 @@ namespace HuntersAndCollectors.Players
             // - The host/server instance
             UpdateAnimatorFromMotion();
         }
-
         /// <summary>
         /// Local-only pitch: does NOT affect gameplay, only cameraPivot.
         /// </summary>
@@ -210,6 +237,8 @@ namespace HuntersAndCollectors.Players
 
         private void HandleServerMovement()
         {
+            if (controller == null || !controller.enabled)
+                return;
             // 1) Apply yaw rotation (authoritative)
             if (Mathf.Abs(serverYawDelta) > 0.0001f)
             {
@@ -352,3 +381,5 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+

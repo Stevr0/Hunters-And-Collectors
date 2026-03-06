@@ -91,6 +91,7 @@ namespace HuntersAndCollectors.UI
             data.Description = def.Description;
             data.Damage = def.Damage;
             data.Defence = def.Defence;
+            data.AttackBonus = def.AttackBonus;
             data.SwingSpeed = def.SwingSpeed;
             data.MoveSpeed = def.MovementSpeed;
 
@@ -164,6 +165,7 @@ namespace HuntersAndCollectors.UI
             sb.AppendLine("Combat:");
             sb.Append("Damage: ").AppendLine(data.Damage.ToString("0.##"));
             sb.Append("Defence: ").AppendLine(data.Defence.ToString("0.##"));
+            sb.Append("Attack Bonus: ").AppendLine(data.AttackBonus.ToString());
             sb.Append("Swing Speed: ").AppendLine(data.SwingSpeed.ToString("0.##"));
             sb.Append("Move Speed: ").AppendLine(data.MoveSpeed.ToString("0.##"));
 
@@ -182,4 +184,5 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
 

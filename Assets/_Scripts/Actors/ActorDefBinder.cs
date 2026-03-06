@@ -56,6 +56,25 @@ namespace HuntersAndCollectors.Actors
                 TryApplyServerDefaults();
         }
 
+        /// <summary>
+        /// Allows ActorSpawner (or other server-authoritative setup code) to assign the ActorDef
+        /// before/around spawn initialization.
+        ///
+        /// Typical use:
+        /// - Instantiate prefab
+        /// - SetActorDefRuntime(def)
+        /// - Spawn via NGO
+        ///
+        /// If this is invoked after spawn, the binder will attempt to re-apply server defaults once.
+        /// </summary>
+        public void SetActorDefRuntime(ActorDef def)
+        {
+            actorDef = def;
+            warnedMissingActorDef = false;
+            serverDefaultsApplied = false;
+            TryApplyServerDefaults();
+        }
+
         private void CacheRefs()
         {
             if (networkObject == null)

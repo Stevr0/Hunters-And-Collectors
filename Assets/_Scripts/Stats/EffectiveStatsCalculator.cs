@@ -89,7 +89,7 @@ namespace HuntersAndCollectors.Stats
                 }
             }
 
-            string activeCombatSkillId = string.Empty;
+            string activeCombatSkillId = SkillId.CombatUnarmed;
             if (mainHandDef != null)
                 activeCombatSkillId = ResolveCombatSkillIdFromToolTags(mainHandDef.ToolTags);
 
@@ -157,7 +157,8 @@ namespace HuntersAndCollectors.Stats
             if (HasToolTag(tags, ToolTag.Club))
                 return SkillId.CombatClub;
 
-            return string.Empty;
+            // Items without a combat tool tag still train/scale through unarmed for now.
+            return SkillId.CombatUnarmed;
         }
 
         private static bool HasToolTag(ToolTag[] tags, ToolTag wanted)
@@ -175,3 +176,6 @@ namespace HuntersAndCollectors.Stats
         }
     }
 }
+
+
+

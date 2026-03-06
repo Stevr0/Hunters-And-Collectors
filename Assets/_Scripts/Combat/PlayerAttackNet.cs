@@ -313,9 +313,7 @@ namespace HuntersAndCollectors.Combat
 
             ResolveServerAttackStats(out int baseDamage, out float swingSpeed, out string weaponLabel, out var style);
             bool hasCombatSkill = TryResolveCombatSkillForCurrentWeapon(out string combatSkillId, out string weaponItemId);
-            int attackBonus = 0;
-            if (hasCombatSkill)
-                attackBonus = ResolveAttackBonus(combatSkillId);
+            int attackBonus = ResolveAttackBonus(hasCombatSkill ? combatSkillId : string.Empty, weaponItemId);
 
             float cooldownSeconds = 1f / Mathf.Max(0.01f, swingSpeed);
             ulong attackId = ++_nextAttackId;
@@ -605,19 +603,30 @@ namespace HuntersAndCollectors.Combat
             skills.AddXp(context.CombatSkillId, xpPerHit);
             Debug.Log($"[CombatSkill] Awarded XP skill={context.CombatSkillId} xp={xpPerHit} weapon={context.WeaponItemId} attacker={OwnerClientId}", this);
         }
-        private int ResolveAttackBonus(string combatSkillId)
+        private int ResolveAttackBonus(string combatSkillId, string weaponItemId)
         {
+            int itemAttackBonus = 0;
+            if (equipmentNet != null &&
+                !string.IsNullOrWhiteSpace(weaponItemId) &&
+                !string.Equals(weaponItemId, "Unarmed", StringComparison.Ordinal) &&
+                equipmentNet.TryGetItemDef(weaponItemId, out ItemDef weaponDef) &&
+                weaponDef != null)
+            {
+                itemAttackBonus = Mathf.Max(0, weaponDef.AttackBonus);
+            }
+
             if (string.IsNullOrWhiteSpace(combatSkillId))
-                return 0;
+                return itemAttackBonus;
 
             if (skills == null)
                 skills = GetComponent<SkillsNet>();
 
             if (skills == null)
-                return 0;
+                return itemAttackBonus;
 
             int weaponSkillLevel = Mathf.Clamp(skills.GetLevel(combatSkillId), 0, 100);
-            return weaponSkillLevel / 10;
+            int skillAttackBonus = weaponSkillLevel / 10;
+            return itemAttackBonus + skillAttackBonus;
         }
 
         private int ResolveTargetDefence(DamageableNet targetDamageable)
@@ -643,21 +652,25 @@ namespace HuntersAndCollectors.Combat
 
         private bool TryResolveCombatSkillForCurrentWeapon(out string skillId, out string weaponItemId)
         {
-            skillId = string.Empty;
+            // Unarmed is now a first-class combat skill.
+            skillId = SkillId.CombatUnarmed;
             weaponItemId = "Unarmed";
 
             if (equipmentNet == null)
-                return false;
+                return true;
 
             string itemId = equipmentNet.GetMainHandItemId();
             if (string.IsNullOrWhiteSpace(itemId))
-                return false;
+                return true;
 
             if (!equipmentNet.TryGetItemDef(itemId, out ItemDef def) || def == null)
-                return false;
+                return true;
 
             weaponItemId = itemId;
-            return TryMapCombatSkillIdFromToolTags(def.ToolTags, out skillId);
+            if (TryMapCombatSkillIdFromToolTags(def.ToolTags, out string mappedSkillId))
+                skillId = mappedSkillId;
+
+            return true;
         }
 
         private static bool TryMapCombatSkillIdFromToolTags(ToolTag[] tags, out string skillId)
@@ -704,6 +717,7 @@ namespace HuntersAndCollectors.Combat
 
             return false;
         }
+
         // Client local estimate for request pacing only.
         private float GetOwnerExpectedSwingIntervalSeconds()
         {
@@ -730,6 +744,7 @@ namespace HuntersAndCollectors.Combat
 
             return true;
         }
+
         private void LogAttackRejected(string reason)
         {
             Debug.Log($"[Combat] Attack rejected reason={reason}", this);
@@ -749,5 +764,13 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+
+
+
+
+
+
+
+
 
 

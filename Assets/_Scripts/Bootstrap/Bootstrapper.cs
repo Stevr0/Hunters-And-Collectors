@@ -1,3 +1,4 @@
+using HuntersAndCollectors.Actors;
 using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
@@ -15,7 +16,12 @@ namespace HuntersAndCollectors.Bootstrap
     ///
     /// Spawn rule:
     /// - After the gameplay scene finishes loading (server-side),
-    ///   teleport all connected players to a SceneSpawnPoint inside that scene.
+    ///   place connected players at a player spawn marker.
+    ///
+    /// ActorSpawner integration:
+    /// - NGO still owns the default PlayerObject lifecycle.
+    /// - Spawn-point resolution is delegated to ActorSpawner when present, so player/dummy/NPC
+    ///   location selection follows one actor-spawn-point model.
     /// </summary>
     public sealed class Bootstrapper : MonoBehaviour
     {
@@ -24,7 +30,17 @@ namespace HuntersAndCollectors.Bootstrap
         [Header("Spawn")]
         [SerializeField] private string spawnId = "Heartstone";
 
+        [Header("Grounding")]
+        [SerializeField] private bool snapPlayerToGround = true;
+        [SerializeField] private LayerMask groundMask;
+        [Min(0.1f)] [SerializeField] private float groundRayStartHeight = 50f;
+        [Min(1f)] [SerializeField] private float groundRayDistance = 200f;
+        [Min(0f)] [SerializeField] private float groundContactSkin = 0.05f;
+
         private bool _requestedSceneLoad;
+        private bool _startupActorsSpawned;
+        private ActorSpawner _actorSpawner;
+        private Coroutine _startupSpawnRoutine;
 
         private void Awake()
         {
@@ -62,6 +78,12 @@ namespace HuntersAndCollectors.Bootstrap
                 NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnNetworkSceneLoadComplete;
                 Debug.Log("[Bootstrapper] Unsubscribed from SceneManager.OnLoadComplete.");
             }
+
+            if (_startupSpawnRoutine != null)
+            {
+                StopCoroutine(_startupSpawnRoutine);
+                _startupSpawnRoutine = null;
+            }
         }
 
         private void Start()
@@ -83,6 +105,9 @@ namespace HuntersAndCollectors.Bootstrap
                 NetworkManager.Singleton.StartHost();
                 Debug.Log("[Bootstrapper] Host started.");
             }
+
+            _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+
             // Subscribe here (Start) so we never miss the NetworkManager lifecycle.
             NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnNetworkSceneLoadComplete;
             NetworkManager.Singleton.SceneManager.OnLoadComplete += OnNetworkSceneLoadComplete;
@@ -115,11 +140,29 @@ namespace HuntersAndCollectors.Bootstrap
             if (!NetworkManager.Singleton.IsServer)
                 return;
 
+            if (_startupSpawnRoutine == null && !_startupActorsSpawned)
+                _startupSpawnRoutine = StartCoroutine(SpawnStartupActorsWhenReady());
+
             // Delay to ensure:
             // - additive scene objects exist + can be found
             // - player object exists
             // - any spawn/movement scripts have run at least once
             StartCoroutine(TeleportClientAfterLoad(clientId));
+        }
+
+        private IEnumerator SpawnStartupActorsWhenReady()
+        {
+            const int maxFrames = 120;
+            for (int i = 0; i < maxFrames && !_startupActorsSpawned; i++)
+            {
+                TrySpawnStartupActors();
+                if (_startupActorsSpawned)
+                    break;
+
+                yield return null;
+            }
+
+            _startupSpawnRoutine = null;
         }
 
         private IEnumerator TeleportClientAfterLoad(ulong clientId)
@@ -133,22 +176,24 @@ namespace HuntersAndCollectors.Bootstrap
                 yield break;
             }
 
-            if (!TryFindSpawnPointInScene(gameplaySceneName, spawnId, out var spawn))
+            if (!TryResolvePlayerSpawn(out Vector3 spawnPosition, out Quaternion spawnRotation))
             {
-                Debug.LogError($"[Bootstrapper] No SceneSpawnPoint with id '{spawnId}' found in scene '{gameplaySceneName}'. " +
-                               $"(Make sure HeartstoneSpawnPoint has the SceneSpawnPoint component and SpawnId matches.)");
+                Debug.LogError($"[Bootstrapper] No spawn point found for id '{spawnId}' in scene '{gameplaySceneName}'.");
                 yield break;
             }
+
+            if (snapPlayerToGround)
+                spawnPosition = ResolveGroundedPlayerPosition(client.PlayerObject, spawnPosition);
 
             var playerObj = client.PlayerObject;
 
             // Log positions so we can prove what happened.
             var before = playerObj.transform.position;
-            var target = spawn.transform.position;
+            var target = spawnPosition;
 
             Debug.Log($"[Bootstrapper] Teleport attempt clientId={clientId} netId={playerObj.NetworkObjectId} FROM {before} TO {target}");
 
-            TeleportPlayerToSpawn(playerObj, spawn);
+            TeleportPlayerToSpawn(playerObj, target, spawnRotation, spawnId);
 
             // Wait another frame and check if something snapped them back.
             yield return null;
@@ -160,9 +205,45 @@ namespace HuntersAndCollectors.Bootstrap
             // This commonly happens when the owner's NetworkTransform sends its first state.
             if ((after - target).sqrMagnitude > 0.01f)
             {
-                Debug.LogWarning($"[Bootstrapper] Player snapped back after teleport. Forcing teleport again.");
-                TeleportPlayerToSpawn(playerObj, spawn);
+                Debug.LogWarning("[Bootstrapper] Player snapped back after teleport. Forcing teleport again.");
+                TeleportPlayerToSpawn(playerObj, target, spawnRotation, spawnId);
             }
+        }
+
+        private void TrySpawnStartupActors()
+        {
+            if (_startupActorsSpawned)
+                return;
+
+            if (_actorSpawner == null)
+                _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+
+            if (_actorSpawner == null)
+                return;
+
+            _actorSpawner.ServerSpawnConfiguredActorsOnce();
+            _startupActorsSpawned = true;
+        }
+
+        private bool TryResolvePlayerSpawn(out Vector3 position, out Quaternion rotation)
+        {
+            if (_actorSpawner == null)
+                _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+
+            if (_actorSpawner != null && _actorSpawner.TryGetPlayerSpawnTransform(spawnId, out position, out rotation))
+                return true;
+
+            // Compatibility fallback for legacy scenes still using SceneSpawnPoint.
+            if (TryFindSpawnPointInScene(gameplaySceneName, spawnId, out var legacySpawn))
+            {
+                position = legacySpawn.transform.position;
+                rotation = legacySpawn.transform.rotation;
+                return true;
+            }
+
+            position = default;
+            rotation = default;
+            return false;
         }
 
         /// <summary>
@@ -201,7 +282,43 @@ namespace HuntersAndCollectors.Bootstrap
         /// Disables CharacterController (if present) before moving to avoid collision snapping.
         /// NetworkTransform / NGO will replicate the new position to clients.
         /// </summary>
-        private static void TeleportPlayerToSpawn(NetworkObject playerObject, SceneSpawnPoint spawn)
+        private Vector3 ResolveGroundedPlayerPosition(NetworkObject playerObject, Vector3 desiredPosition)
+        {
+            EnsureGroundMaskInitialized();
+
+            Vector3 rayOrigin = desiredPosition + Vector3.up * Mathf.Max(0.1f, groundRayStartHeight);
+            if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, Mathf.Max(1f, groundRayDistance), groundMask, QueryTriggerInteraction.Ignore))
+                return desiredPosition;
+
+            float bottomOffset = 0f;
+            if (playerObject != null)
+            {
+                CharacterController cc = playerObject.GetComponent<CharacterController>();
+                if (cc != null)
+                {
+                    bottomOffset = cc.center.y - (cc.height * 0.5f);
+                }
+                else
+                {
+                    Collider col = playerObject.GetComponentInChildren<Collider>(true);
+                    if (col != null)
+                        bottomOffset = col.bounds.min.y - playerObject.transform.position.y;
+                }
+            }
+
+            desiredPosition.y = hit.point.y - bottomOffset + Mathf.Max(0f, groundContactSkin);
+            return desiredPosition;
+        }
+
+        private void EnsureGroundMaskInitialized()
+        {
+            if (groundMask.value != 0)
+                return;
+
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            groundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics.DefaultRaycastLayers;
+        }
+        private static void TeleportPlayerToSpawn(NetworkObject playerObject, Vector3 position, Quaternion rotation, string spawnLabel)
         {
             var playerTransform = playerObject.transform;
 
@@ -210,12 +327,18 @@ namespace HuntersAndCollectors.Bootstrap
             if (cc != null)
                 cc.enabled = false;
 
-            playerTransform.SetPositionAndRotation(spawn.transform.position, spawn.transform.rotation);
+            playerTransform.SetPositionAndRotation(position, rotation);
 
             if (cc != null)
                 cc.enabled = true;
 
-            Debug.Log($"[Bootstrapper] Teleported PlayerObjectId={playerObject.NetworkObjectId} to spawn '{spawn.SpawnId}'.");
+            Debug.Log($"[Bootstrapper] Teleported PlayerObjectId={playerObject.NetworkObjectId} to spawn '{spawnLabel}'.");
         }
     }
 }
+
+
+
+
+
+

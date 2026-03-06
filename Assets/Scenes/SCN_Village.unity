@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 25919369}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 64.8132, y: -0, z: 41.28837}
+  m_LocalPosition: {x: 511.51324, y: 0, z: 508.98837}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -445,6 +445,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3417656800199026792, guid: 732e8ca26931c9747a04f0ce646118f1, type: 3}
   m_PrefabInstance: {fileID: 466796158}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &527218308
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 527218310}
+  - component: {fileID: 527218309}
+  m_Layer: 0
+  m_Name: ActorSpawnPoint_Player
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &527218309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 527218308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a63e90d0e136bb4c8a843b08869cfa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnPoint
+  spawnPointId: SP_002
+  isPlayerSpawn: 1
+  isNpcSpawn: 0
+  isDummySpawn: 0
+  defaultActorDef: {fileID: 11400000, guid: 60f6e14c1d4c1af48adfd1498e8f00d1, type: 2}
+  enableRespawn: 1
+  respawnDelaySeconds: 5
+  maxAliveFromPoint: 1
+  drawGizmo: 1
+--- !u!4 &527218310
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 527218308}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 507.72003, y: 0, z: 507.88}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &537763653
 GameObject:
   m_ObjectHideFlags: 0
@@ -741,6 +794,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3417656800199026792, guid: 97d065c5451f8e547b9acd3ddcef374d, type: 3}
   m_PrefabInstance: {fileID: 593852614}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &751182974
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 751182976}
+  - component: {fileID: 751182975}
+  m_Layer: 0
+  m_Name: ActorSpawnPoint_Dummy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &751182975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751182974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a63e90d0e136bb4c8a843b08869cfa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnPoint
+  spawnPointId: SP_001
+  isPlayerSpawn: 0
+  isNpcSpawn: 0
+  isDummySpawn: 1
+  defaultActorDef: {fileID: 11400000, guid: 859a84d913e54ee6bc2e9f465bc79584, type: 2}
+  enableRespawn: 1
+  respawnDelaySeconds: 5
+  maxAliveFromPoint: 1
+  drawGizmo: 1
+--- !u!4 &751182976
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751182974}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 506.36, y: 0, z: 498.22}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &794944008
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -836,7 +942,7 @@ Transform:
   m_GameObject: {fileID: 802153037}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 64.8132, y: -0, z: 41.28837}
+  m_LocalPosition: {x: 511.51324, y: 0, z: 508.98837}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -852,134 +958,6 @@ Transform:
   - {fileID: 2103398066}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &847591576
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 847591580}
-  - component: {fileID: 847591579}
-  - component: {fileID: 847591578}
-  - component: {fileID: 847591577}
-  - component: {fileID: 847591581}
-  m_Layer: 0
-  m_Name: HeartstoneSpawnPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!136 &847591577
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847591576}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
---- !u!23 &847591578
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847591576}
-  m_Enabled: 0
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &847591579
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847591576}
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &847591580
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847591576}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 61.058, y: -0, z: 36.928}
-  m_LocalScale: {x: 2, y: 0.1, z: 2}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &847591581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847591576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 441c8db3c2013ac4f840b31b00531662, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerSpawnPoint
-  spawnId: Heartstone
 --- !u!1 &890298199
 GameObject:
   m_ObjectHideFlags: 0
@@ -1180,6 +1158,59 @@ Transform:
   - {fileID: 466796159}
   m_Father: {fileID: 25919370}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1483792929
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1483792931}
+  - component: {fileID: 1483792930}
+  m_Layer: 0
+  m_Name: ActorSpawnPoint_Bandit
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1483792930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483792929}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a63e90d0e136bb4c8a843b08869cfa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnPoint
+  spawnPointId: SP_003
+  isPlayerSpawn: 0
+  isNpcSpawn: 1
+  isDummySpawn: 0
+  defaultActorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+  enableRespawn: 1
+  respawnDelaySeconds: 20
+  maxAliveFromPoint: 2
+  drawGizmo: 1
+--- !u!4 &1483792931
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483792929}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 506.36, y: 0, z: 553.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1504449639
 GameObject:
   m_ObjectHideFlags: 0
@@ -1191,6 +1222,7 @@ GameObject:
   - component: {fileID: 1504449642}
   - component: {fileID: 1504449641}
   - component: {fileID: 1504449640}
+  - component: {fileID: 1504449643}
   m_Layer: 7
   m_Name: Terrain
   m_TagString: Untagged
@@ -1273,6 +1305,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1504449643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504449639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 0
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: 00d69702a5d33f242a13f349e4cfba7c, type: 2}
+  m_BuildHeightMesh: 0
 --- !u!1 &1613664783
 GameObject:
   m_ObjectHideFlags: 0
@@ -1556,69 +1620,64 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 294337475956184107, guid: 3f240cae831378e4c91f842c458ee839, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1637891441}
   m_SourcePrefab: {fileID: 100100000, guid: 3f240cae831378e4c91f842c458ee839, type: 3}
---- !u!1001 &1640305218
-PrefabInstance:
+--- !u!1 &1637891440 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 294337475956184107, guid: 3f240cae831378e4c91f842c458ee839, type: 3}
+  m_PrefabInstance: {fileID: 1637891439}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1637891441
+MonoBehaviour:
   m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 6506320977219844565, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: GlobalObjectIdHash
-      value: 3246561604
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 61.91
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 30.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6626027751779979479, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6889116378619088114, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
-      propertyPath: m_Name
-      value: PF_TrainingDummy
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1637891440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daf1685abe7d01a4199797ceb7c6209e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawner
+  actorPrefabBindings:
+  - actorDef: {fileID: 11400000, guid: 60f6e14c1d4c1af48adfd1498e8f00d1, type: 2}
+    actorId: Player
+    prefab: {fileID: 3632684436402908213, guid: 9df120c089f1bec4bbfa1dd1805753e6, type: 3}
+  - actorDef: {fileID: 11400000, guid: 859a84d913e54ee6bc2e9f465bc79584, type: 2}
+    actorId: TrainingDummy
+    prefab: {fileID: 6506320977219844565, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
+  - actorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+    actorId: Bandit
+    prefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  playerActorPrefab: {fileID: 0}
+  dummyActorPrefab: {fileID: 0}
+  npcActorPrefab: {fileID: 0}
+  spawnPoints: []
+  snapToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 115
+  groundRayStartHeight: 50
+  groundRayDistance: 200
+  groundContactSkin: 0.05
+  obstacleLiftStep: 0.25
+  obstacleLiftMaxSteps: 24
+  spawnConfiguredActorsOnServerStart: 1
+  startupSpawns:
+  - actorDef: {fileID: 11400000, guid: 859a84d913e54ee6bc2e9f465bc79584, type: 2}
+    spawnPointId: SP_001
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
+  - actorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+    spawnPointId: SP_003
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
 --- !u!1 &1790041013
 GameObject:
   m_ObjectHideFlags: 0
@@ -2231,7 +2290,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6626027751779979479, guid: 54a4bc9b17b9ae944a8c5cf775fca5a5, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 61.17
+      value: 507.87
       objectReference: {fileID: 0}
     - target: {fileID: 6626027751779979479, guid: 54a4bc9b17b9ae944a8c5cf775fca5a5, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2239,7 +2298,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6626027751779979479, guid: 54a4bc9b17b9ae944a8c5cf775fca5a5, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 49.05
+      value: 516.75
       objectReference: {fileID: 0}
     - target: {fileID: 6626027751779979479, guid: 54a4bc9b17b9ae944a8c5cf775fca5a5, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2362,7 +2421,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1696287669785136691, guid: ee3dc914fbff4b4499522c3e89233124, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 63.5
+      value: 510.2
       objectReference: {fileID: 0}
     - target: {fileID: 1696287669785136691, guid: ee3dc914fbff4b4499522c3e89233124, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2370,7 +2429,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1696287669785136691, guid: ee3dc914fbff4b4499522c3e89233124, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 48.8
+      value: 516.5
       objectReference: {fileID: 0}
     - target: {fileID: 1696287669785136691, guid: ee3dc914fbff4b4499522c3e89233124, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2419,7 +2478,8 @@ SceneRoots:
   - {fileID: 4515105235620340891}
   - {fileID: 8742433871451367}
   - {fileID: 1504449642}
-  - {fileID: 847591580}
   - {fileID: 802153038}
   - {fileID: 25919370}
-  - {fileID: 1640305218}
+  - {fileID: 751182976}
+  - {fileID: 1483792931}
+  - {fileID: 527218310}

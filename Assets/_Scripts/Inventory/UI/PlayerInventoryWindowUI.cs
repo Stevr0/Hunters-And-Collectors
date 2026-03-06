@@ -206,6 +206,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 data.Description = def.Description;
                 data.Damage = def.Damage;
                 data.Defence = def.Defence;
+                data.AttackBonus = def.AttackBonus;
                 data.SwingSpeed = def.SwingSpeed;
                 data.MoveSpeed = def.MovementSpeed;
 
@@ -288,4 +289,5 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
 

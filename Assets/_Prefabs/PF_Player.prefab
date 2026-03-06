@@ -5472,11 +5472,13 @@ GameObject:
   - component: {fileID: 4545690860031361385}
   - component: {fileID: 8023456712345678901}
   - component: {fileID: 6123456701234567890}
-  - component: {fileID: 6036641258081310702}
   - component: {fileID: 3825172233251478024}
   - component: {fileID: 5779662129854349533}
   - component: {fileID: -4335417801814364540}
   - component: {fileID: 8827242436923027333}
+  - component: {fileID: 6758564430667381648}
+  - component: {fileID: -8358533200946782}
+  - component: {fileID: 3741286068403575486}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -6017,25 +6019,6 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   animator: {fileID: 5712288911929492183}
   attackStateDuration: 0.25
---- !u!114 &6036641258081310702
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4492703975310421043}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6889ecf946472c841b44846566ad563d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Stats.PlayerBaseStats
-  baseStrength: 10
-  baseDexterity: 10
-  baseIntelligence: 10
-  baseMoveSpeedMult: 1
-  baseDamage: 0
-  baseDefence: 0
-  baseSwingSpeed: 1
 --- !u!114 &3825172233251478024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6091,6 +6074,62 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.PvpToggleNet
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!195 &6758564430667381648
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!114 &-8358533200946782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b7fbfba4f904893b2e7c877f5ec6192, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Combat.HealthNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  fallbackMaxHealth: 100
+  despawnOnZero: 1
+--- !u!114 &3741286068403575486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db249ec6cecf4352b203f20f6558f6a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Combat.DamageableNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  health: {fileID: -8358533200946782}
+  animator: {fileID: 5712288911929492183}
+  flashRenderers: []
+  hitTriggerName: Hit
+  flashColor: {r: 1, g: 0.0047169924, b: 0.0047169924, a: 1}
+  flashDuration: 0.1
 --- !u!1 &6085582210013377001
 GameObject:
   m_ObjectHideFlags: 0

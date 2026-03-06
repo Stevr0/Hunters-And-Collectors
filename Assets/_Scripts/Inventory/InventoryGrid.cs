@@ -29,6 +29,19 @@ namespace HuntersAndCollectors.Inventory
 
         public bool CanAdd(string itemId, int quantity, out int remainder)
         {
+            return CanAdd(itemId, quantity, out remainder, durability: -1, bonusStrength: 0, bonusDexterity: 0, bonusIntelligence: 0, craftedBy: default);
+        }
+
+        public bool CanAdd(
+            string itemId,
+            int quantity,
+            out int remainder,
+            int durability,
+            int bonusStrength,
+            int bonusDexterity,
+            int bonusIntelligence,
+            FixedString64Bytes craftedBy)
+        {
             remainder = quantity;
             if (quantity <= 0 || !TryGetDef(itemId, out var def))
                 return false;
@@ -36,11 +49,19 @@ namespace HuntersAndCollectors.Inventory
             bool durable = IsDurable(def);
             int maxStack = GetMaxStack(def);
             int remaining = quantity;
+            ItemInstanceData incomingInstance = BuildInstanceData(def, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy);
+
+            bool incomingHasInstanceData = incomingInstance.HasAnyBonus || incomingInstance.HasCrafter;
 
             for (var i = 0; i < Slots.Length && remaining > 0; i++)
             {
-                if (!Slots[i].IsEmpty && Slots[i].Stack.ItemId == itemId && !durable && !Slots[i].InstanceData.HasAnyBonus && !Slots[i].InstanceData.HasCrafter)
-                    remaining -= maxStack - Slots[i].Stack.Quantity;
+                if (!Slots[i].IsEmpty && Slots[i].Stack.ItemId == itemId && !durable)
+                {
+                    // Keep CanAdd behavior aligned with Add(): only stacks without instance data can merge.
+                    bool slotHasInstanceData = Slots[i].InstanceData.HasAnyBonus || Slots[i].InstanceData.HasCrafter;
+                    if (!slotHasInstanceData && !incomingHasInstanceData)
+                        remaining -= maxStack - Slots[i].Stack.Quantity;
+                }
 
                 if (Slots[i].IsEmpty)
                     remaining -= maxStack;
@@ -309,3 +330,4 @@ namespace HuntersAndCollectors.Inventory
         private bool IsValidIndex(int index) => index >= 0 && index < Slots.Length;
     }
 }
+
