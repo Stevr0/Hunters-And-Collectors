@@ -18,8 +18,8 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private TMP_Text levelText;
         [SerializeField] private TMP_Text xpText;
 
-        [Tooltip("Optional XP bar. If you don't use a bar, leave null.")]
-        [SerializeField] private Slider xpBar;
+        [Tooltip("Optional fill image for XP (Image Type should be Filled).")]
+        [SerializeField] private Image xpFillImage;
 
         /// <summary>
         /// Populate the row with the latest data.
@@ -32,12 +32,11 @@ namespace HuntersAndCollectors.UI
             // e.g. "7 / 130"
             if (xpText) xpText.text = $"{xp} / {xpToNextLevel}";
 
-            // Normalized 0..1 for the bar
-            if (xpBar)
+            // Normalized 0..1 for the fill image.
+            if (xpFillImage)
             {
-                xpBar.minValue = 0f;
-                xpBar.maxValue = 1f;
-                xpBar.value = (xpToNextLevel <= 0) ? 0f : (xp / (float)xpToNextLevel);
+                float normalized = (xpToNextLevel <= 0) ? 0f : (xp / (float)xpToNextLevel);
+                xpFillImage.fillAmount = Mathf.Clamp01(normalized);
             }
         }
     }

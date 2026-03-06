@@ -5473,6 +5473,10 @@ GameObject:
   - component: {fileID: 8023456712345678901}
   - component: {fileID: 6123456701234567890}
   - component: {fileID: 6036641258081310702}
+  - component: {fileID: 3825172233251478024}
+  - component: {fileID: 5779662129854349533}
+  - component: {fileID: -4335417801814364540}
+  - component: {fileID: 8827242436923027333}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -6032,6 +6036,61 @@ MonoBehaviour:
   baseDamage: 0
   baseDefence: 0
   baseSwingSpeed: 1
+--- !u!114 &3825172233251478024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b006142495af2354ea72b181699d09c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorIdentityNet
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &5779662129854349533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cdab41d41ca4cf0b33ecd92734a9f8b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Stats.ActorStatsProvider
+  defBinder: {fileID: -4335417801814364540}
+  equipment: {fileID: 9162402046273109018}
+  skills: {fileID: 691804140746123789}
+  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
+--- !u!114 &-4335417801814364540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 393cbd6bbfaf47828054ae68950deafb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDefBinder
+  actorDef: {fileID: 11400000, guid: 60f6e14c1d4c1af48adfd1498e8f00d1, type: 2}
+--- !u!114 &8827242436923027333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3502f31083e065a4f88028fa303cbfda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.PvpToggleNet
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &6085582210013377001
 GameObject:
   m_ObjectHideFlags: 0

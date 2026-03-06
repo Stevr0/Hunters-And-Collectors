@@ -6,22 +6,12 @@ using UnityEngine;
 namespace HuntersAndCollectors.Stats
 {
     /// <summary>
-    /// EffectiveStatsCalculator
-    /// -----------------------------------------------------------------------------
     /// Single source of truth for effective stat math.
     ///
-    /// Design intent:
-    /// - Keep all formulas in one shared place to prevent UI/server drift.
-    /// - Remain null-safe so callers can use this during spawn timing gaps.
-    /// - Avoid LINQ/allocation-heavy patterns in hot paths.
+    /// Actor pipeline callers should pass primitive baseline values sourced from ActorDef.
     /// </summary>
     public static class EffectiveStatsCalculator
     {
-        private const float DefaultBaseMoveSpeedMult = 1f;
-        private const float DefaultBaseDamage = 0f;
-        private const float DefaultBaseDefence = 0f;
-        private const float DefaultBaseSwingSpeed = 1f;
-
         private static readonly EquipSlot[] EquippedSlots =
         {
             EquipSlot.MainHand,
@@ -33,23 +23,32 @@ namespace HuntersAndCollectors.Stats
         };
 
         /// <summary>
-        /// Computes effective totals from base + equipment + skills.
+        /// Computes effective totals from baseline + equipment + skills.
         ///
         /// Attribute-to-vitals rules:
         /// - MaxHealth  = Strength * 2
         /// - MaxStamina = Dexterity * 2
         /// - MaxMana    = Intelligence * 2
         /// </summary>
-        public static EffectiveStats Compute(PlayerBaseStats baseStats, PlayerEquipmentNet equipment, SkillsNet skills, ItemDatabase itemDatabase)
+        public static EffectiveStats Compute(
+            int baseStrength,
+            int baseDexterity,
+            int baseIntelligence,
+            float baseMoveSpeedMult,
+            float baseDamage,
+            float baseDefence,
+            float baseSwingSpeed,
+            PlayerEquipmentNet equipment,
+            SkillsNet skills,
+            ItemDatabase itemDatabase)
         {
-            int baseStrength = baseStats != null ? Mathf.Max(0, baseStats.BaseStrength) : 0;
-            int baseDexterity = baseStats != null ? Mathf.Max(0, baseStats.BaseDexterity) : 0;
-            int baseIntelligence = baseStats != null ? Mathf.Max(0, baseStats.BaseIntelligence) : 0;
-
-            float baseMoveSpeedMult = baseStats != null ? Mathf.Max(0.0001f, baseStats.BaseMoveSpeedMult) : DefaultBaseMoveSpeedMult;
-            float baseDamage = baseStats != null ? Mathf.Max(0f, baseStats.BaseDamage) : DefaultBaseDamage;
-            float baseDefence = baseStats != null ? Mathf.Max(0f, baseStats.BaseDefence) : DefaultBaseDefence;
-            float baseSwingSpeed = baseStats != null ? Mathf.Max(0.0001f, baseStats.BaseSwingSpeed) : DefaultBaseSwingSpeed;
+            baseStrength = Mathf.Max(0, baseStrength);
+            baseDexterity = Mathf.Max(0, baseDexterity);
+            baseIntelligence = Mathf.Max(0, baseIntelligence);
+            baseMoveSpeedMult = Mathf.Max(0.0001f, baseMoveSpeedMult);
+            baseDamage = Mathf.Max(0f, baseDamage);
+            baseDefence = Mathf.Max(0f, baseDefence);
+            baseSwingSpeed = Mathf.Max(0.0001f, baseSwingSpeed);
 
             float equipDamage = 0f;
             float equipDefence = 0f;
@@ -78,7 +77,6 @@ namespace HuntersAndCollectors.Stats
                     equipDefence += def.Defence;
                     equipMoveMult *= def.MovementSpeed <= 0f ? 1f : def.MovementSpeed;
 
-                    // ItemDef base attributes + crafted per-instance bonus attributes.
                     equipStr += Mathf.Max(0, def.Strength) + Mathf.Max(0, equipment.GetEquippedBonusStrength(slot));
                     equipDex += Mathf.Max(0, def.Dexterity) + Mathf.Max(0, equipment.GetEquippedBonusDexterity(slot));
                     equipInt += Mathf.Max(0, def.Intelligence) + Mathf.Max(0, equipment.GetEquippedBonusIntelligence(slot));

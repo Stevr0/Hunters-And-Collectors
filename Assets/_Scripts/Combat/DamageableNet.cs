@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using HuntersAndCollectors.Actors;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -14,6 +15,7 @@ namespace HuntersAndCollectors.Combat
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(HealthNet))]
+    [RequireComponent(typeof(ActorIdentityNet))]
     public sealed class DamageableNet : NetworkBehaviour, IDamageableNet
     {
         [Header("References")]
@@ -126,3 +128,4 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+

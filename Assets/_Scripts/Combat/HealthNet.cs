@@ -1,3 +1,4 @@
+using HuntersAndCollectors.Stats;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -9,14 +10,14 @@ namespace HuntersAndCollectors.Combat
     /// Authority model:
     /// - Health is replicated to everyone.
     /// - Only the server can write health.
-    /// - Damage feedback visuals are broadcast via ClientRpc.
+    /// - Max health is derived from actor stats (IStatsProvider) with a safe fallback.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
     public sealed class HealthNet : NetworkBehaviour
     {
         [Header("Health")]
-        [SerializeField] private int maxHealth = 100;
+        [SerializeField] private int fallbackMaxHealth = 100;
         [SerializeField] private bool despawnOnZero = true;
 
         // Server-authoritative health value. Clients read only.
@@ -24,9 +25,12 @@ namespace HuntersAndCollectors.Combat
             new(100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Guards one-time server spawn initialization.
-        private bool _serverInitialized;
+        private bool serverInitialized;
+        private int resolvedMaxHealth;
+        private IStatsProvider cachedStatsProvider;
+        private bool warnedMissingStatsProvider;
 
-        public int MaxHealth => Mathf.Max(1, maxHealth);
+        public int MaxHealth => Mathf.Max(1, resolvedMaxHealth > 0 ? resolvedMaxHealth : fallbackMaxHealth);
         public int CurrentHealth => Mathf.Clamp(currentHealth.Value, 0, MaxHealth);
         public float Health01 => Mathf.Clamp01((float)CurrentHealth / MaxHealth);
 
@@ -41,14 +45,16 @@ namespace HuntersAndCollectors.Combat
             if (!IsServer)
                 return;
 
-            maxHealth = Mathf.Max(1, maxHealth);
+            fallbackMaxHealth = Mathf.Max(1, fallbackMaxHealth);
+            ServerRecalculateMaxHealthInternal(initializeIfNeeded: !serverInitialized);
+        }
 
-            // Initialize once when this networked object first spawns on server.
-            if (!_serverInitialized)
-            {
-                currentHealth.Value = maxHealth;
-                _serverInitialized = true;
-            }
+        /// <summary>
+        /// SERVER ONLY: Re-resolves max health from actor stats and clamps current health if needed.
+        /// </summary>
+        public void ServerRecalculateMaxHealth()
+        {
+            ServerRecalculateMaxHealthInternal(initializeIfNeeded: false);
         }
 
         /// <summary>
@@ -101,6 +107,53 @@ namespace HuntersAndCollectors.Combat
             // Optional local hit reaction if this object has DamageableNet visuals.
             if (TryGetComponent<DamageableNet>(out var damageable))
                 damageable.PlayHitReactionLocal();
+        }
+
+        private void ServerRecalculateMaxHealthInternal(bool initializeIfNeeded)
+        {
+            if (!IsServer)
+                return;
+
+            if (!IsSpawned)
+                return;
+
+            resolvedMaxHealth = ResolveMaxHealthFromStats();
+            int effectiveMax = MaxHealth;
+
+            if (initializeIfNeeded)
+            {
+                currentHealth.Value = effectiveMax;
+                serverInitialized = true;
+                return;
+            }
+
+            if (currentHealth.Value > effectiveMax)
+                currentHealth.Value = effectiveMax;
+        }
+
+        private int ResolveMaxHealthFromStats()
+        {
+            if (cachedStatsProvider == null)
+                cachedStatsProvider = GetComponentInParent<IStatsProvider>();
+
+            if (cachedStatsProvider == null)
+            {
+                if (!warnedMissingStatsProvider)
+                {
+                    warnedMissingStatsProvider = true;
+                    Debug.LogWarning($"[Combat] HealthNet missing IStatsProvider on '{name}'. Using fallback max health {Mathf.Max(1, fallbackMaxHealth)}.", this);
+                }
+
+                return Mathf.Max(1, fallbackMaxHealth);
+            }
+
+            EffectiveStats stats = cachedStatsProvider.GetEffectiveStats();
+            int derivedMax = Mathf.RoundToInt(stats.MaxHealth);
+
+            if (derivedMax <= 0)
+                return Mathf.Max(1, fallbackMaxHealth);
+
+            return derivedMax;
         }
 
         private void ServerDespawnSelf()

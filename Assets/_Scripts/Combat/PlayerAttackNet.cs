@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using HuntersAndCollectors.Actors;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
+using HuntersAndCollectors.Stats;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -33,6 +35,8 @@ namespace HuntersAndCollectors.Combat
     /// - Prevents spoofed hit points and most hit-through-wall attempts.
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(ActorIdentityNet))]
+    [RequireComponent(typeof(ActorStatsProvider))]
     public sealed class PlayerAttackNet : NetworkBehaviour
     {
         [Header("Melee Sweep")]
@@ -93,6 +97,7 @@ namespace HuntersAndCollectors.Combat
         // Server-authoritative cooldown timestamp.
         private double _nextAttackServerTime;
         private ulong _nextAttackId;
+        private readonly HashSet<ulong> _loggedMissingStatsProviderTargetIds = new();
 
         private struct SweepCandidate
         {
@@ -113,6 +118,7 @@ namespace HuntersAndCollectors.Combat
             public string CombatSkillId;
             public float SwingSpeed;
             public float CooldownSeconds;
+            public int AttackBonus;
         }
 
         public override void OnNetworkSpawn()
@@ -307,6 +313,10 @@ namespace HuntersAndCollectors.Combat
 
             ResolveServerAttackStats(out int baseDamage, out float swingSpeed, out string weaponLabel, out var style);
             bool hasCombatSkill = TryResolveCombatSkillForCurrentWeapon(out string combatSkillId, out string weaponItemId);
+            int attackBonus = 0;
+            if (hasCombatSkill)
+                attackBonus = ResolveAttackBonus(combatSkillId);
+
             float cooldownSeconds = 1f / Mathf.Max(0.01f, swingSpeed);
             ulong attackId = ++_nextAttackId;
 
@@ -329,7 +339,8 @@ namespace HuntersAndCollectors.Combat
                 WeaponItemId = weaponItemId,
                 CombatSkillId = hasCombatSkill ? combatSkillId : string.Empty,
                 SwingSpeed = swingSpeed,
-                CooldownSeconds = cooldownSeconds
+                CooldownSeconds = cooldownSeconds,
+                AttackBonus = attackBonus
             };
             StartCoroutine(ServerResolveAttackHitWindow(context));
         }
@@ -388,16 +399,36 @@ namespace HuntersAndCollectors.Combat
             if (selected.HasValue)
             {
                 SweepCandidate c = selected.Value;
-                int finalDamage = Mathf.Max(1, Mathf.RoundToInt(context.BaseDamage * Mathf.Max(0f, c.Multiplier)));
+                ActorIdentityNet attackerIdentity = GetComponent<ActorIdentityNet>();
+                ActorIdentityNet targetIdentity = c.Damageable.GetComponentInParent<ActorIdentityNet>();
 
-                IDamageableNet damageable = c.Damageable.GetComponent(typeof(IDamageableNet)) as IDamageableNet;
-                if (damageable != null && damageable.ServerTryApplyDamage(finalDamage, OwnerClientId, c.HitPoint))
+                Disposition disposition = HostilityResolver.GetDisposition(attackerIdentity, targetIdentity);
+                if (!HostilityResolver.CanAttack(attackerIdentity, targetIdentity))
                 {
-                    hitApplied = true;
-                    Debug.Log($"[Combat] SweepHit target={c.Damageable.name} dist={c.Distance:0.##} mult={c.Multiplier:0.##} dmg={finalDamage}", this);
-                    Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Hit target={c.Damageable.name}", this);
-                    Debug.Log($"[Combat] Attack accepted weapon={context.WeaponLabel} dmg={finalDamage} speed={context.SwingSpeed:0.##} cd={context.CooldownSeconds:0.###}", this);
-                    ServerAwardCombatXp(context, finalDamage);
+                    Debug.Log($"[Combat] Blocked by disposition id={context.AttackId} disposition={disposition} target={c.Damageable.name}", this);
+                }
+                else
+                {
+                    int targetDefence = ResolveTargetDefence(c.Damageable);
+                    int baseDamage = Mathf.Max(1, Mathf.RoundToInt(context.BaseDamage * Mathf.Max(0f, c.Multiplier)));
+                    CombatResolution resolution = CombatResolver.ResolveMeleeAttack(baseDamage, context.AttackBonus, targetDefence);
+
+                    if (resolution.IsHit)
+                    {
+                        IDamageableNet damageable = c.Damageable.GetComponent(typeof(IDamageableNet)) as IDamageableNet;
+                        if (damageable != null && damageable.ServerTryApplyDamage(resolution.FinalDamage, OwnerClientId, c.HitPoint))
+                        {
+                            hitApplied = true;
+                            Debug.Log($"[Combat] SweepHit target={c.Damageable.name} dist={c.Distance:0.##} mult={c.Multiplier:0.##} dmg={resolution.FinalDamage} outcome={resolution.Outcome} roll={resolution.Roll} total={resolution.AttackTotal} vsDef={resolution.TargetDefence}", this);
+                            Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result={resolution.Outcome} target={c.Damageable.name}", this);
+                            Debug.Log($"[Combat] Attack accepted weapon={context.WeaponLabel} dmg={resolution.FinalDamage} speed={context.SwingSpeed:0.##} cd={context.CooldownSeconds:0.###} bonus={context.AttackBonus}", this);
+                            ServerAwardCombatXp(context, resolution.FinalDamage);
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"[Combat] HitWindowCheck id={context.AttackId} result=Miss target={c.Damageable.name} roll={resolution.Roll} total={resolution.AttackTotal} vsDef={resolution.TargetDefence}", this);
+                    }
                 }
             }
 
@@ -573,6 +604,41 @@ namespace HuntersAndCollectors.Combat
 
             skills.AddXp(context.CombatSkillId, xpPerHit);
             Debug.Log($"[CombatSkill] Awarded XP skill={context.CombatSkillId} xp={xpPerHit} weapon={context.WeaponItemId} attacker={OwnerClientId}", this);
+        }
+        private int ResolveAttackBonus(string combatSkillId)
+        {
+            if (string.IsNullOrWhiteSpace(combatSkillId))
+                return 0;
+
+            if (skills == null)
+                skills = GetComponent<SkillsNet>();
+
+            if (skills == null)
+                return 0;
+
+            int weaponSkillLevel = Mathf.Clamp(skills.GetLevel(combatSkillId), 0, 100);
+            return weaponSkillLevel / 10;
+        }
+
+        private int ResolveTargetDefence(DamageableNet targetDamageable)
+        {
+            const int fallbackDefence = 10;
+
+            if (targetDamageable == null)
+                return fallbackDefence;
+
+            IStatsProvider statsProvider = targetDamageable.GetComponentInParent<IStatsProvider>();
+            if (statsProvider != null)
+            {
+                EffectiveStats targetStats = statsProvider.GetEffectiveStats();
+                return Mathf.Max(0, Mathf.RoundToInt(targetStats.Defence));
+            }
+
+            ulong targetId = targetDamageable.NetworkObjectId;
+            if (_loggedMissingStatsProviderTargetIds.Add(targetId))
+                Debug.LogWarning($"[Combat] Missing IStatsProvider on target={targetDamageable.name}. Using fallback defence={fallbackDefence}.", targetDamageable);
+
+            return fallbackDefence;
         }
 
         private bool TryResolveCombatSkillForCurrentWeapon(out string skillId, out string weaponItemId)

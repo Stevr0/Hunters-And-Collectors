@@ -188,6 +188,7 @@ namespace HuntersAndCollectors.UI
                 // Set cache first, icon second, durability last.
                 slotUI.SetEquippedItemCache(itemId, icon);
                 slotUI.SetTooltipData(BuildTooltipData(slotUI.Slot, itemId));
+                slotUI.SetIcon(icon);
 
                 int maxDurability = 0;
                 if (!string.IsNullOrWhiteSpace(itemId))
@@ -356,6 +357,7 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
 
 
 

@@ -1,8 +1,5 @@
 using System;
 using System.Text;
-using HuntersAndCollectors.Items;
-using HuntersAndCollectors.Players;
-using HuntersAndCollectors.Skills;
 using HuntersAndCollectors.Stats;
 using TMPro;
 using Unity.Netcode;
@@ -11,9 +8,7 @@ using UnityEngine;
 namespace HuntersAndCollectors.UI
 {
     /// <summary>
-    /// StatsWindowUI (Totals text only)
-    /// -----------------------------------------------------------------------------
-    /// Renders read-only totals for the local player.
+    /// Renders read-only local-player totals from the actor stats pipeline.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class StatsWindowUI : MonoBehaviour
@@ -21,22 +16,15 @@ namespace HuntersAndCollectors.UI
         [Header("UI")]
         [SerializeField] private TMP_Text totalsText;
 
-        [Header("Data")]
-        [Tooltip("Assign your ItemDatabase so equipped item ids can resolve to ItemDef.")]
-        [SerializeField] private ItemDatabase itemDatabase;
-
         [Header("Refresh")]
         [SerializeField, Min(0.05f)] private float pollIntervalSeconds = 0.25f;
 
         private readonly StringBuilder textBuilder = new(320);
 
         private NetworkObject boundPlayerObject;
-        private PlayerEquipmentNet boundEquipment;
-        private SkillsNet boundSkills;
-        private PlayerBaseStats boundBaseStats;
+        private IStatsProvider boundStatsProvider;
 
-        private bool equipmentSubscribed;
-        private bool warnedMissingEquipment;
+        private bool warnedMissingStatsProvider;
         private float nextPollTime;
         private string lastRenderedText = string.Empty;
 
@@ -49,7 +37,9 @@ namespace HuntersAndCollectors.UI
 
         private void OnDisable()
         {
-            Unbind();
+            boundPlayerObject = null;
+            boundStatsProvider = null;
+            warnedMissingStatsProvider = false;
         }
 
         private void Update()
@@ -70,7 +60,9 @@ namespace HuntersAndCollectors.UI
             {
                 if (boundPlayerObject != null)
                 {
-                    Unbind();
+                    boundPlayerObject = null;
+                    boundStatsProvider = null;
+                    warnedMissingStatsProvider = false;
                     SetTotalsTextIfChanged("No player bound");
                 }
                 return;
@@ -79,7 +71,9 @@ namespace HuntersAndCollectors.UI
             if (boundPlayerObject == localPlayer)
                 return;
 
-            Bind(localPlayer);
+            boundPlayerObject = localPlayer;
+            boundStatsProvider = localPlayer.GetComponentInParent<IStatsProvider>();
+            warnedMissingStatsProvider = false;
         }
 
         private static NetworkObject GetLocalPlayerObject()
@@ -95,44 +89,6 @@ namespace HuntersAndCollectors.UI
             return nm.SpawnManager != null ? nm.SpawnManager.GetLocalPlayerObject() : null;
         }
 
-        private void Bind(NetworkObject playerObject)
-        {
-            Unbind();
-
-            boundPlayerObject = playerObject;
-            boundEquipment = boundPlayerObject.GetComponent<PlayerEquipmentNet>();
-            boundSkills = boundPlayerObject.GetComponent<SkillsNet>();
-            boundBaseStats = boundPlayerObject.GetComponent<PlayerBaseStats>();
-
-            if (boundEquipment != null)
-            {
-                boundEquipment.OnEquipmentChanged += HandleEquipmentChanged;
-                equipmentSubscribed = true;
-            }
-            else if (!warnedMissingEquipment)
-            {
-                warnedMissingEquipment = true;
-                Debug.LogWarning("[StatsWindowUI] PlayerEquipmentNet missing on local player.");
-            }
-        }
-
-        private void Unbind()
-        {
-            if (equipmentSubscribed && boundEquipment != null)
-                boundEquipment.OnEquipmentChanged -= HandleEquipmentChanged;
-
-            equipmentSubscribed = false;
-            boundPlayerObject = null;
-            boundEquipment = null;
-            boundSkills = null;
-            boundBaseStats = null;
-        }
-
-        private void HandleEquipmentChanged()
-        {
-            Refresh();
-        }
-
         private void Refresh()
         {
             if (boundPlayerObject == null)
@@ -141,7 +97,19 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            EffectiveStats effective = EffectiveStatsCalculator.Compute(boundBaseStats, boundEquipment, boundSkills, itemDatabase);
+            if (boundStatsProvider == null)
+            {
+                if (!warnedMissingStatsProvider)
+                {
+                    warnedMissingStatsProvider = true;
+                    Debug.LogWarning("[StatsWindowUI] Missing IStatsProvider on local player.", this);
+                }
+
+                SetTotalsTextIfChanged("Missing stats provider");
+                return;
+            }
+
+            EffectiveStats effective = boundStatsProvider.GetEffectiveStats();
 
             textBuilder.Clear();
             textBuilder.AppendLine("== TOTALS ==");
@@ -151,7 +119,7 @@ namespace HuntersAndCollectors.UI
             textBuilder.Append("Swing Speed: ").AppendLine(effective.SwingSpeed.ToString("0.##"));
             textBuilder.AppendLine();
 
-            textBuilder.AppendLine("== ATTRIBUTES (BASE + EQUIP) ==");
+            textBuilder.AppendLine("== ATTRIBUTES ==");
             textBuilder.Append("Strength: ").AppendLine(effective.Strength.ToString());
             textBuilder.Append("Dexterity: ").AppendLine(effective.Dexterity.ToString());
             textBuilder.Append("Intelligence: ").AppendLine(effective.Intelligence.ToString());
@@ -161,7 +129,6 @@ namespace HuntersAndCollectors.UI
             textBuilder.Append("Health Max: ").AppendLine(effective.MaxHealth.ToString());
             textBuilder.Append("Stamina Max: ").AppendLine(effective.MaxStamina.ToString());
             textBuilder.Append("Mana Max: ").AppendLine(effective.MaxMana.ToString());
-            textBuilder.Append("Crafting Bonus Included: Yes");
 
             SetTotalsTextIfChanged(textBuilder.ToString());
         }

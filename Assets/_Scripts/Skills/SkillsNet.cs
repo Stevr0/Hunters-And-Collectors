@@ -1,3 +1,4 @@
+using HuntersAndCollectors.Actors;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -20,8 +21,8 @@ namespace HuntersAndCollectors.Skills
         /// </summary>
         public NetworkList<SkillEntry> Skills => skills;
 
-        // Add near top of SkillsNet class
         private const int MaxSkillLevel = 100;
+        private bool _startingSkillsApplied;
 
         public override void OnNetworkSpawn()
         {
@@ -41,6 +42,37 @@ namespace HuntersAndCollectors.Skills
             EnsureSkill(SkillId.CombatPickaxe);
             EnsureSkill(SkillId.CombatKnife);
             EnsureSkill(SkillId.CombatClub);
+        }
+
+        /// <summary>
+        /// SERVER ONLY: applies ActorDef starting skills one time for this actor instance.
+        /// Existing levels are replaced by the authored ActorDef baseline and XP is reset to 0.
+        /// </summary>
+        public void ServerApplyStartingSkills(ActorDef def)
+        {
+            if (!IsServer)
+                return;
+
+            if (_startingSkillsApplied)
+                return;
+
+            if (def == null || def.StartingSkills == null || def.StartingSkills.Length == 0)
+            {
+                _startingSkillsApplied = true;
+                return;
+            }
+
+            for (int i = 0; i < def.StartingSkills.Length; i++)
+            {
+                ActorDef.StartingSkill authored = def.StartingSkills[i];
+                if (string.IsNullOrWhiteSpace(authored.SkillId))
+                    continue;
+
+                int clampedLevel = Mathf.Clamp(authored.Level, 0, MaxSkillLevel);
+                SetSkillLevel(authored.SkillId, clampedLevel);
+            }
+
+            _startingSkillsApplied = true;
         }
 
         public SkillEntry Get(string id)
@@ -105,6 +137,34 @@ namespace HuntersAndCollectors.Skills
             // If skill didn't exist yet, add it then retry
             skills.Add(new SkillEntry { Id = key, Level = 0, Xp = 0 });
             AddXp(id, amount);
+        }
+
+        private void SetSkillLevel(string id, int level)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return;
+
+            FixedString64Bytes key = new(id);
+            int clampedLevel = Mathf.Clamp(level, 0, MaxSkillLevel);
+
+            for (int i = 0; i < skills.Count; i++)
+            {
+                if (!skills[i].Id.Equals(key))
+                    continue;
+
+                SkillEntry entry = skills[i];
+                entry.Level = clampedLevel;
+                entry.Xp = 0;
+                skills[i] = entry;
+                return;
+            }
+
+            skills.Add(new SkillEntry
+            {
+                Id = key,
+                Level = clampedLevel,
+                Xp = 0
+            });
         }
 
         private void EnsureSkill(string id)
