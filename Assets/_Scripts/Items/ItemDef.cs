@@ -170,6 +170,7 @@ namespace HuntersAndCollectors.Items
             if (equipLocalScale.x == 0f && equipLocalScale.y == 0f && equipLocalScale.z == 0f)
                 equipLocalScale = Vector3.one;
         }
+#endif
 
         public string BuildPropertiesText(bool appendManualPropertiesText = true)
         {
@@ -220,7 +221,6 @@ namespace HuntersAndCollectors.Items
 
             return sb.ToString();
         }
-#endif
     }
 }
 
