@@ -25,3 +25,20 @@ Thumbs.db
 DL_Assets/
 Assets/StoreAssets/
 Assets/Downloaded/
+
+# Unity build outputs
+/Build/
+/Builds/
+/Game/
+
+# Unity generated player data
+*_Data/
+*.exe
+*.apk
+*.aab
+*.x86
+*.x86_64
+
+# Unity asset bundles
+*.unity3d
+*.assetbundle
