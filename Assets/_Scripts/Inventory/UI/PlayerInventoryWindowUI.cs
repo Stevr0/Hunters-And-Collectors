@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
+using HuntersAndCollectors.Players;
 using HuntersAndCollectors.UI;
 using TMPro;
 using UnityEngine;
@@ -23,6 +24,7 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private int uiSlotCount = 48;
 
         private Inventory.PlayerInventoryNet currentInventoryNet;
+        private PlayerVitalsNet currentVitals;
         private readonly List<InventoryGridSlotUI> slotUIs = new();
 
         private bool gameplayLockHeld;
@@ -57,6 +59,7 @@ namespace HuntersAndCollectors.Inventory.UI
         {
             UnsubscribeFromInventorySnapshots();
             currentInventoryNet = null;
+            currentVitals = null;
 
             lastRenderedSignature = int.MinValue;
 
@@ -89,6 +92,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 if (inv != null && inv.IsOwner)
                 {
                     currentInventoryNet = inv;
+                    currentVitals = inv.GetComponent<PlayerVitalsNet>();
                     SubscribeToInventorySnapshots();
                     Debug.Log($"[PlayerInventoryWindowUI] Bound to local PlayerInventoryNet. netId={inv.NetworkObjectId}");
                     ForceNextRender();
@@ -252,9 +256,29 @@ namespace HuntersAndCollectors.Inventory.UI
             return null;
         }
 
-        private void OnSlotClicked(string itemId)
+        private void OnSlotClicked(int slotIndex, string itemId, int clickCount)
         {
-            Debug.Log($"[Inventory] Clicked itemId={itemId}");
+            if (string.IsNullOrWhiteSpace(itemId))
+                return;
+
+            // Single-click is still available for future behaviors.
+            if (clickCount < 2)
+            {
+                Debug.Log($"[Inventory] Clicked slot={slotIndex} itemId={itemId}");
+                return;
+            }
+
+            if (currentVitals == null)
+                return;
+
+            if (itemDatabase == null)
+                itemDatabase = FindFirstObjectByType<ItemDatabase>();
+
+            if (itemDatabase == null || !itemDatabase.TryGet(itemId, out var def) || def == null || !def.IsFood)
+                return;
+
+            // Double-click on a food item requests server-authoritative consumption from this slot.
+            currentVitals.TryConsumeFoodFromInventorySlot(slotIndex);
         }
 
         private void SubscribeToInventorySnapshots()
@@ -289,5 +313,7 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
+
 
 

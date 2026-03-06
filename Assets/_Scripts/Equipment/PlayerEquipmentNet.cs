@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Inventory;
@@ -31,6 +31,9 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<FixedString64Bytes> chest = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> legs = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> feet = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> gloves = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> shoulders = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> belt = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Server writes durability, all clients read for UI.
         private readonly NetworkVariable<int> mainHandDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -39,6 +42,9 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<int> chestDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> legsDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> feetDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> glovesDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> shouldersDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> beltDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Per-slot crafted instance attribute bonuses (server writes, all clients read).
         private readonly NetworkVariable<int> mainHandBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -64,6 +70,15 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<int> feetBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> feetBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> feetBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> glovesBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> glovesBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> glovesBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> shouldersBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> shouldersBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> shouldersBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> beltBonusStrength = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> beltBonusDexterity = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> beltBonusIntelligence = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Per-slot maker marks. Empty when item was not crafted by a player.
         private readonly NetworkVariable<FixedString64Bytes> mainHandCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -72,21 +87,38 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<FixedString64Bytes> chestCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> legsCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> feetCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> glovesCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> shouldersCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<FixedString64Bytes> beltCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public event Action OnEquipmentChanged;
 
         public NetworkVariable<FixedString64Bytes> MainHandNetVar => mainHand;
         public NetworkVariable<FixedString64Bytes> OffHandNetVar => offHand;
+        public NetworkVariable<FixedString64Bytes> HelmetNetVar => head;
+        [Obsolete("Use HelmetNetVar")]
         public NetworkVariable<FixedString64Bytes> HeadNetVar => head;
         public NetworkVariable<FixedString64Bytes> ChestNetVar => chest;
         public NetworkVariable<FixedString64Bytes> LegsNetVar => legs;
+        public NetworkVariable<FixedString64Bytes> BootsNetVar => feet;
+        public NetworkVariable<FixedString64Bytes> GlovesNetVar => gloves;
+        public NetworkVariable<FixedString64Bytes> ShouldersNetVar => shoulders;
+        public NetworkVariable<FixedString64Bytes> BeltNetVar => belt;
+        [Obsolete("Use BootsNetVar")]
         public NetworkVariable<FixedString64Bytes> FeetNetVar => feet;
 
         public NetworkVariable<int> MainHandDurabilityNetVar => mainHandDurability;
         public NetworkVariable<int> OffHandDurabilityNetVar => offHandDurability;
+        public NetworkVariable<int> HelmetDurabilityNetVar => headDurability;
+        [Obsolete("Use HelmetDurabilityNetVar")]
         public NetworkVariable<int> HeadDurabilityNetVar => headDurability;
         public NetworkVariable<int> ChestDurabilityNetVar => chestDurability;
         public NetworkVariable<int> LegsDurabilityNetVar => legsDurability;
+        public NetworkVariable<int> BootsDurabilityNetVar => feetDurability;
+        public NetworkVariable<int> GlovesDurabilityNetVar => glovesDurability;
+        public NetworkVariable<int> ShouldersDurabilityNetVar => shouldersDurability;
+        public NetworkVariable<int> BeltDurabilityNetVar => beltDurability;
+        [Obsolete("Use BootsDurabilityNetVar")]
         public NetworkVariable<int> FeetDurabilityNetVar => feetDurability;
 
         public string GetMainHandItemId() => mainHand.Value.ToString();
@@ -97,10 +129,13 @@ namespace HuntersAndCollectors.Players
             {
                 EquipSlot.MainHand => mainHand.Value.ToString(),
                 EquipSlot.OffHand => offHand.Value.ToString(),
-                EquipSlot.Head => head.Value.ToString(),
+                EquipSlot.Helmet => head.Value.ToString(),
                 EquipSlot.Chest => chest.Value.ToString(),
                 EquipSlot.Legs => legs.Value.ToString(),
-                EquipSlot.Feet => feet.Value.ToString(),
+                EquipSlot.Boots => feet.Value.ToString(),
+                EquipSlot.Gloves => gloves.Value.ToString(),
+                EquipSlot.Shoulders => shoulders.Value.ToString(),
+                EquipSlot.Belt => belt.Value.ToString(),
                 _ => string.Empty
             };
         }
@@ -111,10 +146,13 @@ namespace HuntersAndCollectors.Players
             {
                 EquipSlot.MainHand => mainHandDurability.Value,
                 EquipSlot.OffHand => offHandDurability.Value,
-                EquipSlot.Head => headDurability.Value,
+                EquipSlot.Helmet => headDurability.Value,
                 EquipSlot.Chest => chestDurability.Value,
                 EquipSlot.Legs => legsDurability.Value,
-                EquipSlot.Feet => feetDurability.Value,
+                EquipSlot.Boots => feetDurability.Value,
+                EquipSlot.Gloves => glovesDurability.Value,
+                EquipSlot.Shoulders => shouldersDurability.Value,
+                EquipSlot.Belt => beltDurability.Value,
                 _ => 0
             };
         }
@@ -150,7 +188,10 @@ namespace HuntersAndCollectors.Players
                 || SlotMatches(head.Value, canonical)
                 || SlotMatches(chest.Value, canonical)
                 || SlotMatches(legs.Value, canonical)
-                || SlotMatches(feet.Value, canonical);
+                || SlotMatches(feet.Value, canonical)
+                || SlotMatches(gloves.Value, canonical)
+                || SlotMatches(shoulders.Value, canonical)
+                || SlotMatches(belt.Value, canonical);
         }
 
         public bool HasToolTag(ToolTag tag)
@@ -166,7 +207,10 @@ namespace HuntersAndCollectors.Players
                 || EquippedItemHasToolTag(head.Value, tag)
                 || EquippedItemHasToolTag(chest.Value, tag)
                 || EquippedItemHasToolTag(legs.Value, tag)
-                || EquippedItemHasToolTag(feet.Value, tag);
+                || EquippedItemHasToolTag(feet.Value, tag)
+                || EquippedItemHasToolTag(gloves.Value, tag)
+                || EquippedItemHasToolTag(shoulders.Value, tag)
+                || EquippedItemHasToolTag(belt.Value, tag);
         }
 
         private bool EquippedItemHasToolTag(FixedString64Bytes itemIdFs, ToolTag tag)
@@ -216,6 +260,9 @@ namespace HuntersAndCollectors.Players
             chest.OnValueChanged += OnAnySlotChanged;
             legs.OnValueChanged += OnAnySlotChanged;
             feet.OnValueChanged += OnAnySlotChanged;
+            gloves.OnValueChanged += OnAnySlotChanged;
+            shoulders.OnValueChanged += OnAnySlotChanged;
+            belt.OnValueChanged += OnAnySlotChanged;
 
             mainHandDurability.OnValueChanged += OnAnyDurabilityChanged;
             offHandDurability.OnValueChanged += OnAnyDurabilityChanged;
@@ -223,6 +270,9 @@ namespace HuntersAndCollectors.Players
             chestDurability.OnValueChanged += OnAnyDurabilityChanged;
             legsDurability.OnValueChanged += OnAnyDurabilityChanged;
             feetDurability.OnValueChanged += OnAnyDurabilityChanged;
+            glovesDurability.OnValueChanged += OnAnyDurabilityChanged;
+            shouldersDurability.OnValueChanged += OnAnyDurabilityChanged;
+            beltDurability.OnValueChanged += OnAnyDurabilityChanged;
 
             mainHandBonusStrength.OnValueChanged += OnAnyBonusChanged;
             mainHandBonusDexterity.OnValueChanged += OnAnyBonusChanged;
@@ -242,6 +292,15 @@ namespace HuntersAndCollectors.Players
             feetBonusStrength.OnValueChanged += OnAnyBonusChanged;
             feetBonusDexterity.OnValueChanged += OnAnyBonusChanged;
             feetBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            glovesBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            glovesBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            glovesBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            shouldersBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            shouldersBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            shouldersBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
+            beltBonusStrength.OnValueChanged += OnAnyBonusChanged;
+            beltBonusDexterity.OnValueChanged += OnAnyBonusChanged;
+            beltBonusIntelligence.OnValueChanged += OnAnyBonusChanged;
 
             mainHandCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
             offHandCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
@@ -249,6 +308,9 @@ namespace HuntersAndCollectors.Players
             chestCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
             legsCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
             feetCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            glovesCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            shouldersCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
+            beltCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
 
             OnEquipmentChanged?.Invoke();
         }
@@ -261,6 +323,9 @@ namespace HuntersAndCollectors.Players
             chest.OnValueChanged -= OnAnySlotChanged;
             legs.OnValueChanged -= OnAnySlotChanged;
             feet.OnValueChanged -= OnAnySlotChanged;
+            gloves.OnValueChanged -= OnAnySlotChanged;
+            shoulders.OnValueChanged -= OnAnySlotChanged;
+            belt.OnValueChanged -= OnAnySlotChanged;
 
             mainHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
             offHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
@@ -268,6 +333,9 @@ namespace HuntersAndCollectors.Players
             chestDurability.OnValueChanged -= OnAnyDurabilityChanged;
             legsDurability.OnValueChanged -= OnAnyDurabilityChanged;
             feetDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            glovesDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            shouldersDurability.OnValueChanged -= OnAnyDurabilityChanged;
+            beltDurability.OnValueChanged -= OnAnyDurabilityChanged;
 
             mainHandBonusStrength.OnValueChanged -= OnAnyBonusChanged;
             mainHandBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
@@ -287,6 +355,15 @@ namespace HuntersAndCollectors.Players
             feetBonusStrength.OnValueChanged -= OnAnyBonusChanged;
             feetBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
             feetBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            glovesBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            glovesBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            glovesBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            shouldersBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            shouldersBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            shouldersBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
+            beltBonusStrength.OnValueChanged -= OnAnyBonusChanged;
+            beltBonusDexterity.OnValueChanged -= OnAnyBonusChanged;
+            beltBonusIntelligence.OnValueChanged -= OnAnyBonusChanged;
 
             mainHandCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
             offHandCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
@@ -294,6 +371,9 @@ namespace HuntersAndCollectors.Players
             chestCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
             legsCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
             feetCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            glovesCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            shouldersCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+            beltCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
         }
 
         private void OnAnySlotChanged(FixedString64Bytes prev, FixedString64Bytes next)
@@ -437,10 +517,13 @@ namespace HuntersAndCollectors.Players
             {
                 EquipSlot.MainHand,
                 EquipSlot.OffHand,
-                EquipSlot.Head,
+                EquipSlot.Helmet,
                 EquipSlot.Chest,
                 EquipSlot.Legs,
-                EquipSlot.Feet
+                EquipSlot.Boots,
+                EquipSlot.Gloves,
+                EquipSlot.Shoulders,
+                EquipSlot.Belt
             };
 
             for (int i = 0; i < order.Length; i++)
@@ -586,7 +669,7 @@ namespace HuntersAndCollectors.Players
             unequipA = EquipSlot.None;
             unequipB = EquipSlot.None;
 
-            if (def.EquipSlot is EquipSlot.Head or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Feet)
+            if (def.EquipSlot is EquipSlot.Helmet or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Boots or EquipSlot.Gloves or EquipSlot.Shoulders or EquipSlot.Belt)
             {
                 unequipA = def.EquipSlot;
                 return true;
@@ -642,10 +725,13 @@ namespace HuntersAndCollectors.Players
 
             switch (slot)
             {
-                case EquipSlot.Head:
+                case EquipSlot.Helmet:
                 case EquipSlot.Chest:
                 case EquipSlot.Legs:
-                case EquipSlot.Feet:
+                case EquipSlot.Boots:
+                case EquipSlot.Gloves:
+                case EquipSlot.Shoulders:
+                case EquipSlot.Belt:
                     return def.EquipSlot == slot;
                 case EquipSlot.MainHand:
                     if (def.Handedness == Handedness.BothHands)
@@ -714,7 +800,7 @@ namespace HuntersAndCollectors.Players
             var itemId = def.ItemId;
             int finalDurability = ResolveInitialDurability(def, durability);
 
-            if (def.EquipSlot is EquipSlot.Head or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Feet)
+            if (def.EquipSlot is EquipSlot.Helmet or EquipSlot.Chest or EquipSlot.Legs or EquipSlot.Boots or EquipSlot.Gloves or EquipSlot.Shoulders or EquipSlot.Belt)
             {
                 SetSlot(def.EquipSlot, itemId, finalDurability, instanceData);
             }
@@ -778,7 +864,7 @@ namespace HuntersAndCollectors.Players
                     offHandBonusIntelligence.Value = instanceData.BonusIntelligence;
                     offHandCraftedBy.Value = instanceData.CraftedBy;
                     break;
-                case EquipSlot.Head:
+                case EquipSlot.Helmet:
                     head.Value = fs;
                     headDurability.Value = finalDurability;
                     headBonusStrength.Value = instanceData.BonusStrength;
@@ -802,13 +888,37 @@ namespace HuntersAndCollectors.Players
                     legsBonusIntelligence.Value = instanceData.BonusIntelligence;
                     legsCraftedBy.Value = instanceData.CraftedBy;
                     break;
-                case EquipSlot.Feet:
+                case EquipSlot.Boots:
                     feet.Value = fs;
                     feetDurability.Value = finalDurability;
                     feetBonusStrength.Value = instanceData.BonusStrength;
                     feetBonusDexterity.Value = instanceData.BonusDexterity;
                     feetBonusIntelligence.Value = instanceData.BonusIntelligence;
                     feetCraftedBy.Value = instanceData.CraftedBy;
+                    break;
+                case EquipSlot.Gloves:
+                    gloves.Value = fs;
+                    glovesDurability.Value = finalDurability;
+                    glovesBonusStrength.Value = instanceData.BonusStrength;
+                    glovesBonusDexterity.Value = instanceData.BonusDexterity;
+                    glovesBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    glovesCraftedBy.Value = instanceData.CraftedBy;
+                    break;
+                case EquipSlot.Shoulders:
+                    shoulders.Value = fs;
+                    shouldersDurability.Value = finalDurability;
+                    shouldersBonusStrength.Value = instanceData.BonusStrength;
+                    shouldersBonusDexterity.Value = instanceData.BonusDexterity;
+                    shouldersBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    shouldersCraftedBy.Value = instanceData.CraftedBy;
+                    break;
+                case EquipSlot.Belt:
+                    belt.Value = fs;
+                    beltDurability.Value = finalDurability;
+                    beltBonusStrength.Value = instanceData.BonusStrength;
+                    beltBonusDexterity.Value = instanceData.BonusDexterity;
+                    beltBonusIntelligence.Value = instanceData.BonusIntelligence;
+                    beltCraftedBy.Value = instanceData.CraftedBy;
                     break;
             }
         }
@@ -830,7 +940,7 @@ namespace HuntersAndCollectors.Players
                     data.BonusIntelligence = offHandBonusIntelligence.Value;
                     data.CraftedBy = offHandCraftedBy.Value;
                     return data;
-                case EquipSlot.Head:
+                case EquipSlot.Helmet:
                     data.BonusStrength = headBonusStrength.Value;
                     data.BonusDexterity = headBonusDexterity.Value;
                     data.BonusIntelligence = headBonusIntelligence.Value;
@@ -848,11 +958,29 @@ namespace HuntersAndCollectors.Players
                     data.BonusIntelligence = legsBonusIntelligence.Value;
                     data.CraftedBy = legsCraftedBy.Value;
                     return data;
-                case EquipSlot.Feet:
+                case EquipSlot.Boots:
                     data.BonusStrength = feetBonusStrength.Value;
                     data.BonusDexterity = feetBonusDexterity.Value;
                     data.BonusIntelligence = feetBonusIntelligence.Value;
                     data.CraftedBy = feetCraftedBy.Value;
+                    return data;
+                case EquipSlot.Gloves:
+                    data.BonusStrength = glovesBonusStrength.Value;
+                    data.BonusDexterity = glovesBonusDexterity.Value;
+                    data.BonusIntelligence = glovesBonusIntelligence.Value;
+                    data.CraftedBy = glovesCraftedBy.Value;
+                    return data;
+                case EquipSlot.Shoulders:
+                    data.BonusStrength = shouldersBonusStrength.Value;
+                    data.BonusDexterity = shouldersBonusDexterity.Value;
+                    data.BonusIntelligence = shouldersBonusIntelligence.Value;
+                    data.CraftedBy = shouldersCraftedBy.Value;
+                    return data;
+                case EquipSlot.Belt:
+                    data.BonusStrength = beltBonusStrength.Value;
+                    data.BonusDexterity = beltBonusDexterity.Value;
+                    data.BonusIntelligence = beltBonusIntelligence.Value;
+                    data.CraftedBy = beltCraftedBy.Value;
                     return data;
                 default:
                     return default;
@@ -866,10 +994,13 @@ namespace HuntersAndCollectors.Players
             {
                 case EquipSlot.MainHand: mainHandDurability.Value = finalDurability; break;
                 case EquipSlot.OffHand: offHandDurability.Value = finalDurability; break;
-                case EquipSlot.Head: headDurability.Value = finalDurability; break;
+                case EquipSlot.Helmet: headDurability.Value = finalDurability; break;
                 case EquipSlot.Chest: chestDurability.Value = finalDurability; break;
                 case EquipSlot.Legs: legsDurability.Value = finalDurability; break;
-                case EquipSlot.Feet: feetDurability.Value = finalDurability; break;
+                case EquipSlot.Boots: feetDurability.Value = finalDurability; break;
+                case EquipSlot.Gloves: glovesDurability.Value = finalDurability; break;
+                case EquipSlot.Shoulders: shouldersDurability.Value = finalDurability; break;
+                case EquipSlot.Belt: beltDurability.Value = finalDurability; break;
             }
         }
 
@@ -917,10 +1048,13 @@ namespace HuntersAndCollectors.Players
             var sb = new StringBuilder(320);
             sb.Append("Slots[MH=").Append(GetSlotString(mainHand.Value)).Append('(').Append(mainHandDurability.Value).Append(')')
               .Append(", OH=").Append(GetSlotString(offHand.Value)).Append('(').Append(offHandDurability.Value).Append(')')
-              .Append(", Head=").Append(GetSlotString(head.Value)).Append('(').Append(headDurability.Value).Append(')')
+               .Append(", Helmet=").Append(GetSlotString(head.Value)).Append('(').Append(headDurability.Value).Append(')')
               .Append(", Chest=").Append(GetSlotString(chest.Value)).Append('(').Append(chestDurability.Value).Append(')')
               .Append(", Legs=").Append(GetSlotString(legs.Value)).Append('(').Append(legsDurability.Value).Append(')')
-              .Append(", Feet=").Append(GetSlotString(feet.Value)).Append('(').Append(feetDurability.Value).Append(')')
+               .Append(", Boots=").Append(GetSlotString(feet.Value)).Append('(').Append(feetDurability.Value).Append(')')
+              .Append(", Gloves=").Append(GetSlotString(gloves.Value)).Append('(').Append(glovesDurability.Value).Append(')')
+              .Append(", Shoulders=").Append(GetSlotString(shoulders.Value)).Append('(').Append(shouldersDurability.Value).Append(')')
+              .Append(", Belt=").Append(GetSlotString(belt.Value)).Append('(').Append(beltDurability.Value).Append(')')
               .Append(']');
 
             if (EnsureItemDatabase())
@@ -929,10 +1063,13 @@ namespace HuntersAndCollectors.Players
                 var startLength = sb.Length;
                 AppendSlotToolTags(sb, "MH", mainHand.Value);
                 AppendSlotToolTags(sb, "OH", offHand.Value);
-                AppendSlotToolTags(sb, "Head", head.Value);
+                AppendSlotToolTags(sb, "Helmet", head.Value);
                 AppendSlotToolTags(sb, "Chest", chest.Value);
                 AppendSlotToolTags(sb, "Legs", legs.Value);
-                AppendSlotToolTags(sb, "Feet", feet.Value);
+                AppendSlotToolTags(sb, "Boots", feet.Value);
+                AppendSlotToolTags(sb, "Gloves", gloves.Value);
+                AppendSlotToolTags(sb, "Shoulders", shoulders.Value);
+                AppendSlotToolTags(sb, "Belt", belt.Value);
                 if (sb.Length == startLength)
                     sb.Append("none");
                 sb.Append(']');
@@ -984,6 +1121,36 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

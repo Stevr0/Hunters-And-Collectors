@@ -8,6 +8,8 @@ namespace HuntersAndCollectors.Skills
         public const string Sales = "Sales";
         public const string Negotiation = "Negotiation";
         public const string Running = "Running";
+        public const string Vitality = "Vitality";
+        public const string Endurance = "Endurance";
 
         // Harvesting-centric skills
         public const string Woodcutting = "Woodcutting";
@@ -27,4 +29,6 @@ namespace HuntersAndCollectors.Skills
         public const string CombatUnarmed = "Combat_Unarmed";
     }
 }
+
+
 

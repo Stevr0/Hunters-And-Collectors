@@ -79,6 +79,12 @@ namespace HuntersAndCollectors.Combat
         [SerializeField] private PlayerCombatAnimNet playerCombatAnim;
         [SerializeField] private Transform viewOrigin;
         [SerializeField] private SkillsNet skills;
+        [SerializeField] private PlayerVitalsNet playerVitals;
+
+        [Header("Stamina")]
+        [Tooltip("First-pass stamina cost for each accepted swing (hit or miss).")]
+        [Min(0)]
+        [SerializeField] private int staminaCostPerSwing = 5;
 
         [Header("Combat XP")]
         [Min(0)]
@@ -325,6 +331,10 @@ namespace HuntersAndCollectors.Combat
             // Server-authoritative durability consumption for accepted swings.
             // Rejected attacks return earlier and never consume durability.
             ServerConsumeAcceptedSwingDurability();
+            // First-pass stamina hook: accepted swings spend stamina even on miss,
+            // matching cooldown usage and creating busy-state pressure.
+            if (staminaCostPerSwing > 0)
+                playerVitals?.ServerSpendStamina(staminaCostPerSwing);
             Debug.Log($"[Combat] AttackAccepted id={attackId} dmg={baseDamage} delay={hitDelaySeconds:0.###} window={hitWindowSeconds:0.###}", this);
 
             var context = new ServerAttackContext
@@ -764,6 +774,9 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+
+
+
 
 
 

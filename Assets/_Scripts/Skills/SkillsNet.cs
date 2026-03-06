@@ -32,6 +32,8 @@ namespace HuntersAndCollectors.Skills
             EnsureSkill(SkillId.Sales);
             EnsureSkill(SkillId.Negotiation);
             EnsureSkill(SkillId.Running);
+            EnsureSkill(SkillId.Vitality);
+            EnsureSkill(SkillId.Endurance);
             EnsureSkill(SkillId.Woodcutting);
             EnsureSkill(SkillId.Mining);
             EnsureSkill(SkillId.Foraging);
@@ -180,4 +182,6 @@ namespace HuntersAndCollectors.Skills
         }
     }
 }
+
+
 

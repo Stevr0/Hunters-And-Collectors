@@ -1,4 +1,5 @@
 using HuntersAndCollectors.Combat;
+using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Stats;
 using TMPro;
 using Unity.Netcode;
@@ -8,11 +9,11 @@ using UnityEngine.UI;
 namespace HuntersAndCollectors.UI
 {
     /// <summary>
-    /// Displays local-player vitals using the actor stats pipeline.
+    /// Displays local-player vitals.
     ///
-    /// Max values come from IStatsProvider (ActorStatsProvider).
-    /// Current health comes from HealthNet when available.
-    /// Stamina/mana current values currently mirror derived max values.
+    /// First-pass behavior:
+    /// - Prefer PlayerVitalsNet for authoritative current/max health+stamina.
+    /// - Fallback to legacy stat/health sources when PlayerVitalsNet is absent.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class VitalsWindowUI : MonoBehaviour
@@ -35,6 +36,7 @@ namespace HuntersAndCollectors.UI
         private NetworkObject boundPlayerObject;
         private IStatsProvider boundStatsProvider;
         private HealthNet boundHealth;
+        private PlayerVitalsNet boundVitals;
 
         private float nextPollTime;
         private bool warnedMissingStatsProvider;
@@ -61,6 +63,7 @@ namespace HuntersAndCollectors.UI
             boundPlayerObject = null;
             boundStatsProvider = null;
             boundHealth = null;
+            boundVitals = null;
             warnedMissingStatsProvider = false;
         }
 
@@ -76,6 +79,7 @@ namespace HuntersAndCollectors.UI
             boundPlayerObject = localPlayer;
             boundStatsProvider = localPlayer.GetComponentInParent<IStatsProvider>();
             boundHealth = localPlayer.GetComponent<HealthNet>();
+            boundVitals = localPlayer.GetComponent<PlayerVitalsNet>();
             warnedMissingStatsProvider = false;
         }
 
@@ -117,12 +121,18 @@ namespace HuntersAndCollectors.UI
 
             EffectiveStats stats = boundStatsProvider.GetEffectiveStats();
 
-            float healthMax = Mathf.Max(0f, stats.MaxHealth);
-            float staminaMax = Mathf.Max(0f, stats.MaxStamina);
+            float healthMax = boundVitals != null ? Mathf.Max(1f, boundVitals.CurrentMaxHealth) : Mathf.Max(0f, stats.MaxHealth);
+            float staminaMax = boundVitals != null ? Mathf.Max(1f, boundVitals.CurrentMaxStamina) : Mathf.Max(0f, stats.MaxStamina);
             float manaMax = Mathf.Max(0f, stats.MaxMana);
 
-            float healthCurrent = boundHealth != null ? boundHealth.CurrentHealth : healthMax;
-            float staminaCurrent = staminaMax;
+            float healthCurrent = boundVitals != null
+                ? Mathf.Clamp(boundVitals.CurrentHealth, 0f, healthMax)
+                : (boundHealth != null ? boundHealth.CurrentHealth : healthMax);
+
+            float staminaCurrent = boundVitals != null
+                ? Mathf.Clamp(boundVitals.CurrentStamina, 0f, staminaMax)
+                : staminaMax;
+
             float manaCurrent = manaMax;
 
             RenderChannel(healthFill, healthValueText, healthCurrent, healthMax);

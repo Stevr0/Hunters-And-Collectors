@@ -46,10 +46,21 @@ namespace HuntersAndCollectors.Harvesting
         [SerializeField] private PlayerEquipmentNet equipment;
         [SerializeField] private PlayerMovement playerMovement;
         [SerializeField] private PlayerHarvestAnimNet harvestAnim;
+        [SerializeField] private PlayerVitalsNet playerVitals;
 
         [Header("Item Lookup (required for drop spawning)")]
         [Tooltip("Used to look up ItemDef so we can spawn the correct prefab.")]
         [SerializeField] private ItemDatabase itemDatabase;
+
+        [Header("Currency Pickup")]
+        [Tooltip("Wallet on this player object. Coin drops credit this directly.")]
+        [SerializeField] private WalletNet wallet;
+
+        [Tooltip("Optional explicit coin item definition that should go to WalletNet on pickup.")]
+        [SerializeField] private ItemDef walletCoinItemDef;
+
+        [Tooltip("Fallback coin item id used when Wallet Coin ItemDef is not assigned.")]
+        [SerializeField] private string walletCoinItemId = "IT_Coin";
 
         // --------------------------------------------------------------------
         // Validation / Tuning
@@ -369,14 +380,39 @@ namespace HuntersAndCollectors.Harvesting
                 return;
             }
 
-            // Which skill influences this pickup?
-            if (!TryGetSkillForItem(itemId, out var skillId))
+            bool isWalletCoin = IsWalletCoinDrop(drop, itemId);
+            if (isWalletCoin)
             {
-                SendDropResult(false, HarvestFailureReason.ConfigError, dropNetworkObjectId, itemId, 0);
+                if (wallet == null)
+                    wallet = GetComponent<WalletNet>();
+
+                if (wallet == null)
+                {
+                    SendDropResult(false, HarvestFailureReason.ConfigError, dropNetworkObjectId, itemId, 0);
+                    return;
+                }
+
+                int grantedCoins = Mathf.Max(1, drop.Quantity);
+                wallet.AddCoins(grantedCoins);
+
+                // Despawn drop after success.
+                drop.ServerConsumeAndDespawn(0.75f);
+
+                // Cosmetic gather anim.
+                if (playerMovement != null)
+                    playerMovement.PlayGatherClientRpc();
+
+                playerVitals?.ServerMarkBusyFromAction();
+
+                Debug.Log($"[HarvestingNet][SERVER] Wallet pickup owner={OwnerClientId} item={itemId} coins={grantedCoins}");
+                SendDropResult(true, HarvestFailureReason.None, dropNetworkObjectId, itemId, grantedCoins);
                 return;
             }
 
-            int level = GetSkillLevel(skillId);
+            // Optional skill influence for pickup scaling.
+            // Some items (e.g., berries/rare drops) may not map to a harvesting skill yet.
+            bool hasMappedSkill = TryGetSkillForItem(itemId, out var skillId);
+            int level = hasMappedSkill ? GetSkillLevel(skillId) : 0;
 
             // Scale pickup yield by skill.
             int desiredQuantity = CalculateDropYield(drop.Quantity, level);
@@ -401,15 +437,15 @@ namespace HuntersAndCollectors.Harvesting
             // Despawn drop after success.
             drop.ServerConsumeAndDespawn(0.75f);
 
-            // XP.
-            GrantXp(skillId, xpPerAction);
+
+            // Any successful pickup counts as a busy action for regen suppression.
+            playerVitals?.ServerMarkBusyFromAction();
 
             // Cosmetic gather anim.
             if (playerMovement != null)
                 playerMovement.PlayGatherClientRpc();
 
-            SendDropResult(true, HarvestFailureReason.None, dropNetworkObjectId, itemId, granted);
-        }
+            SendDropResult(true, HarvestFailureReason.None, dropNetworkObjectId, itemId, granted);        }
 
         #endregion
 
@@ -556,7 +592,6 @@ namespace HuntersAndCollectors.Harvesting
             // Cooldown.
             node.ServerConsumeStartCooldown();
 
-            // XP.
             int xpAward = xpPerAction + xpBonusOnNodeDeplete;
             if (rareAwarded && xpBonusOnRareDrop > 0)
                 xpAward += xpBonusOnRareDrop;
@@ -804,7 +839,7 @@ namespace HuntersAndCollectors.Harvesting
             }
 
             // 7) Initialize quantity BEFORE spawning network object.
-            drop.ServerInitialize(quantity, null);
+            drop.ServerInitialize(quantity, null, def);
 
             // 8) Spawn network object so all clients see it.
             netObj.Spawn(true);
@@ -868,8 +903,14 @@ namespace HuntersAndCollectors.Harvesting
             if (harvestAnim == null)
                 harvestAnim = GetComponent<PlayerHarvestAnimNet>();
 
+            if (playerVitals == null)
+                playerVitals = GetComponent<PlayerVitalsNet>();
+
             if (itemDatabase == null)
                 itemDatabase = FindFirstObjectByType<ItemDatabase>();
+
+            if (wallet == null)
+                wallet = GetComponent<WalletNet>();
 
             // Skills can be optional in some MVP setups; the rest are required.
             return inventory != null && nodeRegistry != null && equipment != null && itemDatabase != null;
@@ -947,6 +988,12 @@ namespace HuntersAndCollectors.Harvesting
 
             int damage = Mathf.Max(1, hitDamagePerSwing);
             bool depleted = node.ServerApplyDamage(damage);
+
+            if (damage > 0 && playerVitals != null)
+            {
+                playerVitals.ServerSpendStamina(1);
+                playerVitals.ServerMarkBusyFromAction();
+            }
 
             if (depleted)
                 HandleNodeDepleted(node, equippedItemId);
@@ -1240,6 +1287,38 @@ namespace HuntersAndCollectors.Harvesting
             return remainder == 0;
         }
 
+        private bool IsWalletCoinDrop(ResourceDrop drop, string itemId)
+        {
+            if (drop == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            string canonical = itemId.Trim();
+
+            if (walletCoinItemDef != null)
+            {
+                if (ReferenceEquals(drop.ItemDefinition, walletCoinItemDef))
+                    return true;
+
+                string configuredCoinId = walletCoinItemDef.ItemId;
+                if (!string.IsNullOrWhiteSpace(configuredCoinId) &&
+                    canonical.Equals(configuredCoinId.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(walletCoinItemId) &&
+                canonical.Equals(walletCoinItemId.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         private int GetSkillLevel(string skillId)
         {
             if (skills == null || string.IsNullOrWhiteSpace(skillId))
@@ -1427,5 +1506,18 @@ namespace HuntersAndCollectors.Harvesting
         HitRateLimited
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

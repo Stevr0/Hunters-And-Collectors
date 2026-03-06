@@ -21,6 +21,44 @@ namespace HuntersAndCollectors.Inventory
 
         public InventoryGrid Grid => grid;
 
+        /// <summary>
+        /// SERVER ONLY: checks whether a slot index is valid for the authoritative inventory grid.
+        /// </summary>
+        public bool ServerIsValidSlotIndex(int slotIndex)
+        {
+            if (!IsServer || grid == null)
+                return false;
+
+            return slotIndex >= 0 && slotIndex < grid.Slots.Length;
+        }
+
+        /// <summary>
+        /// SERVER ONLY: true when the slot is currently empty.
+        /// Returns false for invalid slot indices.
+        /// </summary>
+        public bool ServerIsSlotEmpty(int slotIndex)
+        {
+            if (!ServerIsValidSlotIndex(slotIndex))
+                return false;
+
+            return grid.Slots[slotIndex].IsEmpty;
+        }
+
+        /// <summary>
+        /// SERVER ONLY: resolves an ItemDef through this inventory's configured item database.
+        /// This keeps food-consume validation inventory-driven and authoritative.
+        /// </summary>
+        public bool ServerTryGetItemDef(string itemId, out ItemDef def)
+        {
+            if (!IsServer)
+            {
+                def = null;
+                return false;
+            }
+
+            return TryGetItemDef(itemId, out def);
+        }
+
         // --------------------------------------------------------------------
         // Snapshot batching (SERVER ONLY)
         // --------------------------------------------------------------------
@@ -465,6 +503,8 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+
 
 
 

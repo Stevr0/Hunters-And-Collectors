@@ -218,6 +218,7 @@ GameObject:
   - component: {fileID: 8022892491924015800}
   - component: {fileID: 2260256776123607319}
   - component: {fileID: 6099900311908046992}
+  - component: {fileID: -4290469236902424996}
   m_Layer: 6
   m_Name: PF_Bandit
   m_TagString: Untagged
@@ -673,6 +674,30 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-4290469236902424996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6889116378619088114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c899f3c1baec2bb4bb09b5bc3cd2e51f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootDropper
+  ShowTopMostFoldoutHeaderGroup: 1
+  lootTable: {fileID: 11400000, guid: bc32f39355c477d4abf4f1dce1c7ac13, type: 2}
+  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
+  scatterRadius: 0.85
+  spawnHeight: 0.25
+  lifetimeSeconds: 120
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  groundRayHeight: 6
+  groundRayDistance: 30
+  extraUpOffsetIfIntersecting: 0.15
 --- !u!1 &7548749613030968103
 GameObject:
   m_ObjectHideFlags: 0

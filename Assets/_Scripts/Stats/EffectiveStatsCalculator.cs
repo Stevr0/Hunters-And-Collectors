@@ -1,4 +1,4 @@
-using HuntersAndCollectors.Items;
+﻿using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
 using UnityEngine;
@@ -16,10 +16,13 @@ namespace HuntersAndCollectors.Stats
         {
             EquipSlot.MainHand,
             EquipSlot.OffHand,
-            EquipSlot.Head,
+            EquipSlot.Helmet,
             EquipSlot.Chest,
             EquipSlot.Legs,
-            EquipSlot.Feet
+            EquipSlot.Boots,
+            EquipSlot.Gloves,
+            EquipSlot.Shoulders,
+            EquipSlot.Belt
         };
 
         /// <summary>
@@ -176,6 +179,8 @@ namespace HuntersAndCollectors.Stats
         }
     }
 }
+
+
 
 
 

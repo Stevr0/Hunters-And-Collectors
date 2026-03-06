@@ -39,13 +39,13 @@ namespace HuntersAndCollectors.Items
         /// <summary>
         /// SERVER: Configure runtime state. Safe to call before or after net spawn.
         /// </summary>
-        public void ServerInitialize(int newQuantity, PickupSpawnerNet newSpawner = null)
+        public void ServerInitialize(int newQuantity, PickupSpawnerNet newSpawner = null, ItemDef overrideItemDefinition = null)
         {
             // Use singleton authority check so this can run before netObj.Spawn().
             if (!HasServerAuthority())
                 return;
 
-            quantity = Mathf.Max(1, newQuantity);
+            // Authoritative spawn path can override item definition at runtime.`r`n            // This prevents prefab-authored item mismatches from awarding wrong items.`r`n            if (overrideItemDefinition != null)`r`n                itemDefinition = overrideItemDefinition;`r`n`r`n            quantity = Mathf.Max(1, newQuantity);
             IsConsumed = false;
 
             // Ensure interactable when (re)spawned.
@@ -236,3 +236,4 @@ namespace HuntersAndCollectors.Items
     [System.Obsolete("WorldPickup was renamed to ResourceDrop. Please swap the component when convenient.")]
     public sealed class WorldPickup : ResourceDrop { }
 }
+

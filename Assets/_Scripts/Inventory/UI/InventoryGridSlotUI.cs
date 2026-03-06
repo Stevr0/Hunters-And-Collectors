@@ -1,20 +1,19 @@
+using HuntersAndCollectors.UI;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using HuntersAndCollectors.UI;
+using UnityEngine.UI;
 
 namespace HuntersAndCollectors.Inventory.UI
 {
     /// <summary>
-    /// InventoryGridSlotUI
-    /// ---------------------------------------------------------
     /// Visual+clickable UI for one inventory slot.
+    /// Supports drag/drop and click forwarding to window-level handlers.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class InventoryGridSlotUI : MonoBehaviour,
         IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler,
-        IPointerEnterHandler, IPointerExitHandler
+        IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
         [Header("UI")]
         [SerializeField] private Image iconImage;
@@ -35,12 +34,12 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public int SlotIndex { get; private set; } = -1;
 
+        private System.Action<int, string, int> onClicked;
+
         public void SetSlotIndex(int index)
         {
             SlotIndex = index;
         }
-
-        private System.Action<string> onClicked;
 
         private void Reset()
         {
@@ -50,20 +49,14 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private void Awake()
         {
-            if (button != null)
-            {
-                button.onClick.RemoveListener(HandleClick);
-                button.onClick.AddListener(HandleClick);
-            }
-
             if (dragDrop == null)
-                dragDrop = FindObjectOfType<UIDragDropBroker>(true);
+                dragDrop = FindFirstObjectByType<UIDragDropBroker>();
 
             TryAutoBindDurabilityRefs();
             ResetVisuals();
         }
 
-        public void BindClick(System.Action<string> onClick)
+        public void BindClick(System.Action<int, string, int> onClick)
         {
             onClicked = onClick;
         }
@@ -124,6 +117,19 @@ namespace HuntersAndCollectors.Inventory.UI
                 button.interactable = true;
         }
 
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left)
+                return;
+
+            if (string.IsNullOrWhiteSpace(itemId))
+                return;
+
+            // clickCount is provided by EventSystem and supports double-click UX.
+            int clicks = Mathf.Max(1, eventData.clickCount);
+            onClicked?.Invoke(SlotIndex, itemId, clicks);
+        }
+
         private void ResetVisuals()
         {
             if (iconImage != null)
@@ -152,33 +158,22 @@ namespace HuntersAndCollectors.Inventory.UI
         {
             if (durabilityBackground == null)
             {
-                Transform bg = transform.Find("DurabilityBG");
-                if (bg == null)
-                    bg = transform.Find("Durability");
+                Transform bg = transform.Find("DurabilityBG") ?? transform.Find("Durability");
                 if (bg != null)
                     durabilityBackground = bg.GetComponent<Image>();
             }
 
             if (durabilityFill == null)
             {
-                Transform fill = transform.Find("DurabilityBG/DurabilityFill");
-                if (fill == null)
-                    fill = transform.Find("DurabilityBG/DurFill");
-                if (fill == null)
-                    fill = transform.Find("DurabilityFill");
-                if (fill == null)
-                    fill = transform.Find("DurFill");
+                Transform fill =
+                    transform.Find("DurabilityBG/DurabilityFill") ??
+                    transform.Find("DurabilityBG/DurFill") ??
+                    transform.Find("DurabilityFill") ??
+                    transform.Find("DurFill");
+
                 if (fill != null)
                     durabilityFill = fill.GetComponent<Image>();
             }
-        }
-
-        private void HandleClick()
-        {
-            if (string.IsNullOrWhiteSpace(itemId))
-                return;
-
-            onClicked?.Invoke(itemId);
         }
 
         public void OnPointerEnter(PointerEventData eventData)

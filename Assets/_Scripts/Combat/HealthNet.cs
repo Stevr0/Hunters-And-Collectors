@@ -1,3 +1,5 @@
+using HuntersAndCollectors.Actors;
+using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Stats;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,10 +9,10 @@ namespace HuntersAndCollectors.Combat
     /// <summary>
     /// Reusable server-authoritative health component.
     ///
-    /// Authority model:
-    /// - Health is replicated to everyone.
-    /// - Only the server can write health.
-    /// - Max health is derived from actor stats (IStatsProvider) with a safe fallback.
+    /// Compatibility notes:
+    /// - Non-player actors use native HealthNet storage exactly as before.
+    /// - Player actors can attach PlayerVitalsNet and HealthNet will delegate damage/reset/max handling
+    ///   to PlayerVitalsNet while still mirroring values for existing systems.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -30,9 +32,36 @@ namespace HuntersAndCollectors.Combat
         private IStatsProvider cachedStatsProvider;
         private bool warnedMissingStatsProvider;
 
-        public int MaxHealth => Mathf.Max(1, resolvedMaxHealth > 0 ? resolvedMaxHealth : fallbackMaxHealth);
-        public int CurrentHealth => Mathf.Clamp(currentHealth.Value, 0, MaxHealth);
-        public float Health01 => Mathf.Clamp01((float)CurrentHealth / MaxHealth);
+        // Guards one-time death resolution for this actor instance.
+        private bool serverDeathResolved;
+        private ActorLootDropper cachedLootDropper;
+
+        // Optional player vitals bridge.
+        private PlayerVitalsNet cachedPlayerVitals;
+
+        public int MaxHealth
+        {
+            get
+            {
+                if (cachedPlayerVitals != null)
+                    return Mathf.Max(1, cachedPlayerVitals.CurrentMaxHealth);
+
+                return Mathf.Max(1, resolvedMaxHealth > 0 ? resolvedMaxHealth : fallbackMaxHealth);
+            }
+        }
+
+        public int CurrentHealth
+        {
+            get
+            {
+                if (cachedPlayerVitals != null)
+                    return Mathf.Clamp(cachedPlayerVitals.CurrentHealth, 0, MaxHealth);
+
+                return Mathf.Clamp(currentHealth.Value, 0, MaxHealth);
+            }
+        }
+
+        public float Health01 => Mathf.Clamp01((float)CurrentHealth / Mathf.Max(1, MaxHealth));
 
         /// <summary>
         /// Read-only exposure for UI/view scripts that subscribe to health changes.
@@ -42,11 +71,40 @@ namespace HuntersAndCollectors.Combat
 
         public override void OnNetworkSpawn()
         {
+            cachedPlayerVitals = GetComponent<PlayerVitalsNet>();
+
             if (!IsServer)
                 return;
 
             fallbackMaxHealth = Mathf.Max(1, fallbackMaxHealth);
+            serverDeathResolved = false;
+
+            if (cachedPlayerVitals != null)
+            {
+                ServerMirrorFromVitals(cachedPlayerVitals.CurrentHealth, cachedPlayerVitals.CurrentMaxHealth);
+                serverInitialized = true;
+                return;
+            }
+
             ServerRecalculateMaxHealthInternal(initializeIfNeeded: !serverInitialized);
+        }
+
+        /// <summary>
+        /// SERVER ONLY: called by PlayerVitalsNet to keep backward compatibility mirrors in sync.
+        /// </summary>
+        public void ServerMirrorFromVitals(int current, int max)
+        {
+            if (!IsServer)
+                return;
+
+            int safeMax = Mathf.Max(1, max);
+            int safeCurrent = Mathf.Clamp(current, 0, safeMax);
+
+            resolvedMaxHealth = safeMax;
+            currentHealth.Value = safeCurrent;
+
+            if (safeCurrent > 0)
+                serverDeathResolved = false;
         }
 
         /// <summary>
@@ -54,6 +112,12 @@ namespace HuntersAndCollectors.Combat
         /// </summary>
         public void ServerRecalculateMaxHealth()
         {
+            if (cachedPlayerVitals != null)
+            {
+                ServerMirrorFromVitals(cachedPlayerVitals.CurrentHealth, cachedPlayerVitals.CurrentMaxHealth);
+                return;
+            }
+
             ServerRecalculateMaxHealthInternal(initializeIfNeeded: false);
         }
 
@@ -65,7 +129,16 @@ namespace HuntersAndCollectors.Combat
             if (!IsServer)
                 return;
 
+            if (cachedPlayerVitals != null)
+            {
+                cachedPlayerVitals.ServerResetToFull();
+                ServerMirrorFromVitals(cachedPlayerVitals.CurrentHealth, cachedPlayerVitals.CurrentMaxHealth);
+                serverDeathResolved = false;
+                return;
+            }
+
             currentHealth.Value = MaxHealth;
+            serverDeathResolved = false;
         }
 
         /// <summary>
@@ -84,17 +157,38 @@ namespace HuntersAndCollectors.Combat
                 return false;
 
             int clampedAmount = Mathf.Max(1, amount);
-            int next = Mathf.Max(0, CurrentHealth - clampedAmount);
-            int applied = CurrentHealth - next;
-            currentHealth.Value = next;
+            int previous = CurrentHealth;
+            int next;
+
+            if (cachedPlayerVitals != null)
+            {
+                bool applied = cachedPlayerVitals.ServerApplyDamage(clampedAmount);
+                if (!applied)
+                    return false;
+
+                next = cachedPlayerVitals.CurrentHealth;
+                ServerMirrorFromVitals(next, cachedPlayerVitals.CurrentMaxHealth);
+            }
+            else
+            {
+                next = Mathf.Max(0, CurrentHealth - clampedAmount);
+                currentHealth.Value = next;
+            }
+
+            int appliedAmount = Mathf.Max(0, previous - next);
 
             Vector3 safeHitPoint = IsFinite(hitPoint) ? hitPoint : transform.position + Vector3.up * 1.6f;
-            DamageFeedbackClientRpc(applied, safeHitPoint, next, MaxHealth);
+            DamageFeedbackClientRpc(appliedAmount, safeHitPoint, next, MaxHealth);
 
-            if (next <= 0 && despawnOnZero)
-                ServerDespawnSelf();
+            if (next <= 0)
+            {
+                ServerResolveDeathOnce();
 
-            return true;
+                if (despawnOnZero)
+                    ServerDespawnSelf();
+            }
+
+            return appliedAmount > 0;
         }
 
         [ClientRpc]
@@ -107,6 +201,19 @@ namespace HuntersAndCollectors.Combat
             // Optional local hit reaction if this object has DamageableNet visuals.
             if (TryGetComponent<DamageableNet>(out var damageable))
                 damageable.PlayHitReactionLocal();
+        }
+
+        private void ServerResolveDeathOnce()
+        {
+            if (!IsServer || serverDeathResolved)
+                return;
+
+            serverDeathResolved = true;
+
+            if (cachedLootDropper == null)
+                cachedLootDropper = GetComponent<ActorLootDropper>();
+
+            cachedLootDropper?.ServerDropLoot();
         }
 
         private void ServerRecalculateMaxHealthInternal(bool initializeIfNeeded)
@@ -124,6 +231,7 @@ namespace HuntersAndCollectors.Combat
             {
                 currentHealth.Value = effectiveMax;
                 serverInitialized = true;
+                serverDeathResolved = false;
                 return;
             }
 

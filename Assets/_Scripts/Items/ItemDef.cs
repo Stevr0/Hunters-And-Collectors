@@ -143,6 +143,30 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Tags used for tool checks (eg, Axe for Woodcutting).")]
         public ToolTag[] ToolTags;
 
+        [Header("Consumable Food (First Pass)")]
+        [Tooltip("If true, this item can be consumed as one of up to 3 active food buffs.")]
+        public bool IsFood = false;
+
+        [Tooltip("Temporary max health bonus granted while this food buff is active.")]
+        [Min(0)]
+        public int FoodMaxHealthBonus = 0;
+
+        [Tooltip("Temporary max stamina bonus granted while this food buff is active.")]
+        [Min(0)]
+        public int FoodMaxStaminaBonus = 0;
+
+        [Tooltip("Flat health regeneration bonus per second while this food buff is active.")]
+        [Min(0f)]
+        public float FoodHealthRegenBonus = 0f;
+
+        [Tooltip("Flat stamina regeneration bonus per second while this food buff is active.")]
+        [Min(0f)]
+        public float FoodStaminaRegenBonus = 0f;
+
+        [Tooltip("How long this food buff remains active after consumption (seconds).")]
+        [Min(0f)]
+        public float FoodDurationSeconds = 0f;
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -169,6 +193,23 @@ namespace HuntersAndCollectors.Items
 
             if (equipLocalScale.x == 0f && equipLocalScale.y == 0f && equipLocalScale.z == 0f)
                 equipLocalScale = Vector3.one;
+
+            if (!IsFood)
+            {
+                FoodMaxHealthBonus = 0;
+                FoodMaxStaminaBonus = 0;
+                FoodHealthRegenBonus = 0f;
+                FoodStaminaRegenBonus = 0f;
+                FoodDurationSeconds = 0f;
+            }
+            else
+            {
+                if (FoodMaxHealthBonus < 0) FoodMaxHealthBonus = 0;
+                if (FoodMaxStaminaBonus < 0) FoodMaxStaminaBonus = 0;
+                if (FoodHealthRegenBonus < 0f) FoodHealthRegenBonus = 0f;
+                if (FoodStaminaRegenBonus < 0f) FoodStaminaRegenBonus = 0f;
+                if (FoodDurationSeconds <= 0f) FoodDurationSeconds = 1f;
+            }
         }
 #endif
 
@@ -223,6 +264,9 @@ namespace HuntersAndCollectors.Items
         }
     }
 }
+
+
+
 
 
 

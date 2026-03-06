@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_Apple
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_apple
+  DisplayName: Apple
+  Icon: {fileID: 21300000, guid: b2cce01b5b3c97149b2a966a08e0a4e5, type: 3}
+  MaxStack: 100
+  Category: 3
+  visualPrefab: {fileID: 2147834026543980358, guid: de09d0116085bd54186a740952aff4f1, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  Description: An apple a day keeps the....
+  PropertiesText: 
+  BaseValue: 1
+  Weight: 1
+  Rarity: 1
+  CraftTime: 1
+  BaseQuality: 1
+  MaxDurability: 0
+  Damage: 0
+  Defence: 0
+  AttackBonus: 0
+  SwingSpeed: 1
+  MovementSpeed: 1
+  Strength: 0
+  Dexterity: 0
+  LegacyDexterity: 0
+  Intelligence: 0
+  IsEquippable: 0
+  EquipSlot: 0
+  Handedness: 0
+  ToolTags: 
+  IsFood: 1
+  FoodMaxHealthBonus: 10
+  FoodMaxStaminaBonus: 10
+  FoodHealthRegenBonus: 2
+  FoodStaminaRegenBonus: 2
+  FoodDurationSeconds: 300

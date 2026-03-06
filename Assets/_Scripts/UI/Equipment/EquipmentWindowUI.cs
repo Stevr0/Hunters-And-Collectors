@@ -1,4 +1,4 @@
-using HuntersAndCollectors.Inventory;
+﻿using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using System;
@@ -314,17 +314,23 @@ namespace HuntersAndCollectors.UI
 
             equipmentNet.MainHandNetVar.OnValueChanged += OnAnyEquipItemChanged;
             equipmentNet.OffHandNetVar.OnValueChanged += OnAnyEquipItemChanged;
-            equipmentNet.HeadNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.HelmetNetVar.OnValueChanged += OnAnyEquipItemChanged;
             equipmentNet.ChestNetVar.OnValueChanged += OnAnyEquipItemChanged;
             equipmentNet.LegsNetVar.OnValueChanged += OnAnyEquipItemChanged;
-            equipmentNet.FeetNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.BootsNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.GlovesNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.ShouldersNetVar.OnValueChanged += OnAnyEquipItemChanged;
+            equipmentNet.BeltNetVar.OnValueChanged += OnAnyEquipItemChanged;
 
             equipmentNet.MainHandDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
             equipmentNet.OffHandDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
-            equipmentNet.HeadDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.HelmetDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
             equipmentNet.ChestDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
             equipmentNet.LegsDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
-            equipmentNet.FeetDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.BootsDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.GlovesDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.ShouldersDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
+            equipmentNet.BeltDurabilityNetVar.OnValueChanged += OnAnyEquipDurabilityChanged;
         }
 
         private void UnsubscribeFromSlotNetVars()
@@ -334,17 +340,23 @@ namespace HuntersAndCollectors.UI
 
             equipmentNet.MainHandNetVar.OnValueChanged -= OnAnyEquipItemChanged;
             equipmentNet.OffHandNetVar.OnValueChanged -= OnAnyEquipItemChanged;
-            equipmentNet.HeadNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.HelmetNetVar.OnValueChanged -= OnAnyEquipItemChanged;
             equipmentNet.ChestNetVar.OnValueChanged -= OnAnyEquipItemChanged;
             equipmentNet.LegsNetVar.OnValueChanged -= OnAnyEquipItemChanged;
-            equipmentNet.FeetNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.BootsNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.GlovesNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.ShouldersNetVar.OnValueChanged -= OnAnyEquipItemChanged;
+            equipmentNet.BeltNetVar.OnValueChanged -= OnAnyEquipItemChanged;
 
             equipmentNet.MainHandDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
             equipmentNet.OffHandDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
-            equipmentNet.HeadDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.HelmetDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
             equipmentNet.ChestDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
             equipmentNet.LegsDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
-            equipmentNet.FeetDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.BootsDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.GlovesDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.ShouldersDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
+            equipmentNet.BeltDurabilityNetVar.OnValueChanged -= OnAnyEquipDurabilityChanged;
         }
 
         private void OnAnyEquipItemChanged(FixedString64Bytes previous, FixedString64Bytes next)
@@ -358,6 +370,9 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
 
 
 

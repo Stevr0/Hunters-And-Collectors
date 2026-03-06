@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_Berry
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_berry
+  DisplayName: Berry
+  Icon: {fileID: 21300000, guid: def823b7f302f4143ac12b638e220af0, type: 3}
+  MaxStack: 100
+  Category: 3
+  visualPrefab: {fileID: 2147834026543980358, guid: 23701766502f56640878b2c424d1d722, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  Description: These are yummy in the tummy!
+  PropertiesText: 
+  BaseValue: 1
+  Weight: 1
+  Rarity: 1
+  CraftTime: 1
+  BaseQuality: 1
+  MaxDurability: 0
+  Damage: 0
+  Defence: 0
+  AttackBonus: 0
+  SwingSpeed: 1
+  MovementSpeed: 1
+  Strength: 0
+  Dexterity: 0
+  LegacyDexterity: 0
+  Intelligence: 0
+  IsEquippable: 0
+  EquipSlot: 0
+  Handedness: 0
+  ToolTags: 
+  IsFood: 1
+  FoodMaxHealthBonus: 10
+  FoodMaxStaminaBonus: 10
+  FoodHealthRegenBonus: 2
+  FoodStaminaRegenBonus: 2
+  FoodDurationSeconds: 300

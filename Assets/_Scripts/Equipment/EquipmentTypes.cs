@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace HuntersAndCollectors.Items
 {
     /// <summary>
     /// Where an equippable item can be worn/held.
-    /// MVP slots only (easy to extend later).
+    /// Canonical player slots: Belt, Boots, Chest, Gloves, Helmet, Legs, Shoulders, MainHand, OffHand.
     /// </summary>
     public enum EquipSlot
     {
@@ -14,14 +14,31 @@ namespace HuntersAndCollectors.Items
         MainHand = 10,
         OffHand = 11,
 
-        Head = 20,
+        Helmet = 20,
         Chest = 21,
         Legs = 22,
-        Feet = 23,
-        Hands = 24,
-        Back = 25,
-        Ring = 26,
-        Necklace = 27,
+        Boots = 23,
+        Gloves = 24,
+        Shoulders = 25,
+        Belt = 26,
+
+        [Obsolete("Use Helmet")]
+        Head = Helmet,
+
+        [Obsolete("Use Boots")]
+        Feet = Boots,
+
+        [Obsolete("Use Gloves")]
+        Hands = Gloves,
+
+        [Obsolete("Use Shoulders")]
+        Back = Shoulders,
+
+        [Obsolete("Use Belt")]
+        Ring = Belt,
+
+        [Obsolete("Use Belt")]
+        Necklace = Belt,
     }
 
     /// <summary>
