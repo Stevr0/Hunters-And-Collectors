@@ -30,15 +30,21 @@ MonoBehaviour:
   BaseQuality: 1
   MaxDurability: 100
   Damage: 0
-  Defence: 1
+  Defence: 2
   AttackBonus: 0
   SwingSpeed: 0.01
   MovementSpeed: 1
   Strength: 1
-  Dexterity: 1
+  Dexterity: 2
   LegacyDexterity: 0
   Intelligence: 1
   IsEquippable: 1
   EquipSlot: 20
   Handedness: 0
   ToolTags: 
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0

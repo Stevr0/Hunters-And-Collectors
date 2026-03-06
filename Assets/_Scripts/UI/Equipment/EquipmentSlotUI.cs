@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using UnityEngine;
@@ -39,6 +40,7 @@ namespace HuntersAndCollectors.UI
         private Sprite _equippedIconCached;
         private ItemTooltipData _tooltipDataCached;
         private EquipmentWindowUI ownerWindow;
+        private readonly List<Image> durabilityFillImages = new();
 
         private static Sprite fallbackWhiteSprite;
 
@@ -120,12 +122,17 @@ namespace HuntersAndCollectors.UI
 
             bool show = maxDurability > 0;
             SetDurabilityObjectsVisible(show);
+            EnsureFillImageSettings();
 
             if (!show || durabilityFill == null)
+            {
+                SetAllDurabilityFillAmounts(1f);
                 return;
+            }
 
-            float fill = Mathf.Clamp01(durability / (float)Mathf.Max(1, maxDurability));
-            durabilityFill.fillAmount = fill;
+            int clampedDurability = Mathf.Clamp(durability, 0, Mathf.Max(1, maxDurability));
+            float fill = Mathf.Clamp01(clampedDurability / (float)Mathf.Max(1, maxDurability));
+            SetAllDurabilityFillAmounts(fill);
         }
 
         public void ResetVisuals()
@@ -140,14 +147,12 @@ namespace HuntersAndCollectors.UI
                 emptyBackground.enabled = true;
 
             SetDurabilityObjectsVisible(false);
-
-            if (durabilityFill != null)
-                durabilityFill.fillAmount = 1f;
+            SetAllDurabilityFillAmounts(1f);
         }
 
         private void SetDurabilityObjectsVisible(bool visible)
         {
-            if (durabilityBackground == null)
+            if (durabilityBackground == null || durabilityFill == null)
                 TryAutoBindDurabilityRefs();
 
             if (durabilityBackground != null)
@@ -156,8 +161,22 @@ namespace HuntersAndCollectors.UI
                 durabilityBackground.enabled = visible;
             }
 
-            // DurabilityFill is a CHILD of the background, so we never toggle it directly.
-            // When the BG is hidden, the Fill is hidden automatically.
+            // Some prefab variants keep Fill outside BG, so always drive Fill visibility too.
+            if (durabilityFill != null)
+            {
+                durabilityFill.gameObject.SetActive(visible);
+                durabilityFill.enabled = visible;
+            }
+
+            for (int i = 0; i < durabilityFillImages.Count; i++)
+            {
+                Image fill = durabilityFillImages[i];
+                if (fill == null)
+                    continue;
+
+                fill.gameObject.SetActive(visible);
+                fill.enabled = visible;
+            }
         }
 
         private void TryAutoBindDurabilityRefs()
@@ -222,6 +241,9 @@ namespace HuntersAndCollectors.UI
                     }
                 }
             }
+            CacheDurabilityFillImages();
+            EnsureFillLayout();
+            EnsureFillImageSettings();
         }
 
         private static Image FindBestFillCandidate(Image[] images, Image background)
@@ -273,6 +295,70 @@ namespace HuntersAndCollectors.UI
             Rect bgRect = bgRt.rect;
             if (bgRect.width < 1f || bgRect.height < 1f)
                 Debug.LogWarning($"[DurUI][Equip] Background rect too small for slot={slot}: {bgRect.width:0.#}x{bgRect.height:0.#}");
+        }
+
+
+        private void EnsureFillImageSettings()
+        {
+            CacheDurabilityFillImages();
+
+            for (int i = 0; i < durabilityFillImages.Count; i++)
+            {
+                Image fill = durabilityFillImages[i];
+                if (fill == null)
+                    continue;
+
+                if (fill.type != Image.Type.Filled)
+                    fill.type = Image.Type.Filled;
+
+                if (fill.fillMethod != Image.FillMethod.Horizontal)
+                    fill.fillMethod = Image.FillMethod.Horizontal;
+
+                if (fill.fillOrigin != 0)
+                    fill.fillOrigin = 0;
+            }
+        }
+
+        private void CacheDurabilityFillImages()
+        {
+            durabilityFillImages.Clear();
+
+            var images = GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image img = images[i];
+                if (img == null)
+                    continue;
+
+                string name = img.name;
+                bool looksLikeDurabilityFill =
+                    name.IndexOf("dur", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    name.IndexOf("fill", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!looksLikeDurabilityFill)
+                    continue;
+
+                if (!durabilityFillImages.Contains(img))
+                    durabilityFillImages.Add(img);
+            }
+
+            if (durabilityFill != null && !durabilityFillImages.Contains(durabilityFill))
+                durabilityFillImages.Add(durabilityFill);
+        }
+
+        private void SetAllDurabilityFillAmounts(float fillAmount)
+        {
+            CacheDurabilityFillImages();
+            float clamped = Mathf.Clamp01(fillAmount);
+
+            for (int i = 0; i < durabilityFillImages.Count; i++)
+            {
+                Image fill = durabilityFillImages[i];
+                if (fill == null)
+                    continue;
+
+                fill.fillAmount = clamped;
+            }
         }
 
         private static Sprite GetFallbackWhiteSprite()

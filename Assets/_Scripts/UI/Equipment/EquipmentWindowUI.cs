@@ -1,4 +1,4 @@
-﻿using HuntersAndCollectors.Inventory;
+using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using System;
@@ -205,10 +205,8 @@ namespace HuntersAndCollectors.UI
                 }
 
                 int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
-                if (maxDurability > 0 && durability <= 0)
-                    durability = maxDurability;
 
-                bool showDurability = !string.IsNullOrWhiteSpace(itemId) && maxDurability > 0;
+                bool showDurability = !string.IsNullOrWhiteSpace(itemId) && maxDurability > 0 && durability > 0;
                 slotUI.SetDurability(durability, showDurability ? maxDurability : 0);
 
                 if (debugDurabilityRefresh)

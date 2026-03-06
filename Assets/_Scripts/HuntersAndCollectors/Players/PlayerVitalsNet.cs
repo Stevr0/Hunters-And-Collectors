@@ -5,6 +5,7 @@ using HuntersAndCollectors.Combat;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Skills;
+using HuntersAndCollectors.Stats;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -60,6 +61,9 @@ namespace HuntersAndCollectors.Players
 
         [Tooltip("Skill container used to read vitality/endurance levels and grant regen XP.")]
         [SerializeField] private SkillsNet skills;
+
+        [Tooltip("Optional stats provider used to derive base max health/stamina from attributes/equipment.")]
+        [SerializeField] private ActorStatsProvider statsProvider;
 
         [Tooltip("Optional HealthNet bridge used for backward compatibility with existing damage pipeline/UI.")]
         [SerializeField] private HealthNet healthBridge;
@@ -162,6 +166,9 @@ namespace HuntersAndCollectors.Players
             if (skills == null)
                 skills = GetComponent<SkillsNet>();
 
+            if (statsProvider == null)
+                statsProvider = GetComponent<ActorStatsProvider>();
+
             if (healthBridge == null)
                 healthBridge = GetComponent<HealthNet>();
         }
@@ -212,6 +219,9 @@ namespace HuntersAndCollectors.Players
             float dt = Mathf.Max(0f, Time.deltaTime);
             if (dt <= 0f)
                 return;
+
+            // Keep max vitals synced to derived stats (attributes/equipment) plus food at all times.
+            RecomputeDynamicMaxVitalsAndClampCurrent();
 
             TickRestedState(dt);
             TickFoodBuffDurations(dt);
@@ -484,11 +494,7 @@ namespace HuntersAndCollectors.Players
             consumedItemId = itemId;
 
             // Consuming food increases max vitals, but does not auto-fill current vitals.
-            RecomputeDynamicMaxVitals();
-            serverHealthExact = Mathf.Min(serverHealthExact, CurrentMaxHealth);
-            serverStaminaExact = Mathf.Min(serverStaminaExact, CurrentMaxStamina);
-            currentHealth.Value = Mathf.Clamp(Mathf.FloorToInt(serverHealthExact), 0, CurrentMaxHealth);
-            currentStamina.Value = Mathf.Clamp(Mathf.FloorToInt(serverStaminaExact), 0, CurrentMaxStamina);
+            RecomputeDynamicMaxVitalsAndClampCurrent();
 
             RebuildActiveFoodSlotReplication();
             MirrorHealthBridgeIfPresent();
@@ -568,11 +574,7 @@ namespace HuntersAndCollectors.Players
             if (!removedAny)
                 return;
 
-            RecomputeDynamicMaxVitals();
-            serverHealthExact = Mathf.Min(serverHealthExact, CurrentMaxHealth);
-            serverStaminaExact = Mathf.Min(serverStaminaExact, CurrentMaxStamina);
-            currentHealth.Value = Mathf.Clamp(Mathf.FloorToInt(serverHealthExact), 0, CurrentMaxHealth);
-            currentStamina.Value = Mathf.Clamp(Mathf.FloorToInt(serverStaminaExact), 0, CurrentMaxStamina);
+            RecomputeDynamicMaxVitalsAndClampCurrent();
 
             RebuildActiveFoodSlotReplication();
             MirrorHealthBridgeIfPresent();
@@ -652,6 +654,16 @@ namespace HuntersAndCollectors.Players
 
         private void RecomputeDynamicMaxVitals()
         {
+            int baseMaxHealth = BaseMaxHealth;
+            int baseMaxStamina = BaseMaxStamina;
+
+            if (statsProvider != null)
+            {
+                EffectiveStats effective = statsProvider.GetEffectiveStats();
+                baseMaxHealth = Mathf.Max(1, effective.MaxHealth);
+                baseMaxStamina = Mathf.Max(1, effective.MaxStamina);
+            }
+
             int bonusHealth = 0;
             int bonusStamina = 0;
 
@@ -661,8 +673,23 @@ namespace HuntersAndCollectors.Players
                 bonusStamina += Mathf.Max(0, runtimeFoods[i].MaxStaminaBonus);
             }
 
-            currentMaxHealth.Value = Mathf.Max(1, BaseMaxHealth + bonusHealth);
-            currentMaxStamina.Value = Mathf.Max(1, BaseMaxStamina + bonusStamina);
+            int nextMaxHealth = Mathf.Max(1, baseMaxHealth + bonusHealth);
+            int nextMaxStamina = Mathf.Max(1, baseMaxStamina + bonusStamina);
+
+            if (currentMaxHealth.Value != nextMaxHealth)
+                currentMaxHealth.Value = nextMaxHealth;
+
+            if (currentMaxStamina.Value != nextMaxStamina)
+                currentMaxStamina.Value = nextMaxStamina;
+        }
+
+        private void RecomputeDynamicMaxVitalsAndClampCurrent()
+        {
+            RecomputeDynamicMaxVitals();
+            serverHealthExact = Mathf.Min(serverHealthExact, CurrentMaxHealth);
+            serverStaminaExact = Mathf.Min(serverStaminaExact, CurrentMaxStamina);
+            currentHealth.Value = Mathf.Clamp(Mathf.FloorToInt(serverHealthExact), 0, CurrentMaxHealth);
+            currentStamina.Value = Mathf.Clamp(Mathf.FloorToInt(serverStaminaExact), 0, CurrentMaxStamina);
         }
 
         private void RefreshFoodSummaryIfNeeded(float dt)

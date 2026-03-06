@@ -137,12 +137,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f9d4f6e1a2b95748b2d0c98fa99a1f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.UI.EquipmentSlotUI
-  slot: 24
+  slot: 10
   button: {fileID: 1044723768018232573}
   iconImage: {fileID: 3217428479027371272}
   emptyBackground: {fileID: 7533791418692211726}
   durabilityBackground: {fileID: 8147724859590760512}
-  durabilityFill: {fileID: 3644045840819053113}
+  durabilityFill: {fileID: 0}
   dragDrop: {fileID: 0}
   equipmentNet: {fileID: 0}
   debugHover: 0
@@ -332,8 +332,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.000038862, y: 0}
-  m_SizeDelta: {x: 72, y: 72}
+  m_AnchoredPosition: {x: 0.6095, y: 0.5191}
+  m_SizeDelta: {x: 58.7116, y: 57.344}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8314232142498594022
 CanvasRenderer:
@@ -407,8 +407,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 72, y: 72}
+  m_AnchoredPosition: {x: -0.000099063, y: 0.000035524}
+  m_SizeDelta: {x: 64, y: 64}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &116111359675698100
 CanvasRenderer:
@@ -482,8 +482,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 48}
-  m_SizeDelta: {x: 75, y: 20}
+  m_AnchoredPosition: {x: 0, y: 47.83197}
+  m_SizeDelta: {x: 75, y: 20.0208}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7995400556312411141
 CanvasRenderer:
@@ -513,7 +513,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Gloves
+  m_text: Main-hand
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

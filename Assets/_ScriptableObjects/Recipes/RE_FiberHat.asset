@@ -18,4 +18,4 @@ MonoBehaviour:
   OutputQuantity: 1
   Ingredients:
   - Item: {fileID: 11400000, guid: e0cb007c4e184044197b914976e1f795, type: 2}
-    Quantity: 5
+    Quantity: 1

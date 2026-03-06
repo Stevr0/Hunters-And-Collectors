@@ -36,6 +36,16 @@ namespace HuntersAndCollectors.Players
         [SerializeField] private float pitchMax = 80f;
         [SerializeField] private Transform cameraPivot; // assign in inspector (local visual only)
 
+        [Header("Server Movement Physics")]
+        [Tooltip("Downward acceleration applied by the server while airborne.")]
+        [SerializeField] private float gravity = -30f;
+
+        [Tooltip("Small downward velocity while grounded to keep CharacterController snapped to slopes/steps.")]
+        [SerializeField] private float groundedStickVelocity = 2f;
+
+        [Tooltip("Maximum falling speed in meters per second.")]
+        [SerializeField] private float maxFallSpeed = 60f;
+
         [Header("Running XP (Server)")]
         [Tooltip("Seconds between running XP ticks while sprinting & moving.")]
         [SerializeField] private float runningXpTickSeconds = 1.0f;
@@ -45,6 +55,10 @@ namespace HuntersAndCollectors.Players
 
         [Tooltip("Minimum input magnitude to count as 'moving' for running XP.")]
         [SerializeField] private float minMoveInputToCount = 0.1f;
+
+        [Header("Stamina (Server)")]
+        [Tooltip("Stamina spent per second while sprinting and moving. Consumed on the server only.")]
+        [SerializeField] private float sprintStaminaCostPerSecond = 8f;
 
         [Header("Animator (Optional)")]
         [Tooltip("Animator on the character (humanoid). If left null, we auto-find in children.")]
@@ -58,6 +72,7 @@ namespace HuntersAndCollectors.Players
 
         private CharacterController controller;
         private SkillsNet skillsNet;
+        private PlayerVitalsNet playerVitals;
 
         // --- Client-side input state (owner only) ---
         private PlayerInputActions input;
@@ -71,9 +86,11 @@ namespace HuntersAndCollectors.Players
         private Vector2 serverMoveInput;
         private bool serverSprintHeld;
         private float serverYawDelta;
+        private float serverVerticalVelocity;
 
         // --- Server-side XP ticking ---
         private float serverRunningXpTimer;
+        private float serverSprintStaminaSpendAccumulator;
 
         // --- Animator driving state (all instances) ---
         private Vector3 lastPosition;
@@ -90,6 +107,7 @@ namespace HuntersAndCollectors.Players
         {
             controller = GetComponent<CharacterController>();
             skillsNet = GetComponent<SkillsNet>();
+            playerVitals = GetComponent<PlayerVitalsNet>();
 
             // If user didn't assign animator, try to find it on children.
             if (animator == null)
@@ -128,6 +146,11 @@ namespace HuntersAndCollectors.Players
 
             // Reset animation velocity tracking when the object spawns on a client
             lastPosition = transform.position;
+
+            if (IsServer)
+            {
+                serverVerticalVelocity = -Mathf.Abs(groundedStickVelocity);
+            }
         }
 
         private void OnDisable()
@@ -258,7 +281,9 @@ namespace HuntersAndCollectors.Players
             float speed = walkSpeed;
 
             bool isTryingToMove = serverMoveInput.magnitude >= minMoveInputToCount;
-            bool isSprinting = serverSprintHeld && isTryingToMove;
+            bool wantsSprint = serverSprintHeld && isTryingToMove;
+            bool canSprint = !wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0;
+            bool isSprinting = wantsSprint && canSprint;
 
             if (isSprinting && skillsNet != null)
             {
@@ -266,8 +291,51 @@ namespace HuntersAndCollectors.Players
                 speed = RunningSkillTuning.GetRunSpeed(walkSpeed, maxMoveSpeed, runningLevel);
             }
 
-            // 4) Move the CharacterController on the server
-            controller.Move(move * speed * Time.deltaTime);
+            // 4) Apply server-side vertical physics so we stay grounded on height transitions.
+            bool wasGrounded = controller.isGrounded;
+
+            if (wasGrounded)
+            {
+                // Keep a slight downward pull so CharacterController remains snapped to the ground.
+                serverVerticalVelocity = -Mathf.Abs(groundedStickVelocity);
+            }
+            else
+            {
+                serverVerticalVelocity += gravity * Time.deltaTime;
+                serverVerticalVelocity = Mathf.Max(serverVerticalVelocity, -Mathf.Abs(maxFallSpeed));
+            }
+
+            // 5) Move with combined horizontal + vertical velocity.
+            Vector3 velocity = move * speed;
+            velocity.y = serverVerticalVelocity;
+            CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
+
+            // If we hit ground while moving downward, keep the sticky grounded pull.
+            bool hitGround = (flags & CollisionFlags.Below) != 0;
+            if (hitGround && serverVerticalVelocity < 0f)
+            {
+                serverVerticalVelocity = -Mathf.Abs(groundedStickVelocity);
+            }
+
+            // 6) Server-authoritative sprint stamina drain. If stamina runs out, next frame will force walk.
+            if (wantsSprint && playerVitals != null && sprintStaminaCostPerSecond > 0f)
+            {
+                serverSprintStaminaSpendAccumulator += sprintStaminaCostPerSecond * Time.deltaTime;
+                while (serverSprintStaminaSpendAccumulator >= 1f)
+                {
+                    serverSprintStaminaSpendAccumulator -= 1f;
+                    if (!playerVitals.ServerSpendStamina(1))
+                    {
+                        // No stamina left to spend; stop carrying fractional debt.
+                        serverSprintStaminaSpendAccumulator = 0f;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                serverSprintStaminaSpendAccumulator = 0f;
+            }
         }
 
         private void HandleServerRunningXp()
@@ -275,9 +343,11 @@ namespace HuntersAndCollectors.Players
             if (skillsNet == null)
                 return;
 
-            // Only award XP while sprinting AND actually trying to move.
+            // Only award XP while sprinting, moving, and having enough stamina to actually sprint.
             bool isTryingToMove = serverMoveInput.magnitude >= minMoveInputToCount;
-            bool isRunning = serverSprintHeld && isTryingToMove;
+            bool wantsSprint = serverSprintHeld && isTryingToMove;
+            bool canSprint = !wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0;
+            bool isRunning = wantsSprint && canSprint;
 
             if (!isRunning)
             {
@@ -347,7 +417,7 @@ namespace HuntersAndCollectors.Players
 
             // Grounded:
             // - On the server this is correct (controller is actually moving).
-            // - On clients it can still often be okay, but if it’s flaky we can replace it later
+            // - On clients it can still often be okay, but if it's flaky we can replace it later
             //   with a small raycast-based ground check.
             bool isGrounded = controller != null && controller.isGrounded;
 
@@ -381,5 +451,3 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
-
-

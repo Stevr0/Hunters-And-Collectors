@@ -125,10 +125,7 @@ namespace HuntersAndCollectors.UI
             textBuilder.Append("Intelligence: ").AppendLine(effective.Intelligence.ToString());
             textBuilder.AppendLine();
 
-            textBuilder.AppendLine("== VITALS (DERIVED) ==");
-            textBuilder.Append("Health Max: ").AppendLine(effective.MaxHealth.ToString());
-            textBuilder.Append("Stamina Max: ").AppendLine(effective.MaxStamina.ToString());
-            textBuilder.Append("Mana Max: ").AppendLine(effective.MaxMana.ToString());
+
 
             SetTotalsTextIfChanged(textBuilder.ToString());
         }
