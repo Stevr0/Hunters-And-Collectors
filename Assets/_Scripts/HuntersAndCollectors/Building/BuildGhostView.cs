@@ -22,7 +22,10 @@ namespace HuntersAndCollectors.Building
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        private readonly MaterialPropertyBlock propertyBlock = new();
+        // IMPORTANT:
+        // MaterialPropertyBlock must be created at runtime (Awake/Start),
+        // not in a field initializer/constructor on MonoBehaviours.
+        private MaterialPropertyBlock propertyBlock;
 
         private Renderer[] cachedRenderers;
         private bool isCurrentlyValid;
@@ -30,6 +33,7 @@ namespace HuntersAndCollectors.Building
 
         private void Awake()
         {
+            EnsurePropertyBlock();
             CacheRenderers();
             ConfigureRenderersForGhost();
         }
@@ -40,6 +44,8 @@ namespace HuntersAndCollectors.Building
         /// </summary>
         public void SetPreviewValid(bool isValid)
         {
+            EnsurePropertyBlock();
+
             if (hasAppliedState && isCurrentlyValid == isValid)
                 return;
 
@@ -48,6 +54,12 @@ namespace HuntersAndCollectors.Building
 
             Color target = isValid ? validColor : invalidColor;
             ApplyTint(target);
+        }
+
+        private void EnsurePropertyBlock()
+        {
+            if (propertyBlock == null)
+                propertyBlock = new MaterialPropertyBlock();
         }
 
         private void CacheRenderers()

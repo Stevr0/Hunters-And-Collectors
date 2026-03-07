@@ -7988,6 +7988,7 @@ GameObject:
   - component: {fileID: 3741286068403575486}
   - component: {fileID: -4342369540640593781}
   - component: {fileID: -186915036213987484}
+  - component: {fileID: -6498447781899020481}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -8699,6 +8700,30 @@ MonoBehaviour:
     m_Bits: 0
   overlapCheckRadius: 0.25
   playerInventory: {fileID: 4863483339001891176}
+--- !u!114 &-6498447781899020481
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ef18e1d1244e6a40854e3529cddbc11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.BuildPlacementController
+  buildingNet: {fileID: -186915036213987484}
+  placementCamera: {fileID: 0}
+  placementSurfaceMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxRayDistance: 512
+  placementBlockerMask:
+    serializedVersion: 2
+    m_Bits: 80
+  overlapCheckRadius: 0.25
+  gridSnapSize: 2
+  rotationStepDegrees: 15
 --- !u!1 &6058968616292535986
 GameObject:
   m_ObjectHideFlags: 0

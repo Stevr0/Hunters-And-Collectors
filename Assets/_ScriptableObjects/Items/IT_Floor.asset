@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemId: it_floor
   DisplayName: Floor
   Icon: {fileID: 21300000, guid: 66110b325d917704b9341d2f1999c3d6, type: 3}
-  MaxStack: 1
+  MaxStack: 99
   Category: 4
   visualPrefab: {fileID: 0}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -50,5 +50,6 @@ MonoBehaviour:
   FoodDurationSeconds: 0
   IsPlaceable: 1
   PlaceablePrefab: {fileID: 7114903014647743600, guid: 15b716b44ddfc8a45a6ffc292df89013, type: 3}
+  GhostPrefab: {fileID: 0}
   PlacementOffset: {x: 0, y: 0, z: 0}
   AllowYawRotation: 1

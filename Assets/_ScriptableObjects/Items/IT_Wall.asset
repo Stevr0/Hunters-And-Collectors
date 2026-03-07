@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemId: it_wall
   DisplayName: Wall
   Icon: {fileID: 21300000, guid: 66110b325d917704b9341d2f1999c3d6, type: 3}
-  MaxStack: 1
+  MaxStack: 99
   Category: 4
   visualPrefab: {fileID: 0}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -50,5 +50,6 @@ MonoBehaviour:
   FoodDurationSeconds: 0
   IsPlaceable: 1
   PlaceablePrefab: {fileID: 7114903014647743600, guid: 9d3f403e3b2c8ac43b06231ad4dda2cc, type: 3}
+  GhostPrefab: {fileID: 0}
   PlacementOffset: {x: 0, y: 0, z: 0}
   AllowYawRotation: 1

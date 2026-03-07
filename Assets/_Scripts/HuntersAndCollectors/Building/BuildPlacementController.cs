@@ -1,4 +1,6 @@
+using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
+using HuntersAndCollectors.UI;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -111,6 +113,10 @@ namespace HuntersAndCollectors.Building
             currentYaw = 0f;
             hasPreviewHit = false;
             isPreviewValid = false;
+
+            // UX request: while placing, hide character windows and allow gameplay movement/look.
+            HideAllCharacterWindows();
+            InputState.ForceUnlockGameplay();
 
             SpawnGhostForItem(itemDef);
 
@@ -317,7 +323,7 @@ namespace HuntersAndCollectors.Building
             if (wasActive)
             {
                 PlacementModeChanged?.Invoke(false);
-                Debug.Log("[BuildPlacement][CLIENT] Placement mode ended. Inventory state restored.", this);
+                Debug.Log("[BuildPlacement][CLIENT] Placement mode ended.", this);
             }
         }
 
@@ -328,6 +334,19 @@ namespace HuntersAndCollectors.Building
 
             activeGhostObject = null;
             activeGhostView = null;
+        }
+
+        private static void HideAllCharacterWindows()
+        {
+            CharacterWindowRootUI[] roots = FindObjectsOfType<CharacterWindowRootUI>(true);
+            for (int i = 0; i < roots.Length; i++)
+            {
+                CharacterWindowRootUI root = roots[i];
+                if (root == null || !root.IsOpen)
+                    continue;
+
+                root.Close();
+            }
         }
     }
 }

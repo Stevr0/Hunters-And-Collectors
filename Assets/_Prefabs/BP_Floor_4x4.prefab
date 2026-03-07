@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.PlacedBuildPiece
   ShowTopMostFoldoutHeaderGroup: 1
-  buildPieceId: BP_Floor_4x4
+  sourceItemId: it_floor
 --- !u!65 &2936037099816057740
 BoxCollider:
   m_ObjectHideFlags: 0

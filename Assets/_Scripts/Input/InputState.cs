@@ -37,5 +37,19 @@ namespace HuntersAndCollectors.Input
                 Cursor.visible = false;
             }
         }
+
+        /// <summary>
+        /// Hard reset for gameplay locks.
+        ///
+        /// Use sparingly for explicit UX transitions where gameplay must be enabled
+        /// even if one or more UI systems previously requested a lock.
+        /// </summary>
+        public static void ForceUnlockGameplay()
+        {
+            lockCount = 0;
+            GameplayLocked = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 }

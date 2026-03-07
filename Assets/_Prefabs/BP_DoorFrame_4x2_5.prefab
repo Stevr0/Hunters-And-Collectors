@@ -298,7 +298,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.PlacedBuildPiece
   ShowTopMostFoldoutHeaderGroup: 1
-  buildPieceId: BP_DoorFrame_4x2_5
+  sourceItemId: it_doorframe
 --- !u!1 &5489241864986644994
 GameObject:
   m_ObjectHideFlags: 0
