@@ -12,5 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50c244c5c46d1d24eb88e15fbb765fc0, type: 3}
   m_Name: BP_Wall
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.BuildPieceDef
-  BuildPieceId: BP_Floor
-  Prefab: {fileID: 0}
+  buildPieceId: BP_Wall_4x2_5
+  displayName: Wall
+  prefab: {fileID: 7114903014647743600, guid: 9d3f403e3b2c8ac43b06231ad4dda2cc, type: 3}
+  placementOffset: {x: 0, y: 0, z: 0}
+  allowYawRotation: 1

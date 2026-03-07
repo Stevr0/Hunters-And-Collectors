@@ -7987,6 +7987,7 @@ GameObject:
   - component: {fileID: -8358533200946782}
   - component: {fileID: 3741286068403575486}
   - component: {fileID: -4342369540640593781}
+  - component: {fileID: -186915036213987484}
   m_Layer: 0
   m_Name: PF_Player
   m_TagString: Untagged
@@ -8678,6 +8679,26 @@ MonoBehaviour:
   statsProvider: {fileID: 5779662129854349533}
   healthBridge: {fileID: -8358533200946782}
   foodSummaryRefreshSeconds: 1
+--- !u!114 &-186915036213987484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4492703975310421043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e41e403940c4b6489811f3eb4b78137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.BuildingNet
+  ShowTopMostFoldoutHeaderGroup: 1
+  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
+  maxPlaceDistance: 6
+  placementBlockerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  overlapCheckRadius: 0.25
+  playerInventory: {fileID: 4863483339001891176}
 --- !u!1 &6058968616292535986
 GameObject:
   m_ObjectHideFlags: 0

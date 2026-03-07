@@ -12,5 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50c244c5c46d1d24eb88e15fbb765fc0, type: 3}
   m_Name: BP_Door
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.BuildPieceDef
-  BuildPieceId: BP_Floor
-  Prefab: {fileID: 0}
+  buildPieceId: BP_DoorFrame_4x2_5
+  displayName: Door
+  prefab: {fileID: 7114903014647743600, guid: ce9a2afb60c6d034ba0b86c122a84bb5, type: 3}
+  placementOffset: {x: 0, y: 0, z: 0}
+  allowYawRotation: 1

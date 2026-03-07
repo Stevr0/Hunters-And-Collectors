@@ -12,5 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50c244c5c46d1d24eb88e15fbb765fc0, type: 3}
   m_Name: BP_Roof
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.BuildPieceDef
-  BuildPieceId: BP_Floor
-  Prefab: {fileID: 0}
+  buildPieceId: BP_Roof_4x4
+  displayName: Roof
+  prefab: {fileID: 7114903014647743600, guid: 3aba2dbd6a478114ab26c5729659ec54, type: 3}
+  placementOffset: {x: 0, y: 0, z: 0}
+  allowYawRotation: 1

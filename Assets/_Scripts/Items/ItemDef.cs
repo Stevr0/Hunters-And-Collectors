@@ -1,4 +1,5 @@
 using System.Text;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -167,6 +168,22 @@ namespace HuntersAndCollectors.Items
         [Min(0f)]
         public float FoodDurationSeconds = 0f;
 
+        [Header("Placeable Building (Unified Item Model)")]
+        [Tooltip("If true, this item can be placed into the world as a structure.")]
+        public bool IsPlaceable = false;
+
+        [Tooltip("Networked world prefab spawned when this placeable item is used.")]
+        public NetworkObject PlaceablePrefab;
+
+        [Tooltip("Optional local-only ghost prefab used for placement preview visuals.")]
+        public GameObject GhostPrefab;
+
+        [Tooltip("Optional spawn offset applied from requested placement position.")]
+        public Vector3 PlacementOffset = Vector3.zero;
+
+        [Tooltip("If false, placement ignores requested yaw and uses 0 rotation on Y.")]
+        public bool AllowYawRotation = true;
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -209,7 +226,12 @@ namespace HuntersAndCollectors.Items
                 if (FoodHealthRegenBonus < 0f) FoodHealthRegenBonus = 0f;
                 if (FoodStaminaRegenBonus < 0f) FoodStaminaRegenBonus = 0f;
                 if (FoodDurationSeconds <= 0f) FoodDurationSeconds = 1f;
+
             }
+            // Unified model rule:
+            // Placeable build pieces are still regular items, but require a world prefab.
+            if (IsPlaceable && PlaceablePrefab == null)
+                Debug.LogWarning($"[ItemDef] Item '{ItemId}' is marked IsPlaceable but PlaceablePrefab is missing.", this);
         }
 #endif
 
@@ -264,6 +286,10 @@ namespace HuntersAndCollectors.Items
         }
     }
 }
+
+
+
+
 
 
 

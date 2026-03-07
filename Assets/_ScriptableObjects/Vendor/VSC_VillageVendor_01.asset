@@ -23,3 +23,11 @@ MonoBehaviour:
     Quantity: 1
   - ItemId: it_stoneknife
     Quantity: 1
+  - ItemId: it_doorframe
+    Quantity: 2
+  - ItemId: it_floor
+    Quantity: 2
+  - ItemId: it_wall
+    Quantity: 2
+  - ItemId: it_roof
+    Quantity: 2

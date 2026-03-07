@@ -24,4 +24,8 @@ MonoBehaviour:
   BaseDefence: 0
   BaseSwingSpeed: 0.5
   AiDef: {fileID: 0}
-  StartingSkills: []
+  StartingSkills:
+  - SkillId: EquipmentCrafting
+    Level: 10
+  - SkillId: ToolCrafting
+    Level: 10
