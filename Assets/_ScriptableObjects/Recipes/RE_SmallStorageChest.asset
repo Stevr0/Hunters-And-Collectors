@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 918f060a3f312fe48a5328d6e6631c81, type: 3}
   m_Name: RE_SmallStorageChest
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.RecipeDef
-  RecipeId: CR_DoorFrame
+  RecipeId: CR_SmallStorageChest
   Category: 2
-  OutputItem: {fileID: 11400000, guid: 42a1a06f4e1a58648859211631d3089f, type: 2}
+  OutputItem: {fileID: 11400000, guid: a5e71b77c1f083f43a6e6c2f8a39f748, type: 2}
   OutputQuantity: 1
   Ingredients:
   - Item: {fileID: 11400000, guid: b5b9e311348865e49bd49ed9b02b261d, type: 2}
-    Quantity: 1
+    Quantity: 2

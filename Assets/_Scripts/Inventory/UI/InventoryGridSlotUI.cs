@@ -7,6 +7,16 @@ using UnityEngine.UI;
 namespace HuntersAndCollectors.Inventory.UI
 {
     /// <summary>
+    /// Identifies which inventory container a slot belongs to.
+    /// This is used by chest drag/drop routing to decide transfer direction.
+    /// </summary>
+    public enum InventoryContainerType
+    {
+        Player = 0,
+        Chest = 1
+    }
+
+    /// <summary>
     /// Visual+clickable UI for one inventory slot.
     /// Supports drag/drop and click forwarding to window-level handlers.
     /// </summary>
@@ -21,6 +31,10 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private Button button;
         [SerializeField] private UIDragDropBroker dragDrop;
 
+        [Header("Container Context")]
+        [SerializeField] private InventoryContainerType containerType = InventoryContainerType.Player;
+        [SerializeField] private InventoryDragController containerDragController;
+
         [Header("Durability")]
         [SerializeField] private Image durabilityBackground;
         [SerializeField] private Image durabilityFill;
@@ -33,12 +47,33 @@ namespace HuntersAndCollectors.Inventory.UI
         private ItemTooltipData tooltipData;
 
         public int SlotIndex { get; private set; } = -1;
+        public string ItemId => itemId;
+        public int Quantity => quantity;
+        public InventoryContainerType ContainerType => containerType;
 
         private System.Action<int, string, int> onClicked;
 
         public void SetSlotIndex(int index)
         {
             SlotIndex = index;
+        }
+
+        /// <summary>
+        /// Sets both the slot index and which container this slot belongs to.
+        /// </summary>
+        public void SetContainerContext(InventoryContainerType type, int index)
+        {
+            containerType = type;
+            SlotIndex = index;
+        }
+
+        /// <summary>
+        /// Allows window presenters to explicitly bind a container drag controller.
+        /// If this is not set, slot falls back to the generic drag broker.
+        /// </summary>
+        public void SetContainerDragController(InventoryDragController controller)
+        {
+            containerDragController = controller;
         }
 
         private void Reset()
@@ -51,6 +86,9 @@ namespace HuntersAndCollectors.Inventory.UI
         {
             if (dragDrop == null)
                 dragDrop = FindFirstObjectByType<UIDragDropBroker>();
+
+            if (containerDragController == null)
+                containerDragController = FindFirstObjectByType<InventoryDragController>(FindObjectsInactive.Include);
 
             TryAutoBindDurabilityRefs();
             ResetVisuals();
@@ -179,7 +217,7 @@ namespace HuntersAndCollectors.Inventory.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (debugHover)
-                Debug.Log($"[InventoryGridSlotUI] Hover enter slot={SlotIndex} itemId='{itemId}'");
+                Debug.Log($"[InventoryGridSlotUI] Hover enter slot={SlotIndex} itemId='{itemId}' container={containerType}");
 
             if (string.IsNullOrWhiteSpace(itemId))
             {
@@ -197,9 +235,17 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (string.IsNullOrWhiteSpace(itemId))
+            if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
                 return;
 
+            // Prefer the container drag controller for player<->chest transfer UX.
+            if (containerDragController != null)
+            {
+                containerDragController.BeginDrag(this, itemId, quantity, iconImage != null ? iconImage.sprite : null);
+                return;
+            }
+
+            // Fallback for existing inventory/equipment drag flows.
             dragDrop?.BeginDragFromInventory(this, itemId, iconImage != null ? iconImage.sprite : null);
         }
 
@@ -209,11 +255,23 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnEndDrag(PointerEventData eventData)
         {
+            if (containerDragController != null)
+            {
+                containerDragController.CancelDrag();
+                return;
+            }
+
             dragDrop?.CancelDrag();
         }
 
         public void OnDrop(PointerEventData eventData)
         {
+            if (containerDragController != null)
+            {
+                containerDragController.CompleteDropOnSlot(containerType, SlotIndex);
+                return;
+            }
+
             dragDrop?.CompleteDropOnInventorySlot(SlotIndex);
         }
     }
