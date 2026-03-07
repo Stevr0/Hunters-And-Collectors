@@ -31,7 +31,8 @@ MonoBehaviour:
   MaxDurability: 100
   Damage: 5
   Defence: 0
-  SwingSpeed: 0.5
+  AttackBonus: 0
+  SwingSpeed: 1
   MovementSpeed: 0.9
   Strength: 3
   Dexterity: 2
@@ -41,3 +42,9 @@ MonoBehaviour:
   EquipSlot: 10
   Handedness: 1
   ToolTags: 01000000
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
