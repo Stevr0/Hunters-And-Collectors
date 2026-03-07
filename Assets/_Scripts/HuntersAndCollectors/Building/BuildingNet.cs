@@ -97,6 +97,14 @@ namespace HuntersAndCollectors.Building
             if (!ValidateOverlap(worldPos))
                 return;
 
+            if (!ServerValidateHeartStonePlacement(worldPos, out string heartStoneFailReason))
+            {
+                Debug.LogWarning($"[BuildingNet][SERVER] Placement denied: {heartStoneFailReason}", this);
+                return;
+            }
+
+            Debug.Log("[BuildingNet][SERVER] Placement approved by HeartStone validation.", this);
+
             if (!ServerTryConsumeOneItem(itemId, out ConsumedItem consumed))
                 return;
 
@@ -105,6 +113,8 @@ namespace HuntersAndCollectors.Building
                 ServerRollbackConsumedItem(consumed);
                 return;
             }
+
+            ServerNotifyShelterStatePlacementChanged();
 
             Debug.Log($"[BuildingNet][SERVER] Placement succeeded: itemId={itemId} pos={worldPos}", this);
         }
@@ -193,6 +203,69 @@ namespace HuntersAndCollectors.Building
             return true;
         }
 
+        /// <summary>
+        /// Server-authoritative HeartStone placement gate.
+        /// Placement is allowed only when a HeartStone exists, shard is alive,
+        /// and the requested position is in the valid build ring.
+        /// </summary>
+        private bool ServerValidateHeartStonePlacement(Vector3 worldPos, out string failReason)
+        {
+            failReason = string.Empty;
+
+            if (HeartStoneRegistry.Instance == null)
+            {
+                failReason = "no HeartStone found";
+                return false;
+            }
+
+            if (!HeartStoneRegistry.Instance.TryGetMain(out HeartStoneNet mainHeartStone) || mainHeartStone == null)
+            {
+                failReason = "no HeartStone found";
+                return false;
+            }
+
+            if (mainHeartStone.IsShardDead)
+            {
+                failReason = "shard is dead";
+                return false;
+            }
+
+            if (mainHeartStone.IsWithinNoBuildRadius(worldPos))
+            {
+                failReason = "inside HeartStone no-build radius";
+                return false;
+            }
+
+            if (!mainHeartStone.IsWithinBuildRadius(worldPos))
+            {
+                failReason = "outside HeartStone build radius";
+                return false;
+            }
+
+            return true;
+        }
+
+
+        /// <summary>
+        /// Server helper to notify first-pass shelter tracking after placement succeeds.
+        /// This keeps integration simple without introducing global event systems.
+        /// </summary>
+        private void ServerNotifyShelterStatePlacementChanged()
+        {
+            if (!IsServer)
+                return;
+
+            ShelterState[] shelterStates = FindObjectsByType<ShelterState>(FindObjectsSortMode.None);
+            for (int i = 0; i < shelterStates.Length; i++)
+            {
+                ShelterState shelterState = shelterStates[i];
+                if (shelterState == null)
+                    continue;
+
+                shelterState.ServerReevaluateShelter();
+            }
+        }
+
         private bool ServerTryConsumeOneItem(string itemId, out ConsumedItem consumed)
         {
             consumed = default;
@@ -272,7 +345,7 @@ namespace HuntersAndCollectors.Building
 
             PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
             if (placed != null)
-                placed.ServerSetSourceItemId(sourceItemId);
+                placed.ServerInitializeFromItem(itemDef);
 
             // World structures are server-owned authoritative objects.
             spawnedNetworkObject.Spawn(destroyWithScene: true);
@@ -294,4 +367,6 @@ namespace HuntersAndCollectors.Building
 #endif
     }
 }
+
+
 

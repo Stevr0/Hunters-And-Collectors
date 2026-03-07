@@ -184,6 +184,13 @@ namespace HuntersAndCollectors.Items
         [Tooltip("If false, placement ignores requested yaw and uses 0 rotation on Y.")]
         public bool AllowYawRotation = true;
 
+        [Tooltip("Max health used by the placed world structure for this placeable item.")]
+        [Min(1)]
+        public int StructureMaxHealth = 100;
+
+        [Tooltip("If true, placed structure despawns when health reaches zero.")]
+        public bool DestroyOnZeroHealth = true;
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -232,6 +239,9 @@ namespace HuntersAndCollectors.Items
             // Placeable build pieces are still regular items, but require a world prefab.
             if (IsPlaceable && PlaceablePrefab == null)
                 Debug.LogWarning($"[ItemDef] Item '{ItemId}' is marked IsPlaceable but PlaceablePrefab is missing.", this);
+
+            // Structure durability for placed world objects.
+            if (StructureMaxHealth < 1) StructureMaxHealth = 1;
         }
 #endif
 

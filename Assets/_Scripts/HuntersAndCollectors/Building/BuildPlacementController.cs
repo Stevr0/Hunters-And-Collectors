@@ -41,6 +41,9 @@ namespace HuntersAndCollectors.Building
         [Min(1f)]
         [SerializeField] private float rotationStepDegrees = 15f;
 
+        [Header("Debug")]
+        [SerializeField] private string latestLocalFailReason = string.Empty;
+
         private ItemDef activeItemDef;
         private GameObject activeGhostObject;
         private BuildGhostView activeGhostView;
@@ -52,6 +55,11 @@ namespace HuntersAndCollectors.Building
         private float currentYaw;
         private Vector3 previewWorldPosition;
 
+        // Local logging guard so preview logs only when validity/reason changes.
+        private bool hasLoggedPreviewState;
+        private bool lastLoggedPreviewValid;
+        private string lastLoggedPreviewFailReason = string.Empty;
+
         /// <summary>
         /// Raised when placement mode enters/exits so UI can dim/restore safely.
         /// </summary>
@@ -59,6 +67,12 @@ namespace HuntersAndCollectors.Building
 
         public bool IsPlacementActive => isPlacementActive;
         public bool IsLocalOwner => buildingNet != null && buildingNet.IsOwner;
+
+        /// <summary>
+        /// Optional inspector/debug visibility for why current preview is invalid.
+        /// Empty when preview is valid.
+        /// </summary>
+        public string LatestLocalFailReason => latestLocalFailReason;
 
         private void Awake()
         {
@@ -113,6 +127,9 @@ namespace HuntersAndCollectors.Building
             currentYaw = 0f;
             hasPreviewHit = false;
             isPreviewValid = false;
+            latestLocalFailReason = string.Empty;
+            hasLoggedPreviewState = false;
+            lastLoggedPreviewFailReason = string.Empty;
 
             // UX request: while placing, hide character windows and allow gameplay movement/look.
             HideAllCharacterWindows();
@@ -160,18 +177,28 @@ namespace HuntersAndCollectors.Building
         {
             hasPreviewHit = false;
             isPreviewValid = false;
+            latestLocalFailReason = "No placement surface hit";
 
             Camera cam = placementCamera != null ? placementCamera : Camera.main;
             if (cam == null)
+            {
+                ReportLocalPreviewStateIfChanged(false, latestLocalFailReason);
                 return;
+            }
 
             Mouse mouse = Mouse.current;
             if (mouse == null)
+            {
+                ReportLocalPreviewStateIfChanged(false, latestLocalFailReason);
                 return;
+            }
 
             Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
             if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, placementSurfaceMask, QueryTriggerInteraction.Ignore))
+            {
+                ReportLocalPreviewStateIfChanged(false, latestLocalFailReason);
                 return;
+            }
 
             hasPreviewHit = true;
 
@@ -184,7 +211,10 @@ namespace HuntersAndCollectors.Building
             Vector3 offset = activeItemDef != null ? activeItemDef.PlacementOffset : Vector3.zero;
             previewWorldPosition = snapped + offset;
 
-            isPreviewValid = !HasBlockingOverlap(previewWorldPosition);
+            isPreviewValid = EvaluateLocalPlacementValidity(previewWorldPosition, out string failReason);
+            latestLocalFailReason = isPreviewValid ? string.Empty : failReason;
+
+            ReportLocalPreviewStateIfChanged(isPreviewValid, latestLocalFailReason);
         }
 
         private void TickGhostTransformAndColor()
@@ -222,7 +252,7 @@ namespace HuntersAndCollectors.Building
 
             if (!hasPreviewHit || !isPreviewValid)
             {
-                Debug.Log("[BuildPlacement][CLIENT] Placement click ignored: local preview invalid.", this);
+                Debug.Log($"[BuildPlacement][CLIENT] Placement click ignored: local preview invalid ({latestLocalFailReason}).", this);
                 return;
             }
 
@@ -247,6 +277,77 @@ namespace HuntersAndCollectors.Building
 
             // First pass behavior: exit after one placement request.
             EndPlacementMode();
+        }
+
+        /// <summary>
+        /// Local preview validation for ghost color guidance.
+        /// This is not authoritative; server still re-validates before spawning.
+        /// </summary>
+        private bool EvaluateLocalPlacementValidity(Vector3 snappedWorldPos, out string failReason)
+        {
+            failReason = string.Empty;
+
+            if (!hasPreviewHit)
+            {
+                failReason = "No placement surface hit";
+                return false;
+            }
+
+            if (activeItemDef == null)
+            {
+                failReason = "No active placement item";
+                return false;
+            }
+
+            if (!activeItemDef.IsPlaceable)
+            {
+                failReason = "Item is not placeable";
+                return false;
+            }
+
+            if (activeItemDef.PlaceablePrefab == null)
+            {
+                failReason = "Placeable prefab missing";
+                return false;
+            }
+
+            if (HasBlockingOverlap(snappedWorldPos))
+            {
+                failReason = "Blocked by overlap";
+                return false;
+            }
+
+            if (HeartStoneRegistry.Instance == null)
+            {
+                failReason = "No HeartStone found";
+                return false;
+            }
+
+            if (!HeartStoneRegistry.Instance.TryGetMain(out HeartStoneNet mainHeartStone) || mainHeartStone == null)
+            {
+                failReason = "No HeartStone found";
+                return false;
+            }
+
+            if (mainHeartStone.IsShardDead)
+            {
+                failReason = "Shard is dead";
+                return false;
+            }
+
+            if (mainHeartStone.IsWithinNoBuildRadius(snappedWorldPos))
+            {
+                failReason = "Inside HeartStone no-build radius";
+                return false;
+            }
+
+            if (!mainHeartStone.IsWithinBuildRadius(snappedWorldPos))
+            {
+                failReason = "Outside HeartStone build radius";
+                return false;
+            }
+
+            return true;
         }
 
         private bool HasBlockingOverlap(Vector3 worldPosition)
@@ -317,6 +418,9 @@ namespace HuntersAndCollectors.Building
             hasPreviewHit = false;
             isPreviewValid = false;
             currentYaw = 0f;
+            latestLocalFailReason = string.Empty;
+            hasLoggedPreviewState = false;
+            lastLoggedPreviewFailReason = string.Empty;
 
             DestroyGhostIfExists();
 
@@ -347,6 +451,27 @@ namespace HuntersAndCollectors.Building
 
                 root.Close();
             }
+        }
+
+        private void ReportLocalPreviewStateIfChanged(bool previewIsValid, string failReason)
+        {
+            string safeReason = failReason ?? string.Empty;
+
+            if (hasLoggedPreviewState &&
+                previewIsValid == lastLoggedPreviewValid &&
+                string.Equals(safeReason, lastLoggedPreviewFailReason, System.StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            hasLoggedPreviewState = true;
+            lastLoggedPreviewValid = previewIsValid;
+            lastLoggedPreviewFailReason = safeReason;
+
+            if (previewIsValid)
+                Debug.Log("[BuildPlacement] Local preview valid.", this);
+            else
+                Debug.Log($"[BuildPlacement] Local preview invalid: {safeReason}", this);
         }
     }
 }

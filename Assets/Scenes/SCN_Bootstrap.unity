@@ -903,6 +903,8 @@ MonoBehaviour:
   slotPrefab: {fileID: -972575547004342896, guid: a76bb855d7bf45c449a30d9f567f3836, type: 3}
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
   uiSlotCount: 48
+  doubleClickThresholdSeconds: 0.3
+  placementModeWindowAlpha: 0.12
 --- !u!1 &127337267
 GameObject:
   m_ObjectHideFlags: 0

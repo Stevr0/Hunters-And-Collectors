@@ -1,6 +1,9 @@
+using System;
 using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Storage;
+using HuntersAndCollectors.UI.Storage;
 using HuntersAndCollectors.Vendors;
 using HuntersAndCollectors.Vendors.UI;
 using Unity.Netcode;
@@ -16,6 +19,7 @@ namespace HuntersAndCollectors.Players
 
         [Header("UI")]
         [SerializeField] private VendorWindowUI vendorUI;
+        [SerializeField] private ChestWindowUI chestUI;
 
         [Header("Camera")]
         [Tooltip("Camera used for reticle raycasting. If null, will use Camera.main.")]
@@ -36,12 +40,14 @@ namespace HuntersAndCollectors.Players
 
         private ResourceNodeNet currentNodeFocus;
         private VendorInteractable currentVendorFocus;
+        private ChestContainerNet currentChestFocus;
         private ResourceDrop currentDropFocus;
 
         private bool primaryHeld;
         private double nextPrimarySwingAttemptClientTime;
 
         public VendorInteractable CurrentVendorFocus => currentVendorFocus;
+        public ChestContainerNet CurrentChestFocus => currentChestFocus;
         public ResourceDrop CurrentDropFocus => currentDropFocus;
 
         public Camera InteractCamera => playerCamera;
@@ -57,10 +63,11 @@ namespace HuntersAndCollectors.Players
             }
 
             vendorUI = FindObjectOfType<VendorWindowUI>(true);
+            chestUI = FindObjectOfType<ChestWindowUI>(true);
 
             if (interactableMask.value == 0)
             {
-                var layer = LayerMask.NameToLayer("Interactable");
+                int layer = LayerMask.NameToLayer("Interactable");
                 if (layer >= 0)
                     interactableMask = 1 << layer;
             }
@@ -167,7 +174,7 @@ namespace HuntersAndCollectors.Players
 
             UpdateFocusNode();
 
-            if (currentVendorFocus != null || currentDropFocus != null || currentNodeFocus == null)
+            if (currentVendorFocus != null || currentChestFocus != null || currentDropFocus != null || currentNodeFocus == null)
             {
                 nextPrimarySwingAttemptClientTime = now + 0.05d;
                 return;
@@ -187,8 +194,6 @@ namespace HuntersAndCollectors.Players
                 return false;
 
             UpdateFocusNode();
-
-
 
             if (harvestingNet != null && currentDropFocus != null)
             {
@@ -221,12 +226,12 @@ namespace HuntersAndCollectors.Players
             if (playerCamera == null)
                 return;
 
-            var ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
 
-            if (!Physics.Raycast(ray, out RaycastHit hit, interactRange, interactableMask, QueryTriggerInteraction.Collide))
+            if (!TryGetBestInteractHit(ray, out RaycastHit hit))
                 return;
 
-            var vendor = hit.collider.GetComponentInParent<VendorInteractable>();
+            VendorInteractable vendor = ResolveVendorFromHit(hit);
             if (vendor != null)
             {
                 if (vendorUI == null)
@@ -239,7 +244,20 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            var pickup = hit.collider.GetComponentInParent<ResourceDrop>();
+            ChestContainerNet chest = ResolveChestFromHit(hit);
+            if (chest != null)
+            {
+                if (chestUI == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] No ChestWindowUI found in scene.");
+                    return;
+                }
+
+                chestUI.Open(chest);
+                return;
+            }
+
+            ResourceDrop pickup = hit.collider.GetComponentInParent<ResourceDrop>();
             if (pickup != null)
             {
                 if (harvestingNet == null)
@@ -253,18 +271,23 @@ namespace HuntersAndCollectors.Players
         {
             currentNodeFocus = null;
             currentVendorFocus = null;
+            currentChestFocus = null;
             currentDropFocus = null;
 
             if (playerCamera == null)
                 return;
 
-            var ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
 
-            if (!Physics.Raycast(ray, out RaycastHit hit, interactRange, interactableMask, QueryTriggerInteraction.Collide))
+            if (!TryGetBestInteractHit(ray, out RaycastHit hit))
                 return;
 
-            currentVendorFocus = hit.collider.GetComponentInParent<VendorInteractable>();
+            currentVendorFocus = ResolveVendorFromHit(hit);
             if (currentVendorFocus != null)
+                return;
+
+            currentChestFocus = ResolveChestFromHit(hit);
+            if (currentChestFocus != null)
                 return;
 
             currentDropFocus = hit.collider.GetComponentInParent<ResourceDrop>();
@@ -273,6 +296,102 @@ namespace HuntersAndCollectors.Players
 
             currentNodeFocus = hit.collider.GetComponentInParent<ResourceNodeNet>();
         }
+
+        /// <summary>
+        /// Finds the closest usable interaction hit in range.
+        /// This avoids false negatives when the first collider hit is not the actual interactable component.
+        /// </summary>
+        private bool TryGetBestInteractHit(Ray ray, out RaycastHit bestHit)
+        {
+            bestHit = default;
+
+            RaycastHit[] maskedHits = Physics.RaycastAll(
+                ray,
+                interactRange,
+                interactableMask,
+                QueryTriggerInteraction.Collide);
+
+            if (TryPickClosestUsableHit(maskedHits, out bestHit))
+                return true;
+
+            // Fallback for early setup where interactable layers may not yet be configured.
+            RaycastHit[] allHits = Physics.RaycastAll(
+                ray,
+                interactRange,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Collide);
+
+            return TryPickClosestUsableHit(allHits, out bestHit);
+        }
+
+        /// <summary>
+        /// Chooses the nearest hit that has any currently supported interaction target.
+        /// </summary>
+        private bool TryPickClosestUsableHit(RaycastHit[] hits, out RaycastHit bestHit)
+        {
+            bestHit = default;
+
+            if (hits == null || hits.Length == 0)
+                return false;
+
+            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit hit = hits[i];
+                if (hit.collider == null)
+                    continue;
+
+                if (ResolveVendorFromHit(hit) != null)
+                {
+                    bestHit = hit;
+                    return true;
+                }
+
+                if (ResolveChestFromHit(hit) != null)
+                {
+                    bestHit = hit;
+                    return true;
+                }
+
+                if (hit.collider.GetComponentInParent<ResourceDrop>() != null)
+                {
+                    bestHit = hit;
+                    return true;
+                }
+
+                if (hit.collider.GetComponentInParent<ResourceNodeNet>() != null)
+                {
+                    bestHit = hit;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static VendorInteractable ResolveVendorFromHit(RaycastHit hit)
+        {
+            if (hit.collider == null)
+                return null;
+
+            VendorInteractable vendor = hit.collider.GetComponentInParent<VendorInteractable>();
+            if (vendor != null)
+                return vendor;
+
+            return hit.collider.GetComponentInChildren<VendorInteractable>();
+        }
+
+        private static ChestContainerNet ResolveChestFromHit(RaycastHit hit)
+        {
+            if (hit.collider == null)
+                return null;
+
+            ChestContainerNet chest = hit.collider.GetComponentInParent<ChestContainerNet>();
+            if (chest != null)
+                return chest;
+
+            return hit.collider.GetComponentInChildren<ChestContainerNet>();
+        }
     }
 }
-

@@ -21,7 +21,7 @@ MonoBehaviour:
   equipLocalPosition: {x: 0, y: 0, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: Floor
+  Description: Door Frame
   PropertiesText: 
   BaseValue: 1
   Weight: 0
