@@ -355,9 +355,13 @@ namespace HuntersAndCollectors.Actors
                 out rotation,
                 out _,
                 out _,
-                out _);
+                out ActorSpawnPoint resolvedSpawnPoint);
 
-            return true;
+            // IMPORTANT:
+            // Return false when we had to use the spawner-transform fallback.
+            // That allows higher-level systems (Bootstrapper) to try alternate spawn sources
+            // like SceneSpawnPoint instead of silently accepting (0,0,0)-style fallback results.
+            return resolvedSpawnPoint != null;
         }
 
         private void ResolveSpawnTransform(
@@ -752,7 +756,7 @@ namespace HuntersAndCollectors.Actors
                 if (p == null)
                     continue;
 
-                if (!string.Equals(p.SpawnPointId, spawnPointId, StringComparison.Ordinal))
+                if (!string.Equals(p.SpawnPointId, spawnPointId, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 spawnPoint = p;
@@ -781,6 +785,7 @@ namespace HuntersAndCollectors.Actors
         }
     }
 }
+
 
 
 

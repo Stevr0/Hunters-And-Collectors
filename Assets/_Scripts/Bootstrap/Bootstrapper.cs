@@ -1,31 +1,26 @@
 using HuntersAndCollectors.Actors;
-using UnityEngine;
-using Unity.Netcode;
-using UnityEngine.SceneManagement;
+using HuntersAndCollectors.Persistence;
+using HuntersAndCollectors.Players;
+using HuntersAndCollectors.UI.Menu;
 using System.Collections;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace HuntersAndCollectors.Bootstrap
 {
     /// <summary>
-    /// Bootstrapper
-    /// -----------------------------------------------------
-    /// MVP bootstrap:
-    /// - Persist Bootstrap scene objects (UI, NetworkManager, services)
-    /// - Start Host automatically
-    /// - Load gameplay scene additively so Bootstrap content stays alive
-    ///
-    /// Spawn rule:
-    /// - After the gameplay scene finishes loading (server-side),
-    ///   place connected players at a player spawn marker.
-    ///
-    /// ActorSpawner integration:
-    /// - NGO still owns the default PlayerObject lifecycle.
-    /// - Spawn-point resolution is delegated to ActorSpawner when present, so player/dummy/NPC
-    ///   location selection follows one actor-spawn-point model.
+    /// Menu-driven bootstrap coordinator.
     /// </summary>
     public sealed class Bootstrapper : MonoBehaviour
     {
         [SerializeField] private string gameplaySceneName = "SCN_Village";
+
+        [Header("Session")]
+        [SerializeField] private bool autoStartHostForLegacy = false;
+        [SerializeField] private string defaultPlayerKey = "Client_0";
+        [SerializeField] private string defaultShardKey = "Shard_Default";
+        [SerializeField] private SaveManager saveManager;
 
         [Header("Spawn")]
         [SerializeField] private string spawnId = "Heartstone";
@@ -37,101 +32,150 @@ namespace HuntersAndCollectors.Bootstrap
         [Min(1f)] [SerializeField] private float groundRayDistance = 200f;
         [Min(0f)] [SerializeField] private float groundContactSkin = 0.05f;
 
-        private bool _requestedSceneLoad;
-        private bool _startupActorsSpawned;
-        private ActorSpawner _actorSpawner;
-        private Coroutine _startupSpawnRoutine;
+        private bool requestedSceneLoad;
+        private bool startupActorsSpawned;
+        private bool shardInitialized;
+        private string activePlayerKey;
+        private string activeShardKey;
+        private ActorSpawner actorSpawner;
+        private Coroutine startupSpawnRoutine;
+        private bool sceneLoadCallbackRegistered;
+        private bool unitySceneLoadedRegistered;
+
+        public static Bootstrapper Instance { get; private set; }
 
         private void Awake()
         {
-            // Keep this object (and its children) alive when loading gameplay scenes.
-            // IMPORTANT: Put your Canvas/VendorWindowUI as children of this same GameObject.
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            if (saveManager == null)
+                saveManager = FindFirstObjectByType<SaveManager>();
+
+            if (saveManager == null)
+            {
+                GameObject saveManagerGo = new("SaveManager");
+                saveManager = saveManagerGo.AddComponent<SaveManager>();
+            }
         }
 
         private void OnEnable()
         {
-            Debug.Log("[Bootstrapper] OnEnable called.");
-
-            if (NetworkManager.Singleton == null)
-            {
-                Debug.LogWarning("[Bootstrapper] OnEnable: NetworkManager.Singleton is NULL (cannot subscribe yet).");
-                return;
-            }
-
-            if (NetworkManager.Singleton.SceneManager == null)
-            {
-                Debug.LogWarning("[Bootstrapper] OnEnable: NetworkManager.SceneManager is NULL (cannot subscribe yet).");
-                return;
-            }
-
-            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnNetworkSceneLoadComplete;
-            Debug.Log("[Bootstrapper] Subscribed to SceneManager.OnLoadComplete.");
+            RegisterSceneLoadCallbackIfNeeded();
+            RegisterUnitySceneLoadedCallbackIfNeeded();
         }
 
         private void OnDisable()
         {
-            Debug.Log("[Bootstrapper] OnDisable called.");
-
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+            if (sceneLoadCallbackRegistered && NetworkManager.Singleton?.SceneManager != null)
             {
                 NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnNetworkSceneLoadComplete;
-                Debug.Log("[Bootstrapper] Unsubscribed from SceneManager.OnLoadComplete.");
+                sceneLoadCallbackRegistered = false;
             }
 
-            if (_startupSpawnRoutine != null)
+            if (unitySceneLoadedRegistered)
             {
-                StopCoroutine(_startupSpawnRoutine);
-                _startupSpawnRoutine = null;
+                SceneManager.sceneLoaded -= OnUnitySceneLoaded;
+                unitySceneLoadedRegistered = false;
+            }
+
+            if (startupSpawnRoutine != null)
+            {
+                StopCoroutine(startupSpawnRoutine);
+                startupSpawnRoutine = null;
             }
         }
 
         private void Start()
         {
-            // Safety check
             if (NetworkManager.Singleton == null)
             {
                 Debug.LogError("[Bootstrapper] No NetworkManager in scene.");
                 return;
             }
 
-            // We only want to request a scene load once.
-            if (_requestedSceneLoad)
+            RegisterSceneLoadCallbackIfNeeded();
+            RegisterUnitySceneLoadedCallbackIfNeeded();
+
+            if (autoStartHostForLegacy)
+                StartGameSession(defaultPlayerKey, defaultShardKey);
+        }
+
+        public void StartGameSession(string playerKey, string shardKey)
+        {
+            if (NetworkManager.Singleton == null)
                 return;
 
-            // Start Host automatically (MVP behavior)
-            if (!NetworkManager.Singleton.IsListening)
+            RegisterSceneLoadCallbackIfNeeded();
+            RegisterUnitySceneLoadedCallbackIfNeeded();
+
+            activePlayerKey = string.IsNullOrWhiteSpace(playerKey) ? defaultPlayerKey : playerKey.Trim();
+            activeShardKey = string.IsNullOrWhiteSpace(shardKey) ? defaultShardKey : shardKey.Trim();
+
+            if (NetworkManager.Singleton.IsListening)
             {
-                NetworkManager.Singleton.StartHost();
-                Debug.Log("[Bootstrapper] Host started.");
+                Debug.LogWarning("[Bootstrapper] StartGameSession ignored because network session is already running.");
+                return;
             }
 
-            _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+            PlayerNetworkRoot.SetPlayerKeyOverride(NetworkManager.ServerClientId, activePlayerKey);
 
-            // Subscribe here (Start) so we never miss the NetworkManager lifecycle.
-            NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnNetworkSceneLoadComplete;
-            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnNetworkSceneLoadComplete;
-            Debug.Log("[Bootstrapper] Start: Subscribed to SceneManager.OnLoadComplete.");
-
-            // Only the server/host should initiate NGO scene loads.
-            if (NetworkManager.Singleton.IsServer)
+            if (!NetworkManager.Singleton.StartHost())
             {
-                _requestedSceneLoad = true;
+                Debug.LogError("[Bootstrapper] Failed to start host.");
+                return;
+            }
 
-                // Additive keeps Bootstrap scene content (Canvas/UI) alive.
-                NetworkManager.Singleton.SceneManager.LoadScene(
-                    gameplaySceneName,
-                    LoadSceneMode.Additive
-                );
+            // Host startup can race callback availability. Keep retrying bind for a short window.
+            StartCoroutine(CoEnsureCallbacksBoundAfterHostStart());
 
+            Debug.Log($"[Bootstrapper] Host started for PlayerKey='{activePlayerKey}' ShardKey='{activeShardKey}'.");
+
+            if (NetworkManager.Singleton.IsServer && !requestedSceneLoad)
+            {
+                requestedSceneLoad = true;
+                shardInitialized = false;
+                startupActorsSpawned = false;
+
+                NetworkManager.Singleton.SceneManager.LoadScene(gameplaySceneName, LoadSceneMode.Additive);
                 Debug.Log($"[Bootstrapper] Loading gameplay scene additively: {gameplaySceneName}");
             }
         }
 
-        /// <summary>
-        /// Called on BOTH server and clients when an NGO scene load completes for a client.
-        /// We only act on the SERVER because spawn position is server-authoritative.
-        /// </summary>
+        public void ReturnToMainMenu(bool quitApplication)
+        {
+            StartCoroutine(ReturnToMainMenuRoutine(quitApplication));
+        }
+
+        private IEnumerator ReturnToMainMenuRoutine(bool quitApplication)
+        {
+            if (saveManager != null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                saveManager.SaveAllNow();
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                NetworkManager.Singleton.Shutdown();
+
+            Scene gameplayScene = SceneManager.GetSceneByName(gameplaySceneName);
+            if (gameplayScene.IsValid() && gameplayScene.isLoaded)
+                yield return SceneManager.UnloadSceneAsync(gameplaySceneName);
+
+            requestedSceneLoad = false;
+            startupActorsSpawned = false;
+            shardInitialized = false;
+            activePlayerKey = string.Empty;
+            activeShardKey = string.Empty;
+            PlayerNetworkRoot.ClearPlayerKeyOverride(NetworkManager.ServerClientId);
+
+            if (quitApplication)
+                Application.Quit();
+        }
+
         private void OnNetworkSceneLoadComplete(ulong clientId, string sceneName, LoadSceneMode mode)
         {
             if (sceneName != gameplaySceneName)
@@ -140,39 +184,188 @@ namespace HuntersAndCollectors.Bootstrap
             if (!NetworkManager.Singleton.IsServer)
                 return;
 
-            if (_startupSpawnRoutine == null && !_startupActorsSpawned)
-                _startupSpawnRoutine = StartCoroutine(SpawnStartupActorsWhenReady());
-
-            // Delay to ensure:
-            // - additive scene objects exist + can be found
-            // - player object exists
-            // - any spawn/movement scripts have run at least once
-            StartCoroutine(TeleportClientAfterLoad(clientId));
+            Debug.Log($"[Bootstrapper] OnLoadComplete clientId={clientId} scene='{sceneName}' mode={mode}.");
+            HandleGameplaySceneLoadedForServer(clientId);
         }
 
+        private void RegisterSceneLoadCallbackIfNeeded()
+        {
+            if (sceneLoadCallbackRegistered)
+                return;
+
+            if (NetworkManager.Singleton?.SceneManager == null)
+                return;
+
+            NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnNetworkSceneLoadComplete;
+            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnNetworkSceneLoadComplete;
+            sceneLoadCallbackRegistered = true;
+            Debug.Log("[Bootstrapper] Registered OnLoadComplete callback.");
+        }
+
+        private void RegisterUnitySceneLoadedCallbackIfNeeded()
+        {
+            if (unitySceneLoadedRegistered)
+                return;
+
+            SceneManager.sceneLoaded -= OnUnitySceneLoaded;
+            SceneManager.sceneLoaded += OnUnitySceneLoaded;
+            unitySceneLoadedRegistered = true;
+            Debug.Log("[Bootstrapper] Registered Unity sceneLoaded callback.");
+        }
+
+        private IEnumerator CoEnsureCallbacksBoundAfterHostStart()
+        {
+            const int maxFrames = 120;
+            for (int i = 0; i < maxFrames; i++)
+            {
+                RegisterSceneLoadCallbackIfNeeded();
+                RegisterUnitySceneLoadedCallbackIfNeeded();
+
+                if (sceneLoadCallbackRegistered && unitySceneLoadedRegistered)
+                    yield break;
+
+                yield return null;
+            }
+
+            Debug.LogWarning("[Bootstrapper] Callback bind retry timed out; relying on available callbacks.");
+        }
+
+        private void OnUnitySceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!string.Equals(scene.name, gameplaySceneName, System.StringComparison.Ordinal))
+                return;
+
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+                return;
+
+            Debug.Log($"[Bootstrapper] Unity sceneLoaded fired for '{scene.name}' mode={mode}.");
+            HandleGameplaySceneLoadedForServer(null);
+        }
+
+        private void HandleGameplaySceneLoadedForServer(ulong? specificClientId)
+        {
+            if (!shardInitialized)
+            {
+                if (saveManager == null)
+                    saveManager = FindFirstObjectByType<SaveManager>();
+
+                if (saveManager != null)
+                {
+                    saveManager.InitializeForShard(string.IsNullOrWhiteSpace(activeShardKey) ? defaultShardKey : activeShardKey);
+                    shardInitialized = true;
+                }
+                else
+                {
+                    Debug.LogWarning("[Bootstrapper] SaveManager not found. Shard initialization skipped.");
+                }
+            }
+
+            if (startupSpawnRoutine == null && !startupActorsSpawned)
+                startupSpawnRoutine = StartCoroutine(SpawnStartupActorsWhenReady());
+
+            if (specificClientId.HasValue)
+            {
+                StartCoroutine(TeleportClientAfterLoad(specificClientId.Value));
+                return;
+            }
+
+            if (NetworkManager.Singleton == null)
+                return;
+
+            foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                StartCoroutine(TeleportClientAfterLoad(clientId));
+        }
+
+
+
+        private void EnsureInGameMenuRuntimeReady()
+        {
+            InGameMenuUI[] menus = Resources.FindObjectsOfTypeAll<InGameMenuUI>();
+            for (int i = 0; i < menus.Length; i++)
+            {
+                InGameMenuUI menu = menus[i];
+                if (menu == null)
+                    continue;
+
+                GameObject go = menu.gameObject;
+                if (go == null || !go.scene.IsValid())
+                    continue;
+
+                if (!go.activeSelf)
+                {
+                    go.SetActive(true);
+                    Debug.Log("[Bootstrapper] Activated InGameMenuUI GameObject for ESC handling.");
+                }
+
+                if (!menu.enabled)
+                    menu.enabled = true;
+
+                return;
+            }
+
+            Debug.LogWarning("[Bootstrapper] InGameMenuUI was not found in loaded scenes.");
+        }
+        private void EnsureGameplayUiRootEnabled()
+        {
+            Scene gameplayScene = SceneManager.GetSceneByName(gameplaySceneName);
+            if (!gameplayScene.IsValid() || !gameplayScene.isLoaded)
+                return;
+
+            GameObject[] roots = gameplayScene.GetRootGameObjects();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                GameObject root = roots[i];
+                if (root == null)
+                    continue;
+
+                if (!string.Equals(root.name, "UIRoot", System.StringComparison.Ordinal))
+                    continue;
+
+                if (!root.activeSelf)
+                {
+                    root.SetActive(true);
+                    Debug.Log("[Bootstrapper] Enabled gameplay UIRoot after scene load.");
+                }
+
+                return;
+            }
+        }
         private IEnumerator SpawnStartupActorsWhenReady()
         {
             const int maxFrames = 120;
-            for (int i = 0; i < maxFrames && !_startupActorsSpawned; i++)
+            for (int i = 0; i < maxFrames && !startupActorsSpawned; i++)
             {
                 TrySpawnStartupActors();
-                if (_startupActorsSpawned)
+                if (startupActorsSpawned)
                     break;
 
                 yield return null;
             }
 
-            _startupSpawnRoutine = null;
+            startupSpawnRoutine = null;
         }
 
         private IEnumerator TeleportClientAfterLoad(ulong clientId)
         {
-            // Wait 1 frame so scene hierarchy settles.
-            yield return null;
+            // Wait for the player's NetworkObject to exist. On some load timings it is not ready on frame 1.
+            const int maxFramesToWaitForPlayerObject = 180;
+            NetworkClient client = null;
 
-            if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client) || client.PlayerObject == null)
+            for (int i = 0; i < maxFramesToWaitForPlayerObject; i++)
             {
-                Debug.LogWarning($"[Bootstrapper] Teleport skipped - no PlayerObject for clientId={clientId} yet.");
+                if (NetworkManager.Singleton != null &&
+                    NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out client) &&
+                    client.PlayerObject != null)
+                {
+                    break;
+                }
+
+                yield return null;
+            }
+
+            if (client == null || client.PlayerObject == null)
+            {
+                Debug.LogWarning($"[Bootstrapper] Teleport skipped - no PlayerObject for clientId={clientId} after wait.");
                 yield break;
             }
 
@@ -185,24 +378,19 @@ namespace HuntersAndCollectors.Bootstrap
             if (snapPlayerToGround)
                 spawnPosition = ResolveGroundedPlayerPosition(client.PlayerObject, spawnPosition);
 
-            var playerObj = client.PlayerObject;
-
-            // Log positions so we can prove what happened.
-            var before = playerObj.transform.position;
-            var target = spawnPosition;
+            NetworkObject playerObj = client.PlayerObject;
+            Vector3 before = playerObj.transform.position;
+            Vector3 target = spawnPosition;
 
             Debug.Log($"[Bootstrapper] Teleport attempt clientId={clientId} netId={playerObj.NetworkObjectId} FROM {before} TO {target}");
 
             TeleportPlayerToSpawn(playerObj, target, spawnRotation, spawnId);
 
-            // Wait another frame and check if something snapped them back.
             yield return null;
 
-            var after = playerObj.transform.position;
+            Vector3 after = playerObj.transform.position;
             Debug.Log($"[Bootstrapper] Teleport result clientId={clientId} pos={after}");
 
-            // If it got overwritten, force it again one more time.
-            // This commonly happens when the owner's NetworkTransform sends its first state.
             if ((after - target).sqrMagnitude > 0.01f)
             {
                 Debug.LogWarning("[Bootstrapper] Player snapped back after teleport. Forcing teleport again.");
@@ -212,32 +400,40 @@ namespace HuntersAndCollectors.Bootstrap
 
         private void TrySpawnStartupActors()
         {
-            if (_startupActorsSpawned)
+            if (startupActorsSpawned)
                 return;
 
-            if (_actorSpawner == null)
-                _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+            if (actorSpawner == null)
+                actorSpawner = FindFirstObjectByType<ActorSpawner>();
 
-            if (_actorSpawner == null)
+            if (actorSpawner == null)
                 return;
 
-            _actorSpawner.ServerSpawnConfiguredActorsOnce();
-            _startupActorsSpawned = true;
+            actorSpawner.ServerSpawnConfiguredActorsOnce();
+            startupActorsSpawned = true;
         }
 
         private bool TryResolvePlayerSpawn(out Vector3 position, out Quaternion rotation)
         {
-            if (_actorSpawner == null)
-                _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+            if (actorSpawner == null)
+                actorSpawner = FindFirstObjectByType<ActorSpawner>();
 
-            if (_actorSpawner != null && _actorSpawner.TryGetPlayerSpawnTransform(spawnId, out position, out rotation))
+            if (actorSpawner != null && actorSpawner.TryGetPlayerSpawnTransform(spawnId, out position, out rotation))
                 return true;
 
-            // Compatibility fallback for legacy scenes still using SceneSpawnPoint.
             if (TryFindSpawnPointInScene(gameplaySceneName, spawnId, out var legacySpawn))
             {
                 position = legacySpawn.transform.position;
                 rotation = legacySpawn.transform.rotation;
+                return true;
+            }
+
+            // Safe fallback for mis-typed ids: use first spawn in scene instead of dropping at origin.
+            if (TryFindAnySpawnPointInScene(gameplaySceneName, out legacySpawn))
+            {
+                position = legacySpawn.transform.position;
+                rotation = legacySpawn.transform.rotation;
+                Debug.LogWarning($"[Bootstrapper] Spawn id '{spawnId}' not found. Falling back to first scene spawn '{legacySpawn.SpawnId}'.");
                 return true;
             }
 
@@ -246,27 +442,21 @@ namespace HuntersAndCollectors.Bootstrap
             return false;
         }
 
-        /// <summary>
-        /// Finds a SceneSpawnPoint that belongs to a specific Unity Scene by name.
-        /// This matters when you load additively (multiple scenes exist at once).
-        /// </summary>
-        private static bool TryFindSpawnPointInScene(string sceneName, string spawnId, out SceneSpawnPoint spawnPoint)
+        private static bool TryFindSpawnPointInScene(string sceneName, string targetSpawnId, out SceneSpawnPoint spawnPoint)
         {
-            // Note: FindObjectsByType finds objects across loaded scenes.
             var all = Object.FindObjectsByType<SceneSpawnPoint>(FindObjectsSortMode.None);
 
             for (int i = 0; i < all.Length; i++)
             {
-                var sp = all[i];
+                SceneSpawnPoint sp = all[i];
                 if (sp == null)
                     continue;
 
-                // Ensure it is in the correct additive scene.
                 if (sp.gameObject.scene.name != sceneName)
                     continue;
 
-                // Ensure it matches the requested spawn id.
-                if (!string.Equals(sp.SpawnId, spawnId, System.StringComparison.Ordinal))
+                // Case-insensitive to prevent brittle id mismatch (Heartstone vs HeartStone).
+                if (!string.Equals(sp.SpawnId, targetSpawnId, System.StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 spawnPoint = sp;
@@ -277,11 +467,27 @@ namespace HuntersAndCollectors.Bootstrap
             return false;
         }
 
-        /// <summary>
-        /// Server-side teleport.
-        /// Disables CharacterController (if present) before moving to avoid collision snapping.
-        /// NetworkTransform / NGO will replicate the new position to clients.
-        /// </summary>
+        private static bool TryFindAnySpawnPointInScene(string sceneName, out SceneSpawnPoint spawnPoint)
+        {
+            var all = Object.FindObjectsByType<SceneSpawnPoint>(FindObjectsSortMode.None);
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                SceneSpawnPoint sp = all[i];
+                if (sp == null)
+                    continue;
+
+                if (sp.gameObject.scene.name != sceneName)
+                    continue;
+
+                spawnPoint = sp;
+                return true;
+            }
+
+            spawnPoint = null;
+            return false;
+        }
+
         private Vector3 ResolveGroundedPlayerPosition(NetworkObject playerObject, Vector3 desiredPosition)
         {
             EnsureGroundMaskInitialized();
@@ -318,12 +524,11 @@ namespace HuntersAndCollectors.Bootstrap
             int groundLayer = LayerMask.NameToLayer("Ground");
             groundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics.DefaultRaycastLayers;
         }
+
         private static void TeleportPlayerToSpawn(NetworkObject playerObject, Vector3 position, Quaternion rotation, string spawnLabel)
         {
-            var playerTransform = playerObject.transform;
-
-            // If you use CharacterController-based movement, disable before teleporting.
-            var cc = playerObject.GetComponent<CharacterController>();
+            Transform playerTransform = playerObject.transform;
+            CharacterController cc = playerObject.GetComponent<CharacterController>();
             if (cc != null)
                 cc.enabled = false;
 
@@ -336,9 +541,5 @@ namespace HuntersAndCollectors.Bootstrap
         }
     }
 }
-
-
-
-
 
 

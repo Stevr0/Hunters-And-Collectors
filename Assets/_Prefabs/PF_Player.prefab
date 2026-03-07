@@ -8054,6 +8054,7 @@ MonoBehaviour:
   skills: {fileID: 691804140746123789}
   knownItems: {fileID: 3306535855743876770}
   inventory: {fileID: 4863483339001891176}
+  equipment: {fileID: 0}
 --- !u!114 &4863483339001891176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8170,9 +8171,13 @@ MonoBehaviour:
   pitchMin: -80
   pitchMax: 80
   cameraPivot: {fileID: 3866871865449947061}
+  gravity: -30
+  groundedStickVelocity: 2
+  maxFallSpeed: 60
   runningXpTickSeconds: 1
   runningXpPerTick: 200
   minMoveInputToCount: 0.1
+  sprintStaminaCostPerSecond: 8
   animator: {fileID: 5712288911929492183}
   animDampTime: 0.1
   minSpeedToAnimate: 0.05
@@ -8606,7 +8611,7 @@ NavMeshAgent:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4492703975310421043}
-  m_Enabled: 1
+  m_Enabled: 0
   m_AgentTypeID: 0
   m_Radius: 0.5
   m_Speed: 3.5
@@ -8670,6 +8675,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   inventory: {fileID: 4863483339001891176}
   skills: {fileID: 691804140746123789}
+  statsProvider: {fileID: 5779662129854349533}
   healthBridge: {fileID: -8358533200946782}
   foodSummaryRefreshSeconds: 1
 --- !u!1 &6058968616292535986

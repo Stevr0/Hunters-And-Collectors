@@ -2,6 +2,7 @@ using System;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Players;
+using HuntersAndCollectors.Persistence;
 using HuntersAndCollectors.Skills;
 using Unity.Collections;
 using Unity.Netcode;
@@ -34,6 +35,7 @@ namespace HuntersAndCollectors.Crafting
         private PlayerInventoryNet inventoryNet;
         private SkillsNet skillsNet;
         private PlayerNetworkRoot playerRoot;
+
 
         public override void OnNetworkSpawn()
         {
@@ -140,6 +142,7 @@ namespace HuntersAndCollectors.Crafting
                             success = false;
                         }
                     }
+
 
                     var result = BuildAttemptResult(
                         recipeId,
@@ -361,4 +364,8 @@ namespace HuntersAndCollectors.Crafting
         }
     }
 }
+
+
+
+
 

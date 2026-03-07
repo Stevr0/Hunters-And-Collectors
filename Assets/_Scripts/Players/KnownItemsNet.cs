@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using HuntersAndCollectors.Persistence;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,6 +12,8 @@ namespace HuntersAndCollectors.Players
     public sealed class KnownItemsNet : NetworkBehaviour
     {
         private readonly NetworkList<KnownItemEntry> known = new();
+
+        public NetworkList<KnownItemEntry> Entries => known;
 
         /// <summary>
         /// Returns true if item is already known.
@@ -77,13 +81,38 @@ namespace HuntersAndCollectors.Players
 
                 var entry = known[i];
                 entry.BasePrice = basePrice;
-                known[i] = entry; // IMPORTANT: triggers replication
+                known[i] = entry;
                 return true;
             }
 
-            // If not known yet
             EnsureKnown(itemId);
             return TrySetBasePrice(itemId, basePrice);
+        }
+
+        /// <summary>
+        /// Server-only bulk restore used by persistence loading.
+        /// </summary>
+        public void ServerLoadEntries(IReadOnlyList<KnownItemSaveData> entries)
+        {
+            if (!IsServer)
+                return;
+
+            known.Clear();
+            if (entries == null)
+                return;
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                KnownItemSaveData row = entries[i];
+                if (row == null || string.IsNullOrWhiteSpace(row.id))
+                    continue;
+
+                known.Add(new KnownItemEntry
+                {
+                    ItemId = new FixedString64Bytes(row.id.Trim()),
+                    BasePrice = row.@base < 0 ? 0 : row.@base
+                });
+            }
         }
 
         /// <summary>

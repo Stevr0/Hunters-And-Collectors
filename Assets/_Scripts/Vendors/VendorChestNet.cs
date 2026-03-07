@@ -1,6 +1,7 @@
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
+using HuntersAndCollectors.Persistence;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -173,6 +174,108 @@ namespace HuntersAndCollectors.Vendors
             // - Optionally replicate pending payout to owner UI only.
         }
 
+
+        public int PendingPayoutCoins => pendingPayoutCoins;
+
+        public VendorSaveData ServerExportSaveData()
+        {
+            var data = new VendorSaveData
+            {
+                vendorId = vendorId,
+                ownerPlayerKey = string.Empty,
+                treasuryCoins = Mathf.Max(0, pendingPayoutCoins),
+                basePrices = new List<KnownItemSaveData>(),
+                chest = new InventoryGridSaveData
+                {
+                    w = grid != null ? grid.Width : width,
+                    h = grid != null ? grid.Height : height,
+                    slots = new List<InventorySlotSaveData>()
+                }
+            };
+
+            foreach (var kvp in basePrices)
+            {
+                data.basePrices.Add(new KnownItemSaveData
+                {
+                    id = kvp.Key,
+                    @base = Mathf.Max(0, kvp.Value)
+                });
+            }
+
+            if (grid != null)
+            {
+                for (int i = 0; i < grid.Slots.Length; i++)
+                {
+                    var slot = grid.Slots[i];
+                    if (slot.IsEmpty)
+                    {
+                        data.chest.slots.Add(null);
+                        continue;
+                    }
+
+                    data.chest.slots.Add(new InventorySlotSaveData
+                    {
+                        id = slot.Stack.ItemId,
+                        q = slot.Stack.Quantity
+                    });
+                }
+            }
+
+            return data;
+        }
+
+        public void ServerApplySaveData(VendorSaveData data, ItemDatabase db)
+        {
+            if (!IsServer || data == null)
+                return;
+
+            int targetWidth = data.chest != null ? Mathf.Max(1, data.chest.w) : width;
+            int targetHeight = data.chest != null ? Mathf.Max(1, data.chest.h) : height;
+
+            grid = new InventoryGrid(targetWidth, targetHeight, itemDatabase != null ? itemDatabase : db);
+            pendingPayoutCoins = Mathf.Max(0, data.treasuryCoins);
+            basePrices.Clear();
+
+            if (data.basePrices != null)
+            {
+                for (int i = 0; i < data.basePrices.Count; i++)
+                {
+                    KnownItemSaveData row = data.basePrices[i];
+                    if (row == null || string.IsNullOrWhiteSpace(row.id))
+                        continue;
+
+                    basePrices[row.id.Trim()] = Mathf.Max(0, row.@base);
+                }
+            }
+
+            if (data.chest != null && data.chest.slots != null)
+            {
+                int copyCount = Mathf.Min(grid.Slots.Length, data.chest.slots.Count);
+                for (int i = 0; i < copyCount; i++)
+                {
+                    InventorySlotSaveData saveSlot = data.chest.slots[i];
+                    if (saveSlot == null || string.IsNullOrWhiteSpace(saveSlot.id) || saveSlot.q <= 0)
+                        continue;
+
+                    ItemDatabase useDb = itemDatabase != null ? itemDatabase : db;
+                    if (useDb == null || !useDb.TryGet(saveSlot.id, out ItemDef def) || def == null)
+                        continue;
+
+                    int maxStack = Mathf.Max(1, def.MaxDurability > 0 ? 1 : def.MaxStack);
+                    int qty = Mathf.Clamp(saveSlot.q, 1, maxStack);
+
+                    grid.Slots[i] = new InventorySlot
+                    {
+                        IsEmpty = false,
+                        Stack = new ItemStack { ItemId = def.ItemId, Quantity = qty },
+                        Durability = 0,
+                        InstanceData = default
+                    };
+                }
+            }
+
+            ForceBroadcastSnapshot();
+        }
         public int GetBasePrice(string itemId)
         {
             if (basePrices.TryGetValue(itemId, out var price))
@@ -191,3 +294,5 @@ namespace HuntersAndCollectors.Vendors
 
     }
 }
+
+

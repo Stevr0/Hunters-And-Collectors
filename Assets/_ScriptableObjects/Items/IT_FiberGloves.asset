@@ -28,12 +28,12 @@ MonoBehaviour:
   Rarity: 0
   CraftTime: 5
   BaseQuality: 1
-  MaxDurability: 100
+  MaxDurability: 50
   Damage: 0
-  Defence: 2
+  Defence: 0.1
   AttackBonus: 0
   SwingSpeed: 0.01
-  MovementSpeed: 1
+  MovementSpeed: 0.9
   Strength: 1
   Dexterity: 2
   LegacyDexterity: 0

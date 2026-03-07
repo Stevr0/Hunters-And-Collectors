@@ -30,10 +30,10 @@ MonoBehaviour:
   BaseQuality: 1
   MaxDurability: 100
   Damage: 0
-  Defence: 2
+  Defence: 1
   AttackBonus: 0
   SwingSpeed: 0.01
-  MovementSpeed: 0.25
+  MovementSpeed: 0.7
   Strength: 1
   Dexterity: 0
   LegacyDexterity: 0

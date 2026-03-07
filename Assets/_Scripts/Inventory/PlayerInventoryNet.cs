@@ -1,6 +1,7 @@
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Players;
+using HuntersAndCollectors.Persistence;
 using System;
 using Unity.Collections;
 using Unity.Netcode;
@@ -376,6 +377,51 @@ namespace HuntersAndCollectors.Inventory
             }
         }
 
+
+        /// <summary>
+        /// SERVER ONLY: replace authoritative grid from persistence payload and replicate snapshot.
+        /// </summary>
+        public void ServerLoadGrid(InventoryGridSaveData saveData)
+        {
+            if (!IsServer)
+                return;
+
+            if (saveData == null)
+                return;
+
+            int targetWidth = Mathf.Max(1, saveData.w);
+            int targetHeight = Mathf.Max(1, saveData.h);
+            int expectedSlots = targetWidth * targetHeight;
+
+            grid = new InventoryGrid(targetWidth, targetHeight, itemDatabase);
+
+            if (saveData.slots != null)
+            {
+                int copyCount = Mathf.Min(expectedSlots, saveData.slots.Count);
+                for (int i = 0; i < copyCount; i++)
+                {
+                    var slot = saveData.slots[i];
+                    if (slot == null || string.IsNullOrWhiteSpace(slot.id) || slot.q <= 0)
+                        continue;
+
+                    if (!TryGetItemDef(slot.id, out var def) || def == null)
+                        continue;
+
+                    int maxStack = Mathf.Max(1, def.MaxDurability > 0 ? 1 : def.MaxStack);
+                    int qty = Mathf.Clamp(slot.q, 1, maxStack);
+
+                    grid.Slots[i] = new InventorySlot
+                    {
+                        IsEmpty = false,
+                        Stack = new ItemStack { ItemId = def.ItemId, Quantity = qty },
+                        Durability = 0,
+                        InstanceData = default
+                    };
+                }
+            }
+
+            ForceSendSnapshotToOwner();
+        }
         public void ForceSendSnapshotToOwner()
         {
             if (!IsServer || grid == null) return;
@@ -432,7 +478,12 @@ namespace HuntersAndCollectors.Inventory
             var remainder = grid.Add(itemId, quantity, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy);
 
             if (remainder < quantity)
+            {
                 knownItems?.EnsureKnown(itemId);
+
+                // Save trigger hook for server-authoritative progression mutations (harvest/craft/vendor/item grants).
+                SaveManager.NotifyPlayerProgressChanged(GetComponent<PlayerNetworkRoot>());
+            }
 
             MarkDirtyAndMaybeSendSnapshot();
             return remainder;
@@ -503,6 +554,10 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+
+
+
 
 
 

@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using HuntersAndCollectors.Actors;
+using HuntersAndCollectors.Persistence;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -170,6 +172,53 @@ namespace HuntersAndCollectors.Skills
             });
         }
 
+
+        /// <summary>
+        /// Server-only bulk restore used by persistence loading.
+        /// Existing entries are replaced.
+        /// </summary>
+        public void ServerLoadEntries(IReadOnlyList<SkillSaveData> entries)
+        {
+            if (!IsServer)
+                return;
+
+            skills.Clear();
+
+            if (entries != null)
+            {
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    SkillSaveData row = entries[i];
+                    if (row == null || string.IsNullOrWhiteSpace(row.id))
+                        continue;
+
+                    skills.Add(new SkillEntry
+                    {
+                        Id = new FixedString64Bytes(row.id.Trim()),
+                        Level = Mathf.Clamp(row.lvl, 0, MaxSkillLevel),
+                        Xp = Mathf.Max(0, row.xp)
+                    });
+                }
+            }
+
+            // Ensure all core skills always exist even if missing from save payload.
+            EnsureSkill(SkillId.Sales);
+            EnsureSkill(SkillId.Negotiation);
+            EnsureSkill(SkillId.Running);
+            EnsureSkill(SkillId.Vitality);
+            EnsureSkill(SkillId.Endurance);
+            EnsureSkill(SkillId.Woodcutting);
+            EnsureSkill(SkillId.Mining);
+            EnsureSkill(SkillId.Foraging);
+            EnsureSkill(SkillId.ToolCrafting);
+            EnsureSkill(SkillId.EquipmentCrafting);
+            EnsureSkill(SkillId.BuildingCrafting);
+            EnsureSkill(SkillId.CombatAxe);
+            EnsureSkill(SkillId.CombatPickaxe);
+            EnsureSkill(SkillId.CombatKnife);
+            EnsureSkill(SkillId.CombatClub);
+            EnsureSkill(SkillId.CombatUnarmed);
+        }
         private void EnsureSkill(string id)
         {
             var key = new FixedString64Bytes(id);
@@ -182,6 +231,8 @@ namespace HuntersAndCollectors.Skills
         }
     }
 }
+
+
 
 
 
