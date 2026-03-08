@@ -450,6 +450,7 @@ namespace HuntersAndCollectors.Inventory.UI
                     InventorySnapshot.SlotDto s = snapshot.Slots[i];
                     hash = hash * 31 + (s.IsEmpty ? 1 : 0);
                     hash = hash * 31 + s.Quantity;
+                    hash = hash * 31 + (int)s.ContentType;
                     hash = hash * 31 + s.ItemId.GetHashCode();
                     hash = hash * 31 + s.Durability;
                     hash = hash * 31 + s.MaxDurability;
@@ -457,6 +458,11 @@ namespace HuntersAndCollectors.Inventory.UI
                     hash = hash * 31 + s.BonusDexterity;
                     hash = hash * 31 + s.BonusIntelligence;
                     hash = hash * 31 + s.CraftedBy.GetHashCode();
+                    hash = hash * 31 + s.InstanceId.GetHashCode();
+                    hash = hash * 31 + s.RolledDamage.GetHashCode();
+                    hash = hash * 31 + s.RolledDefence.GetHashCode();
+                    hash = hash * 31 + s.RolledSwingSpeed.GetHashCode();
+                    hash = hash * 31 + s.RolledMovementSpeed.GetHashCode();
                 }
 
                 return hash;
@@ -539,18 +545,25 @@ namespace HuntersAndCollectors.Inventory.UI
                 BonusDexterity = slot.BonusDexterity,
                 BonusIntelligence = slot.BonusIntelligence,
                 Durability = durability,
-                CraftedBy = slot.CraftedBy.ToString()
+                MaxDurability = slot.MaxDurability,
+                CraftedBy = slot.CraftedBy.ToString(),
+                InstanceId = slot.InstanceId,
+                RolledDamage = slot.RolledDamage,
+                RolledDefence = slot.RolledDefence,
+                RolledSwingSpeed = slot.RolledSwingSpeed,
+                RolledMovementSpeed = slot.RolledMovementSpeed
             };
 
             if (itemDatabase != null && itemDatabase.TryGet(itemId, out ItemDef def) && def != null)
             {
                 data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
                 data.Description = def.Description;
-                data.Damage = def.Damage;
-                data.Defence = def.Defence;
+                // Prefer rolled values when this slot represents an instance item.
+                data.Damage = slot.ContentType == InventorySlotContentType.Instance && slot.RolledDamage > 0f ? slot.RolledDamage : def.Damage;
+                data.Defence = slot.ContentType == InventorySlotContentType.Instance && slot.RolledDefence > 0f ? slot.RolledDefence : def.Defence;
                 data.AttackBonus = def.AttackBonus;
-                data.SwingSpeed = def.SwingSpeed;
-                data.MoveSpeed = def.MovementSpeed;
+                data.SwingSpeed = slot.ContentType == InventorySlotContentType.Instance && slot.RolledSwingSpeed > 0f ? slot.RolledSwingSpeed : def.SwingSpeed;
+                data.MoveSpeed = slot.ContentType == InventorySlotContentType.Instance && slot.RolledMovementSpeed > 0f ? slot.RolledMovementSpeed : def.MovementSpeed;
 
                 data.Strength = Mathf.Max(0, def.Strength) + slot.BonusStrength;
                 data.Dexterity = Mathf.Max(0, def.Dexterity) + slot.BonusDexterity;
@@ -881,6 +894,8 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
+
 
 
 

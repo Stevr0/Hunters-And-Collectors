@@ -6,7 +6,7 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class PlayerSaveData
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public string playerKey = string.Empty;
         public WalletSaveData wallet = new();
         public List<SkillSaveData> skills = new();
@@ -46,14 +46,35 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class InventorySlotSaveData
     {
+        // Versioned tagged union:
+        // - v1 data: id + q only (kind missing/empty => Stack)
+        // - v2 data: kind + stack/instance payload fields
+        public string kind = string.Empty; // "Stack" or "Instance"
+
+        // Stack payload / shared identity.
         public string id = string.Empty;
         public int q;
+
+        // Instance payload.
+        public long instanceId;
+        public float rolledDamage;
+        public float rolledDefence;
+        public float rolledSwingSpeed;
+        public float rolledMovementSpeed;
+        public int maxDurability;
+        public int currentDurability;
+
+        // Legacy bridge metadata.
+        public int bonusStrength;
+        public int bonusDexterity;
+        public int bonusIntelligence;
+        public string craftedBy = string.Empty;
     }
 
     [Serializable]
     public sealed class ShardSaveData
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public string shardKey = string.Empty;
         public List<ShelterSaveData> shelters = new();
         public List<BuildPieceSaveData> buildPieces = new();

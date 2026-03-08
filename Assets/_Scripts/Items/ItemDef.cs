@@ -81,14 +81,37 @@ namespace HuntersAndCollectors.Items
         public float CraftTime = 1f;
 
         [Header("Quality / Durability")]
-        [Tooltip("Base quality (1.0 = normal). Future: crafting may roll this per instance.")]
+        [Tooltip("Legacy template quality value. Not used by instance-roll crafting.")]
         [Min(0f)]
         public float BaseQuality = 1f;
 
-        [Tooltip("Max durability limit for this item type. 0 = indestructible.")]
+        [Tooltip("Legacy template durability cap. For instance-crafted gear, use DurabilityMin/Max.")]
         [Min(0)]
         public int MaxDurability = 0;
 
+        [Header("Item Instance / Roll Template")]
+        [Tooltip("If true, crafted output for this item uses ItemInstance runtime data and does not stack.")]
+        public bool IsInstanceItem = false;
+
+        [Tooltip("Server roll range for per-instance damage.")]
+        public float DamageMin = 0f;
+        public float DamageMax = 0f;
+
+        [Tooltip("Server roll range for per-instance defence.")]
+        public float DefenceMin = 0f;
+        public float DefenceMax = 0f;
+
+        [Tooltip("Server roll range for per-instance swing speed.")]
+        public float SwingSpeedMin = 0f;
+        public float SwingSpeedMax = 0f;
+
+        [Tooltip("Server roll range for per-instance movement speed multiplier.")]
+        public float MovementSpeedMin = 0f;
+        public float MovementSpeedMax = 0f;
+
+        [Tooltip("Server roll range for per-instance max durability.")]
+        public int DurabilityMin = 0;
+        public int DurabilityMax = 0;
         [Header("Combat")]
         [Tooltip("Base damage (weapons/tools).")]
         [Min(0f)]
@@ -168,6 +191,37 @@ namespace HuntersAndCollectors.Items
         [Min(0f)]
         public float FoodDurationSeconds = 0f;
 
+        
+        /// <summary>
+        /// Runtime rule used by authoritative systems to decide whether this item should
+        /// be represented as a unique instance payload in inventory.
+        /// </summary>
+        public bool UsesItemInstance
+        {
+            get
+            {
+                if (IsInstanceItem)
+                    return true;
+
+                // Safe fallback for older assets that were not yet flagged.
+                return MaxStack <= 1 && (IsEquippable || (ToolTags != null && ToolTags.Length > 0));
+            }
+        }
+
+        public float ResolveDamageMin() => DamageMin > 0f ? DamageMin : Damage;
+        public float ResolveDamageMax() => DamageMax > 0f ? DamageMax : Mathf.Max(ResolveDamageMin(), Damage);
+
+        public float ResolveDefenceMin() => DefenceMin > 0f ? DefenceMin : Defence;
+        public float ResolveDefenceMax() => DefenceMax > 0f ? DefenceMax : Mathf.Max(ResolveDefenceMin(), Defence);
+
+        public float ResolveSwingSpeedMin() => SwingSpeedMin > 0f ? SwingSpeedMin : SwingSpeed;
+        public float ResolveSwingSpeedMax() => SwingSpeedMax > 0f ? SwingSpeedMax : Mathf.Max(ResolveSwingSpeedMin(), SwingSpeed);
+
+        public float ResolveMovementSpeedMin() => MovementSpeedMin > 0f ? MovementSpeedMin : MovementSpeed;
+        public float ResolveMovementSpeedMax() => MovementSpeedMax > 0f ? MovementSpeedMax : Mathf.Max(ResolveMovementSpeedMin(), MovementSpeed);
+
+        public int ResolveDurabilityMin() => DurabilityMin > 0 ? DurabilityMin : MaxDurability;
+        public int ResolveDurabilityMax() => DurabilityMax > 0 ? DurabilityMax : Mathf.Max(ResolveDurabilityMin(), MaxDurability);
         [Header("Placeable Building (Unified Item Model)")]
         [Tooltip("If true, this item can be placed into the world as a structure.")]
         public bool IsPlaceable = false;
@@ -204,6 +258,22 @@ namespace HuntersAndCollectors.Items
             if (BaseValue < 0) BaseValue = 0;
             if (BaseQuality < 0f) BaseQuality = 0f;
             if (MaxDurability < 0) MaxDurability = 0;
+            if (DamageMin < 0f) DamageMin = 0f;
+            if (DamageMax < 0f) DamageMax = 0f;
+            if (DefenceMin < 0f) DefenceMin = 0f;
+            if (DefenceMax < 0f) DefenceMax = 0f;
+            if (SwingSpeedMin < 0f) SwingSpeedMin = 0f;
+            if (SwingSpeedMax < 0f) SwingSpeedMax = 0f;
+            if (MovementSpeedMin < 0f) MovementSpeedMin = 0f;
+            if (MovementSpeedMax < 0f) MovementSpeedMax = 0f;
+            if (DurabilityMin < 0) DurabilityMin = 0;
+            if (DurabilityMax < 0) DurabilityMax = 0;
+
+            if (DamageMax > 0f && DamageMin > DamageMax) DamageMin = DamageMax;
+            if (DefenceMax > 0f && DefenceMin > DefenceMax) DefenceMin = DefenceMax;
+            if (SwingSpeedMax > 0f && SwingSpeedMin > SwingSpeedMax) SwingSpeedMin = SwingSpeedMax;
+            if (MovementSpeedMax > 0f && MovementSpeedMin > MovementSpeedMax) MovementSpeedMin = MovementSpeedMax;
+            if (DurabilityMax > 0 && DurabilityMin > DurabilityMax) DurabilityMin = DurabilityMax;
 
             // One-time migration fallback for old float dexterity assets.
             if (Dexterity <= 0 && LegacyDexterity > 0f)
@@ -296,6 +366,10 @@ namespace HuntersAndCollectors.Items
         }
     }
 }
+
+
+
+
 
 
 

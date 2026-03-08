@@ -22,6 +22,7 @@ namespace HuntersAndCollectors.Persistence
             SavePaths.EnsureDirectories();
             string filePath = SavePaths.ShardPath(shardKey);
             bool createFresh = false;
+            bool migratedFromOldSchema = false;
             ShardSaveData data;
 
             if (!System.IO.File.Exists(filePath))
@@ -36,6 +37,12 @@ namespace HuntersAndCollectors.Persistence
                 ArchiveCorrupt(filePath);
                 data = CreateDefault(shardKey);
                 createFresh = true;
+            }
+            else if (data.schemaVersion == 1)
+            {
+                migratedFromOldSchema = true;
+                MigrateV1ToV2(data);
+                data.schemaVersion = SavePaths.CurrentSchemaVersion;
             }
             else if (data.schemaVersion != SavePaths.CurrentSchemaVersion)
             {
@@ -57,7 +64,7 @@ namespace HuntersAndCollectors.Persistence
             ApplyToRuntime(data);
             runtimeState = data;
 
-            if (createFresh)
+            if (createFresh || migratedFromOldSchema)
                 SavePaths.WriteJson(filePath, data);
 
             return data;
@@ -167,6 +174,39 @@ namespace HuntersAndCollectors.Persistence
             // TODO: Hook build pieces and shelter completion flags to gameplay systems when those runtime systems exist.
         }
 
+
+        private static void MigrateV1ToV2(ShardSaveData data)
+        {
+            if (data?.shelters == null)
+                return;
+
+            for (int i = 0; i < data.shelters.Count; i++)
+            {
+                VendorSaveData vendor = data.shelters[i]?.vendor;
+                if (vendor?.chest?.slots == null)
+                    continue;
+
+                for (int s = 0; s < vendor.chest.slots.Count; s++)
+                {
+                    InventorySlotSaveData slot = vendor.chest.slots[s];
+                    if (slot == null)
+                        continue;
+
+                    slot.kind = "Stack";
+                    slot.instanceId = 0;
+                    slot.rolledDamage = 0f;
+                    slot.rolledDefence = 0f;
+                    slot.rolledSwingSpeed = 0f;
+                    slot.rolledMovementSpeed = 0f;
+                    slot.maxDurability = 0;
+                    slot.currentDurability = 0;
+                    slot.bonusStrength = 0;
+                    slot.bonusDexterity = 0;
+                    slot.bonusIntelligence = 0;
+                    slot.craftedBy = string.Empty;
+                }
+            }
+        }
         private bool ValidateAndSanitize(ShardSaveData data, out string severeFailureReason)
         {
             severeFailureReason = string.Empty;
@@ -282,3 +322,4 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+

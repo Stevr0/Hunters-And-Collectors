@@ -89,11 +89,11 @@ namespace HuntersAndCollectors.UI
 
             data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
             data.Description = def.Description;
-            data.Damage = def.Damage;
-            data.Defence = def.Defence;
+            data.Damage = data.RolledDamage > 0f ? data.RolledDamage : def.Damage;
+            data.Defence = data.RolledDefence > 0f ? data.RolledDefence : def.Defence;
             data.AttackBonus = def.AttackBonus;
-            data.SwingSpeed = def.SwingSpeed;
-            data.MoveSpeed = def.MovementSpeed;
+            data.SwingSpeed = data.RolledSwingSpeed > 0f ? data.RolledSwingSpeed : def.SwingSpeed;
+            data.MoveSpeed = data.RolledMovementSpeed > 0f ? data.RolledMovementSpeed : def.MovementSpeed;
 
             data.Strength = Mathf.Max(0, def.Strength) + data.BonusStrength;
             data.Dexterity = Mathf.Max(0, def.Dexterity) + data.BonusDexterity;
@@ -170,7 +170,12 @@ namespace HuntersAndCollectors.UI
             sb.Append("Move Speed: ").AppendLine(data.MoveSpeed.ToString("0.##"));
 
             if (data.Durability > 0)
-                sb.Append("Durability: ").Append(data.Durability.ToString());
+            {
+                if (data.MaxDurability > 0)
+                    sb.Append("Durability: ").Append(data.Durability.ToString()).Append("/").Append(data.MaxDurability.ToString());
+                else
+                    sb.Append("Durability: ").Append(data.Durability.ToString());
+            }
 
             return sb.ToString().TrimEnd();
         }
@@ -184,5 +189,6 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
 
 

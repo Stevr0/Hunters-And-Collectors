@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemId: it_apple
   DisplayName: Apple
   Icon: {fileID: 21300000, guid: b2cce01b5b3c97149b2a966a08e0a4e5, type: 3}
-  MaxStack: 100
+  MaxStack: 99
   Category: 3
   visualPrefab: {fileID: 2147834026543980358, guid: de09d0116085bd54186a740952aff4f1, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -29,11 +29,22 @@ MonoBehaviour:
   CraftTime: 1
   BaseQuality: 1
   MaxDurability: 0
+  IsInstanceItem: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0
+  SwingSpeedMax: 0
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 0
+  DurabilityMax: 0
   Damage: 0
   Defence: 0
   AttackBonus: 0
-  SwingSpeed: 1
-  MovementSpeed: 1
+  SwingSpeed: 0.01
+  MovementSpeed: 0
   Strength: 0
   Dexterity: 0
   LegacyDexterity: 0
@@ -43,8 +54,15 @@ MonoBehaviour:
   Handedness: 0
   ToolTags: 
   IsFood: 1
-  FoodMaxHealthBonus: 10
-  FoodMaxStaminaBonus: 10
-  FoodHealthRegenBonus: 2
-  FoodStaminaRegenBonus: 2
+  FoodMaxHealthBonus: 5
+  FoodMaxStaminaBonus: 5
+  FoodHealthRegenBonus: 1
+  FoodStaminaRegenBonus: 1
   FoodDurationSeconds: 300
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

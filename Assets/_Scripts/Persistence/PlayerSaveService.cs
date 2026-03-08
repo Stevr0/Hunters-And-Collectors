@@ -4,6 +4,7 @@ using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
+using Unity.Collections;
 using UnityEngine;
 
 namespace HuntersAndCollectors.Persistence
@@ -32,6 +33,7 @@ namespace HuntersAndCollectors.Persistence
 
             PlayerSaveData saveData;
             bool createFresh = false;
+            bool migratedFromOldSchema = false;
 
             if (!System.IO.File.Exists(filePath))
             {
@@ -48,8 +50,14 @@ namespace HuntersAndCollectors.Persistence
             }
             else
             {
-                // Unsupported schema is treated as severe corruption for MVP.
-                if (saveData.schemaVersion != SavePaths.CurrentSchemaVersion)
+                // v1 -> v2 migration is supported. Any other schema is archived.
+                if (saveData.schemaVersion == 1)
+                {
+                    migratedFromOldSchema = true;
+                    MigrateV1ToV2(saveData);
+                    saveData.schemaVersion = SavePaths.CurrentSchemaVersion;
+                }
+                else if (saveData.schemaVersion != SavePaths.CurrentSchemaVersion)
                 {
                     Debug.LogWarning($"[PlayerSaveService] Unsupported schemaVersion={saveData.schemaVersion} for {filePath}. Archiving and recreating.");
                     ArchiveCorruptFile(filePath);
@@ -71,7 +79,7 @@ namespace HuntersAndCollectors.Persistence
 
             ApplyToRuntime(playerRoot, saveData);
 
-            if (createFresh)
+            if (createFresh || migratedFromOldSchema)
                 SavePaths.WriteJson(filePath, saveData);
 
             return saveData;
@@ -137,7 +145,7 @@ namespace HuntersAndCollectors.Persistence
         {
             var inventoryData = new InventoryGridSaveData
             {
-                w = 6,
+                w = 8,
                 h = 4,
                 slots = new List<InventorySlotSaveData>()
             };
@@ -159,11 +167,35 @@ namespace HuntersAndCollectors.Persistence
                     continue;
                 }
 
-                inventoryData.slots.Add(new InventorySlotSaveData
+                if (slot.ContentType == InventorySlotContentType.Instance)
                 {
-                    id = slot.Stack.ItemId,
-                    q = slot.Stack.Quantity
-                });
+                    inventoryData.slots.Add(new InventorySlotSaveData
+                    {
+                        kind = "Instance",
+                        id = slot.Instance.ItemId,
+                        q = 1,
+                        instanceId = slot.Instance.InstanceId,
+                        rolledDamage = slot.Instance.RolledDamage,
+                        rolledDefence = slot.Instance.RolledDefence,
+                        rolledSwingSpeed = slot.Instance.RolledSwingSpeed,
+                        rolledMovementSpeed = slot.Instance.RolledMovementSpeed,
+                        maxDurability = slot.Instance.MaxDurability,
+                        currentDurability = slot.Instance.CurrentDurability,
+                        bonusStrength = slot.InstanceData.BonusStrength,
+                        bonusDexterity = slot.InstanceData.BonusDexterity,
+                        bonusIntelligence = slot.InstanceData.BonusIntelligence,
+                        craftedBy = slot.InstanceData.CraftedBy.ToString()
+                    });
+                }
+                else
+                {
+                    inventoryData.slots.Add(new InventorySlotSaveData
+                    {
+                        kind = "Stack",
+                        id = slot.Stack.ItemId,
+                        q = slot.Stack.Quantity
+                    });
+                }
             }
 
             return inventoryData;
@@ -251,32 +283,92 @@ namespace HuntersAndCollectors.Persistence
                 }
 
                 slot.id = slot.id.Trim();
-                ItemDef def = null;
-                if (itemDatabase != null)
+                if (itemDatabase == null || !itemDatabase.TryGet(slot.id, out ItemDef def) || def == null)
                 {
-                    if (!itemDatabase.TryGet(slot.id, out def) || def == null)
-                    {
-                        Debug.LogWarning($"[PlayerSaveService] Removing unknown inventory item '{slot.id}' from slot {i}.");
-                        data.inventory.slots[i] = null;
-                        continue;
-                    }
-                }
-
-                if (slot.q < 1)
-                {
+                    Debug.LogWarning($"[PlayerSaveService] Removing unknown inventory item '{slot.id}' from slot {i}.");
                     data.inventory.slots[i] = null;
                     continue;
                 }
 
-                int maxStack = def != null ? Mathf.Max(1, def.MaxDurability > 0 ? 1 : def.MaxStack) : slot.q;
-                if (slot.q > maxStack)
+                bool instanceSave = string.Equals(slot.kind, "Instance", StringComparison.OrdinalIgnoreCase) || def.UsesItemInstance;
+                if (instanceSave)
                 {
-                    Debug.LogWarning($"[PlayerSaveService] Clamping stack qty for {slot.id} in slot {i} from {slot.q} to {maxStack}.");
-                    slot.q = maxStack;
+                    slot.kind = "Instance";
+                    slot.q = 1;
+                    slot.maxDurability = slot.maxDurability > 0 ? slot.maxDurability : def.ResolveDurabilityMax();
+                    if (slot.maxDurability < 0) slot.maxDurability = 0;
+
+                    if (slot.maxDurability > 0)
+                    {
+                        if (slot.currentDurability <= 0)
+                            slot.currentDurability = slot.maxDurability;
+
+                        slot.currentDurability = Mathf.Clamp(slot.currentDurability, 1, slot.maxDurability);
+                    }
+                    else
+                    {
+                        slot.currentDurability = 0;
+                    }
+                }
+                else
+                {
+                    slot.kind = "Stack";
+                    if (slot.q < 1)
+                    {
+                        data.inventory.slots[i] = null;
+                        continue;
+                    }
+
+                    int maxStack = Mathf.Max(1, def.MaxStack);
+                    if (slot.q > maxStack)
+                    {
+                        Debug.LogWarning($"[PlayerSaveService] Clamping stack qty for {slot.id} in slot {i} from {slot.q} to {maxStack}.");
+                        slot.q = maxStack;
+                    }
+
+                    // Clear stale instance-only fields for stack rows.
+                    slot.instanceId = 0;
+                    slot.rolledDamage = 0f;
+                    slot.rolledDefence = 0f;
+                    slot.rolledSwingSpeed = 0f;
+                    slot.rolledMovementSpeed = 0f;
+                    slot.maxDurability = 0;
+                    slot.currentDurability = 0;
+                    slot.bonusStrength = 0;
+                    slot.bonusDexterity = 0;
+                    slot.bonusIntelligence = 0;
+                    slot.craftedBy = string.Empty;
                 }
             }
 
             return true;
+        }
+
+        private static void MigrateV1ToV2(PlayerSaveData data)
+        {
+            if (data == null || data.inventory == null || data.inventory.slots == null)
+                return;
+
+            for (int i = 0; i < data.inventory.slots.Count; i++)
+            {
+                InventorySlotSaveData slot = data.inventory.slots[i];
+                if (slot == null)
+                    continue;
+
+                // v1 only had id + q, so treat as stack row by default.
+                slot.kind = "Stack";
+                slot.instanceId = 0;
+                slot.rolledDamage = 0f;
+                slot.rolledDefence = 0f;
+                slot.rolledSwingSpeed = 0f;
+                slot.rolledMovementSpeed = 0f;
+                slot.maxDurability = 0;
+                slot.currentDurability = 0;
+                slot.bonusStrength = 0;
+                slot.bonusDexterity = 0;
+                slot.bonusIntelligence = 0;
+                slot.craftedBy = string.Empty;
+            }
         }
 
         private void ApplyToRuntime(PlayerNetworkRoot playerRoot, PlayerSaveData data)
@@ -371,4 +463,3 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
-

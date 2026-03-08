@@ -86,12 +86,24 @@ namespace HuntersAndCollectors.Vendors
                 var s = grid.Slots[i];
 
                 slots[i] = s.IsEmpty
-                    ? new InventorySnapshot.SlotDto { IsEmpty = true }
+                    ? new InventorySnapshot.SlotDto { IsEmpty = true, ContentType = InventorySlotContentType.Empty }
                     : new InventorySnapshot.SlotDto
                     {
                         IsEmpty = false,
+                        ContentType = InventorySlotContentType.Stack,
                         ItemId = new FixedString64Bytes(s.Stack.ItemId),
-                        Quantity = s.Stack.Quantity
+                        Quantity = s.Stack.Quantity,
+                        Durability = 0,
+                        MaxDurability = 0,
+                        BonusStrength = 0,
+                        BonusDexterity = 0,
+                        BonusIntelligence = 0,
+                        CraftedBy = default,
+                        InstanceId = 0,
+                        RolledDamage = 0f,
+                        RolledDefence = 0f,
+                        RolledSwingSpeed = 0f,
+                        RolledMovementSpeed = 0f
                     };
             }
 
@@ -215,6 +227,7 @@ namespace HuntersAndCollectors.Vendors
 
                     data.chest.slots.Add(new InventorySlotSaveData
                     {
+                        kind = "Stack",
                         id = slot.Stack.ItemId,
                         q = slot.Stack.Quantity
                     });
@@ -267,6 +280,7 @@ namespace HuntersAndCollectors.Vendors
                     grid.Slots[i] = new InventorySlot
                     {
                         IsEmpty = false,
+                        ContentType = InventorySlotContentType.Stack,
                         Stack = new ItemStack { ItemId = def.ItemId, Quantity = qty },
                         Durability = 0,
                         InstanceData = default
@@ -294,5 +308,6 @@ namespace HuntersAndCollectors.Vendors
 
     }
 }
+
 
 

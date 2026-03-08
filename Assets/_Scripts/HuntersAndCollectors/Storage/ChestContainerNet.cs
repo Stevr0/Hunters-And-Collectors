@@ -204,7 +204,7 @@ namespace HuntersAndCollectors.Storage
             int remainingInChestSlot = chestSlot.Stack.Quantity - transferQuantity;
             if (remainingInChestSlot <= 0)
             {
-                chestGrid.Slots[chestSlotIndex] = new InventorySlot { IsEmpty = true };
+                chestGrid.Slots[chestSlotIndex] = new InventorySlot { IsEmpty = true, ContentType = InventorySlotContentType.Empty };
             }
             else
             {
@@ -364,3 +364,4 @@ namespace HuntersAndCollectors.Storage
 #endif
     }
 }
+

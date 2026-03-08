@@ -29,9 +29,21 @@ MonoBehaviour:
   CraftTime: 5
   BaseQuality: 1
   MaxDurability: 150
-  Damage: 5
+  IsInstanceItem: 1
+  DamageMin: 1
+  DamageMax: 10
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.2
+  SwingSpeedMax: 2
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 10
+  DurabilityMax: 200
+  Damage: 2
   Defence: 0
-  SwingSpeed: 2
+  AttackBonus: 0
+  SwingSpeed: 1
   MovementSpeed: 1
   Strength: 3
   Dexterity: 2
@@ -41,3 +53,16 @@ MonoBehaviour:
   EquipSlot: 10
   Handedness: 1
   ToolTags: 
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

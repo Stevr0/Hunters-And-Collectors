@@ -1,5 +1,6 @@
 using System;
 using HuntersAndCollectors.Inventory;
+using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Persistence;
@@ -13,11 +14,12 @@ namespace HuntersAndCollectors.Crafting
     /// <summary>
     /// CraftingNet
     /// ------------------------------------------------------------
-    /// Server-authoritative crafting endpoint with skill-based success.
+    /// Server-authoritative crafting endpoint.
     ///
-    /// Important for item quality progression:
-    /// - Crafted equippable/tool items can receive per-instance attribute bonuses.
-    /// - Bonuses are rolled on the server only and stored in inventory slot instance data.
+    /// Updated behavior:
+    /// - Crafting never fails due to RNG once validation passes.
+    /// - Non-stackable crafted gear uses server-rolled ItemInstance stats/durability.
+    /// - Skill influences roll quality distribution (biased RNG profile).
     /// </summary>
     public sealed class CraftingNet : NetworkBehaviour
     {
@@ -32,13 +34,22 @@ namespace HuntersAndCollectors.Crafting
         [Header("Progression")]
         [SerializeField, Min(1)] private int xpPerAttempt = 1;
 
+        [Header("RNG Tuning")]
+        [SerializeField, Tooltip("Low-skill exponent (higher means stronger bias toward low rolls).")]
+        private float lowSkillExponent = 2.2f;
+
+        [SerializeField, Tooltip("High-skill exponent (lower means better average rolls with variance).")]
+        private float highSkillExponent = 0.65f;
+
+        [SerializeField, Range(0f, 0.25f), Tooltip("Per-stat variation around the shared craft profile score.")]
+        private float perStatVariance = 0.08f;
+
         [Header("Debug")]
         [SerializeField] private bool debugCraftTrace = true;
 
         private PlayerInventoryNet inventoryNet;
         private SkillsNet skillsNet;
         private PlayerNetworkRoot playerRoot;
-
 
         public override void OnNetworkSpawn()
         {
@@ -61,7 +72,11 @@ namespace HuntersAndCollectors.Crafting
         public void RequestCraftServerRpc(string recipeId, int craftCount = 1)
         {
             if (!IsServer)
+            {
+                if (debugCraftTrace)
+                    Debug.Log("[Craft][SERVER] Reject reason=NotServerContext");
                 return;
+            }
 
             if (debugCraftTrace)
                 Debug.Log($"[Craft][SERVER] Request recipeId={recipeId} craftCount={craftCount}");
@@ -71,41 +86,65 @@ namespace HuntersAndCollectors.Crafting
             if (inventoryNet == null || craftingDatabase == null || skillsNet == null)
             {
                 if (debugCraftTrace)
-                    Debug.Log("[Craft][SERVER] Craft failed reason=MissingDependencies");
+                    Debug.Log($"[Craft][SERVER] Craft failed reason=MissingDependencies invNull={inventoryNet == null} dbNull={craftingDatabase == null} skillsNull={skillsNet == null}");
+
+                SendImmediateFailure(recipeId, CraftingCategory.Tools, FailureReason.InvalidRequest, craftCount, 0, "MissingDependencies");
                 return;
             }
-
-            if (debugCraftTrace)
-                Debug.Log($"[Craft][SERVER] InventoryShape width={inventoryNet.Grid?.Width ?? 0} height={inventoryNet.Grid?.Height ?? 0} slots={inventoryNet.Grid?.Slots?.Length ?? 0}");
 
             craftCount = Mathf.Clamp(craftCount, 1, maxCraftsPerRequest);
 
             if (!craftingDatabase.TryGet(recipeId, out var recipe) || recipe == null)
             {
-                SendImmediateFailure(recipeId, CraftingCategory.Tools, FailureReason.RecipeNotFound, craftCount);
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Validation failed reason=RecipeNotFound recipeId={recipeId}");
+
+                SendImmediateFailure(recipeId, CraftingCategory.Tools, FailureReason.RecipeNotFound, craftCount, 0, "RecipeNotFound");
                 return;
             }
 
             if (recipe.OutputItem == null || string.IsNullOrWhiteSpace(recipe.OutputItem.ItemId))
             {
-                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount);
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Validation failed reason=InvalidOutputItem recipeId={recipeId}");
+
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount, 0, "InvalidOutputItem");
+                return;
+            }
+
+            if (!inventoryNet.ServerTryGetItemDef(recipe.OutputItem.ItemId, out ItemDef outputDef) || outputDef == null)
+            {
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Validation failed reason=OutputItemNotInDatabase itemId={recipe.OutputItem.ItemId} recipeId={recipeId}");
+
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount, 0, "OutputItemNotInDatabase");
+                return;
+            }
+
+            if (!ValidateCraftingStation(recipe, out string stationFailureReason))
+            {
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Validation failed reason=StationValidationFailed details={stationFailureReason} recipeId={recipeId}");
+
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount, 0, stationFailureReason);
                 return;
             }
 
             var skillId = ResolveSkillId(recipe.Category);
             if (string.IsNullOrEmpty(skillId))
             {
-                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount);
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Validation failed reason=UnknownSkillMapping category={recipe.Category} recipeId={recipeId}");
+
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.InvalidRequest, craftCount, 0, "UnknownSkillMapping");
                 return;
             }
-
-            craftCount = Mathf.Clamp(craftCount, 1, maxCraftsPerRequest);
 
             if (!HasIngredientsForAttempts(recipe, craftCount))
             {
                 if (debugCraftTrace)
                     Debug.Log($"[Craft][SERVER] Craft failed reason=MissingIngredients recipeId={recipeId}");
-                SendImmediateFailure(recipeId, recipe.Category, FailureReason.MissingIngredients, craftCount);
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.MissingIngredients, craftCount, 0, "MissingIngredients");
                 return;
             }
 
@@ -113,7 +152,7 @@ namespace HuntersAndCollectors.Crafting
             {
                 if (debugCraftTrace)
                     Debug.Log($"[Craft][SERVER] Craft failed reason=NotEnoughInventorySpace recipeId={recipeId}");
-                SendImmediateFailure(recipeId, recipe.Category, FailureReason.NotEnoughInventorySpace, craftCount);
+                SendImmediateFailure(recipeId, recipe.Category, FailureReason.NotEnoughInventorySpace, craftCount, 0, "NotEnoughInventorySpace");
                 return;
             }
 
@@ -121,47 +160,26 @@ namespace HuntersAndCollectors.Crafting
 
             try
             {
+                int level = Mathf.Clamp(skillsNet.GetLevel(skillId), 0, MaxSkillLevel);
                 for (int attemptIndex = 0; attemptIndex < craftCount; attemptIndex++)
                 {
                     if (!ConsumeIngredients(recipe))
                     {
-                        SendImmediateFailure(recipeId, recipe.Category, FailureReason.MissingIngredients, craftCount,
-                            attemptIndex);
+                        SendImmediateFailure(recipeId, recipe.Category, FailureReason.MissingIngredients, craftCount, attemptIndex, "ConsumeIngredientsFailed");
                         break;
                     }
 
-                    int level = Mathf.Clamp(skillsNet.GetLevel(skillId), 0, MaxSkillLevel);
-                    float chance = level / (float)MaxSkillLevel;
-                    float roll = RollForAttempt(recipeId, attemptIndex);
-                    bool success = roll <= chance;
+                    bool added = AddCraftOutput(recipe, level, recipeId, attemptIndex);
+                    if (!added)
+                    {
+                        SendImmediateFailure(recipeId, recipe.Category, FailureReason.NotEnoughInventorySpace, craftCount, attemptIndex, "AddOutputFailed");
+                        break;
+                    }
 
                     skillsNet.AddXp(skillId, xpPerAttempt);
 
-                    if (success)
-                    {
-                        BuildCraftingBonuses(recipe.OutputItem, level, out int bonusStr, out int bonusDex, out int bonusInt);
-                        FixedString64Bytes craftedBy = ResolveCrafterName();
-
-                        int remainder = inventoryNet.ServerAddItem(
-                            recipe.OutputItem.ItemId,
-                            Mathf.Max(1, recipe.OutputQuantity),
-                            -1,
-                            bonusStr,
-                            bonusDex,
-                            bonusInt,
-                            craftedBy);
-                        if (debugCraftTrace)
-                            Debug.Log($"[Craft][SERVER] OutputAdd itemId={recipe.OutputItem.ItemId} qty={Mathf.Max(1, recipe.OutputQuantity)} remainder={remainder}");
-
-                        if (remainder > 0)
-                        {
-                            Debug.LogWarning(
-                                $"[CraftingNet] Output item '{recipe.OutputItem.ItemId}' did not fully fit. remainder={remainder}",
-                                this);
-                            success = false;
-                        }
-                    }
-
+                    if (debugCraftTrace)
+                        Debug.Log($"[Craft][SERVER] Craft succeeded recipeId={recipeId} attempt={attemptIndex}");
 
                     var result = BuildAttemptResult(
                         recipeId,
@@ -169,14 +187,11 @@ namespace HuntersAndCollectors.Crafting
                         craftCount,
                         attemptIndex,
                         (byte)level,
-                        chance,
-                        roll,
-                        success ? FailureReason.None : FailureReason.CraftFailed,
+                        chance: 1f,
+                        roll: 0f,
+                        reason: FailureReason.None,
                         ingredientsConsumed: true,
-                        success);
-
-                    if (debugCraftTrace)
-                        Debug.Log($"[Craft][SERVER] Craft {(success ? "succeeded" : "failed")} recipeId={recipeId} attempt={attemptIndex}");
+                        success: true);
 
                     SendCraftResultToOwner(result);
                 }
@@ -187,69 +202,150 @@ namespace HuntersAndCollectors.Crafting
             }
         }
 
-        private void BuildCraftingBonuses(Items.ItemDef outputItem, int skillLevel, out int bonusStrength, out int bonusDexterity, out int bonusIntelligence)
+        private bool AddCraftOutput(CraftingRecipeDef recipe, int skillLevel, string recipeId, int attemptIndex)
         {
-            bonusStrength = 0;
-            bonusDexterity = 0;
-            bonusIntelligence = 0;
-
-            if (outputItem == null)
-                return;
-
-            // Non-equippables/non-tools remain stackable and do not receive instance bonuses.
-            bool canReceiveBonus = outputItem.IsEquippable || (outputItem.ToolTags != null && outputItem.ToolTags.Length > 0);
-            if (!canReceiveBonus)
-                return;
-
-            int bonusPoints = Mathf.FloorToInt(Mathf.Clamp(skillLevel, 0, MaxSkillLevel) / 10f);
-            if (bonusPoints <= 0)
-                return;
-
-            bool prefersStrength = HasToolTag(outputItem.ToolTags, Items.ToolTag.Axe)
-                                  || HasToolTag(outputItem.ToolTags, Items.ToolTag.Pickaxe)
-                                  || HasToolTag(outputItem.ToolTags, Items.ToolTag.Club);
-
-            bool prefersDexterity = HasToolTag(outputItem.ToolTags, Items.ToolTag.Knife)
-                                   || HasToolTag(outputItem.ToolTags, Items.ToolTag.Sickle);
-
-            if (prefersStrength)
-            {
-                bonusStrength = bonusPoints;
-                return;
-            }
-
-            if (prefersDexterity)
-            {
-                bonusDexterity = bonusPoints;
-                return;
-            }
-
-            // Even split across STR/DEX/INT; any remainder goes to Strength.
-            int per = bonusPoints / 3;
-            int rem = bonusPoints % 3;
-
-            bonusStrength = per + rem;
-            bonusDexterity = per;
-            bonusIntelligence = per;
-        }
-
-        private static bool HasToolTag(Items.ToolTag[] tags, Items.ToolTag wanted)
-        {
-            if (tags == null || tags.Length == 0)
+            if (recipe == null || recipe.OutputItem == null)
                 return false;
 
-            for (int i = 0; i < tags.Length; i++)
+            int quantity = Mathf.Max(1, recipe.OutputQuantity);
+            bool isInstanceOutput = recipe.OutputItem.UsesItemInstance;
+
+            if (debugCraftTrace)
+                Debug.Log($"[Craft][SERVER] OutputMode itemId={recipe.OutputItem.ItemId} usesInstance={isInstanceOutput} qty={quantity}");
+
+            if (!isInstanceOutput)
             {
-                if (tags[i] == wanted)
-                    return true;
+                int remainder = inventoryNet.ServerAddItem(recipe.OutputItem.ItemId, quantity);
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] OutputAdd stack itemId={recipe.OutputItem.ItemId} qty={quantity} remainder={remainder}");
+
+                return remainder == 0;
             }
 
-            return false;
+            FixedString64Bytes craftedBy = ResolveCrafterName();
+            for (int i = 0; i < quantity; i++)
+            {
+                ItemInstance instance = RollCraftedInstance(recipe.OutputItem, skillLevel, recipeId, attemptIndex, i);
+                ItemInstanceData data = BuildInstanceData(instance, craftedBy);
+
+                if (!inventoryNet.ServerTryAddItemInstance(instance, data))
+                {
+                    if (debugCraftTrace)
+                        Debug.Log($"[Craft][SERVER] OutputAdd failed mode=Instance itemId={instance.ItemId} instanceId={instance.InstanceId} ordinal={i}");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private ItemInstance RollCraftedInstance(ItemDef outputItem, int skillLevel, string recipeId, int attemptIndex, int outputOrdinal)
+        {
+            // One coherent craft profile score keeps stats feeling consistently weak/average/strong.
+            // Skill shifts the score distribution without removing variance entirely.
+            System.Random rng = BuildRng(recipeId, attemptIndex, outputOrdinal);
+            float skill01 = Mathf.Clamp01(skillLevel / (float)MaxSkillLevel);
+            float exponent = Mathf.Lerp(lowSkillExponent, highSkillExponent, skill01);
+            float profileScore = Mathf.Pow((float)rng.NextDouble(), exponent);
+
+            float RollAroundProfile(float min, float max)
+            {
+                if (max < min)
+                    max = min;
+
+                if (Mathf.Approximately(min, max))
+                    return min;
+
+                float jitter = ((float)rng.NextDouble() * 2f - 1f) * perStatVariance;
+                float t = Mathf.Clamp01(profileScore + jitter);
+                return Mathf.Lerp(min, max, t);
+            }
+
+            int RollDurability(int min, int max)
+            {
+                if (max < min)
+                    max = min;
+
+                if (min <= 0 && max <= 0)
+                    return 0;
+
+                min = Mathf.Max(1, min);
+                max = Mathf.Max(min, max);
+
+                float jitter = ((float)rng.NextDouble() * 2f - 1f) * perStatVariance;
+                float t = Mathf.Clamp01(profileScore + jitter);
+                return Mathf.RoundToInt(Mathf.Lerp(min, max, t));
+            }
+
+            float rolledDamage = RollAroundProfile(outputItem.ResolveDamageMin(), outputItem.ResolveDamageMax());
+            float rolledDefence = RollAroundProfile(outputItem.ResolveDefenceMin(), outputItem.ResolveDefenceMax());
+            float rolledSwing = RollAroundProfile(outputItem.ResolveSwingSpeedMin(), outputItem.ResolveSwingSpeedMax());
+            float rolledMove = RollAroundProfile(outputItem.ResolveMovementSpeedMin(), outputItem.ResolveMovementSpeedMax());
+            int rolledMaxDurability = RollDurability(outputItem.ResolveDurabilityMin(), outputItem.ResolveDurabilityMax());
+
+            if (debugCraftTrace)
+            {
+                Debug.Log($"[Craft][SERVER] InstanceRoll itemId={outputItem.ItemId} skill={skillLevel} profile={profileScore:0.000} dmg={rolledDamage:0.##} def={rolledDefence:0.##} swing={rolledSwing:0.##} move={rolledMove:0.##} maxDur={rolledMaxDurability}");
+            }
+
+            return new ItemInstance
+            {
+                InstanceId = ComposeInstanceId(recipeId, attemptIndex, outputOrdinal),
+                ItemId = outputItem.ItemId,
+                RolledDamage = rolledDamage,
+                RolledDefence = rolledDefence,
+                RolledSwingSpeed = rolledSwing,
+                RolledMovementSpeed = rolledMove,
+                MaxDurability = rolledMaxDurability,
+                CurrentDurability = rolledMaxDurability
+            };
+        }
+
+        private ItemInstanceData BuildInstanceData(in ItemInstance instance, FixedString64Bytes craftedBy)
+        {
+            // Keep bonus fields at zero for now. Existing systems still support them if needed.
+            return new ItemInstanceData
+            {
+                BonusStrength = 0,
+                BonusDexterity = 0,
+                BonusIntelligence = 0,
+                CraftedBy = craftedBy,
+                InstanceId = instance.InstanceId,
+                RolledDamage = instance.RolledDamage,
+                RolledDefence = instance.RolledDefence,
+                RolledSwingSpeed = instance.RolledSwingSpeed,
+                RolledMovementSpeed = instance.RolledMovementSpeed,
+                MaxDurability = instance.MaxDurability,
+                CurrentDurability = instance.CurrentDurability
+            };
+        }
+
+        private System.Random BuildRng(string recipeId, int attemptIndex, int outputOrdinal)
+        {
+            long serverTick = NetworkManager != null
+                ? (long)NetworkManager.ServerTime.Tick
+                : DateTime.UtcNow.Ticks;
+
+            int playerKeyHash = playerRoot != null && !string.IsNullOrEmpty(playerRoot.PlayerKey)
+                ? playerRoot.PlayerKey.GetHashCode(StringComparison.Ordinal)
+                : OwnerClientId.GetHashCode();
+
+            int recipeHash = recipeId?.GetHashCode(StringComparison.Ordinal) ?? 0;
+            int seed = HashCode.Combine(playerKeyHash, recipeHash, attemptIndex, outputOrdinal, (int)(serverTick & 0xFFFFFFFF));
+            return new System.Random(seed);
+        }
+
+        private long ComposeInstanceId(string recipeId, int attemptIndex, int outputOrdinal)
+        {
+            int recipeHash = recipeId?.GetHashCode(StringComparison.Ordinal) ?? 0;
+            int ownerHash = (int)(OwnerClientId & 0xFFFF);
+            long ticks = DateTime.UtcNow.Ticks & 0x00FFFFFFFFFFFFFF;
+            long low = ((long)(attemptIndex & 0xFF) << 56) | ((long)(outputOrdinal & 0xFF) << 48) | ((long)(ownerHash & 0xFFFF) << 32) | (uint)recipeHash;
+            return ticks ^ low;
         }
 
         private FixedString64Bytes ResolveCrafterName()
         {
-            // Replace with real display-name source when available.
             if (playerRoot != null && !string.IsNullOrWhiteSpace(playerRoot.PlayerKey))
                 return new FixedString64Bytes(playerRoot.PlayerKey);
 
@@ -257,10 +353,10 @@ namespace HuntersAndCollectors.Crafting
         }
 
         private void SendImmediateFailure(string recipeId, CraftingCategory category, FailureReason reason, int attemptsRequested,
-            int attemptIndex = 0)
+            int attemptIndex = 0, string detail = "")
         {
             if (debugCraftTrace)
-                Debug.Log($"[Craft][SERVER] Craft failed reason={reason} recipeId={recipeId} attemptIndex={attemptIndex}");
+                Debug.Log($"[Craft][SERVER] Craft failed reason={reason} detail={detail} recipeId={recipeId} attemptIndex={attemptIndex}");
 
             var result = BuildAttemptResult(
                 recipeId,
@@ -322,19 +418,28 @@ namespace HuntersAndCollectors.Crafting
         private bool HasIngredientsForAttempts(CraftingRecipeDef recipe, int attemptCount)
         {
             if (recipe == null || inventoryNet == null || inventoryNet.Grid == null)
+            {
+                if (debugCraftTrace)
+                    Debug.Log("[Craft][SERVER] IngredientCheck failed reason=MissingRecipeOrInventory");
                 return false;
+            }
 
             for (int i = 0; i < recipe.Ingredients.Count; i++)
             {
                 var ing = recipe.Ingredients[i];
                 if (ing.Item == null || string.IsNullOrWhiteSpace(ing.Item.ItemId))
+                {
+                    if (debugCraftTrace)
+                        Debug.Log($"[Craft][SERVER] IngredientCheck failed reason=InvalidIngredient index={i}");
                     return false;
+                }
 
+                bool requiresInstanceIngredient = ing.Item.UsesItemInstance;
                 int required = Mathf.Max(1, ing.Quantity) * attemptCount;
-                int found = CountItemInInventory(ing.Item.ItemId, out int foundInRow3);
+                int found = CountItemInInventory(ing.Item.ItemId, requiresInstanceIngredient, out int foundInRow3);
 
                 if (debugCraftTrace)
-                    Debug.Log($"[Craft][SERVER] IngredientCheck itemId={ing.Item.ItemId} need={required} found={found} foundInRow3={foundInRow3}");
+                    Debug.Log($"[Craft][SERVER] IngredientCheck itemId={ing.Item.ItemId} requiresInstance={requiresInstanceIngredient} need={required} found={found} foundInRow3={foundInRow3}");
 
                 if (found < required)
                     return false;
@@ -348,11 +453,17 @@ namespace HuntersAndCollectors.Crafting
             for (int i = 0; i < recipe.Ingredients.Count; i++)
             {
                 var ing = recipe.Ingredients[i];
+                if (ing.Item == null || string.IsNullOrWhiteSpace(ing.Item.ItemId))
+                    return false;
+
                 int qty = Mathf.Max(1, ing.Quantity);
-                bool removed = inventoryNet.ServerRemoveItem(ing.Item.ItemId, qty);
+                bool requiresInstanceIngredient = ing.Item.UsesItemInstance;
+                bool removed = requiresInstanceIngredient
+                    ? RemoveInstanceIngredients(ing.Item.ItemId, qty)
+                    : RemoveStackIngredients(ing.Item.ItemId, qty);
 
                 if (debugCraftTrace)
-                    Debug.Log($"[Craft][SERVER] IngredientRemove itemId={ing.Item.ItemId} qty={qty} success={removed}");
+                    Debug.Log($"[Craft][SERVER] IngredientRemove itemId={ing.Item.ItemId} requiresInstance={requiresInstanceIngredient} qty={qty} success={removed}");
 
                 if (!removed)
                     return false;
@@ -364,7 +475,11 @@ namespace HuntersAndCollectors.Crafting
         private bool CanFitOutputs(CraftingRecipeDef recipe, int attemptCount)
         {
             if (recipe?.OutputItem == null || inventoryNet?.Grid == null)
+            {
+                if (debugCraftTrace)
+                    Debug.Log("[Craft][SERVER] OutputFit failed reason=MissingOutputOrInventory");
                 return false;
+            }
 
             int totalQuantity = Mathf.Max(1, recipe.OutputQuantity) * attemptCount;
             bool result = inventoryNet.Grid.CanAdd(recipe.OutputItem.ItemId, totalQuantity, out var remainder) && remainder == 0;
@@ -375,8 +490,7 @@ namespace HuntersAndCollectors.Crafting
             return result;
         }
 
-
-        private int CountItemInInventory(string itemId, out int foundInRow3)
+        private int CountItemInInventory(string itemId, bool requiresInstanceIngredient, out int foundInRow3)
         {
             foundInRow3 = 0;
 
@@ -393,15 +507,129 @@ namespace HuntersAndCollectors.Crafting
                 if (slot.IsEmpty)
                     continue;
 
-                if (!string.Equals(slot.Stack.ItemId, itemId, StringComparison.Ordinal))
-                    continue;
+                if (requiresInstanceIngredient)
+                {
+                    if (slot.ContentType != InventorySlotContentType.Instance)
+                        continue;
 
-                count += slot.Stack.Quantity;
-                if (i >= row3StartIndex)
-                    foundInRow3 += slot.Stack.Quantity;
+                    if (!string.Equals(slot.Instance.ItemId, itemId, StringComparison.Ordinal))
+                        continue;
+
+                    count += 1;
+                    if (i >= row3StartIndex)
+                        foundInRow3 += 1;
+                }
+                else
+                {
+                    if (slot.ContentType != InventorySlotContentType.Stack)
+                        continue;
+
+                    if (!string.Equals(slot.Stack.ItemId, itemId, StringComparison.Ordinal))
+                        continue;
+
+                    int qty = Mathf.Max(0, slot.Stack.Quantity);
+                    count += qty;
+                    if (i >= row3StartIndex)
+                        foundInRow3 += qty;
+                }
             }
 
             return count;
+        }
+
+        private bool RemoveStackIngredients(string itemId, int quantity)
+        {
+            if (quantity <= 0 || inventoryNet == null || inventoryNet.Grid == null)
+                return false;
+
+            int remaining = quantity;
+            while (remaining > 0)
+            {
+                int stackSlotIndex = FindFirstMatchingStackSlot(itemId);
+                if (stackSlotIndex < 0)
+                    return false;
+
+                if (!inventoryNet.ServerRemoveOneAtSlot(stackSlotIndex, out _, out _, out _))
+                    return false;
+
+                remaining--;
+            }
+
+            return true;
+        }
+
+        private bool RemoveInstanceIngredients(string itemId, int quantity)
+        {
+            if (quantity <= 0 || inventoryNet == null || inventoryNet.Grid == null)
+                return false;
+
+            int remaining = quantity;
+            while (remaining > 0)
+            {
+                int instanceSlotIndex = FindFirstMatchingInstanceSlot(itemId);
+                if (instanceSlotIndex < 0)
+                    return false;
+
+                if (!inventoryNet.ServerRemoveOneAtSlot(instanceSlotIndex, out _, out _, out _))
+                    return false;
+
+                remaining--;
+            }
+
+            return true;
+        }
+
+        private int FindFirstMatchingStackSlot(string itemId)
+        {
+            InventorySlot[] slots = inventoryNet.Grid.Slots;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot.IsEmpty || slot.ContentType != InventorySlotContentType.Stack)
+                    continue;
+
+                if (!string.Equals(slot.Stack.ItemId, itemId, StringComparison.Ordinal))
+                    continue;
+
+                if (slot.Stack.Quantity <= 0)
+                    continue;
+
+                return i;
+            }
+
+            return -1;
+        }
+
+        private int FindFirstMatchingInstanceSlot(string itemId)
+        {
+            InventorySlot[] slots = inventoryNet.Grid.Slots;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot.IsEmpty || slot.ContentType != InventorySlotContentType.Instance)
+                    continue;
+
+                if (!string.Equals(slot.Instance.ItemId, itemId, StringComparison.Ordinal))
+                    continue;
+
+                return i;
+            }
+
+            return -1;
+        }
+
+
+        /// <summary>
+        /// First-pass station validation hook.
+        ///
+        /// Current implementation is permissive because recipe defs do not yet encode
+        /// station requirements in this project. Keeping this explicit hook prevents
+        /// hidden assumptions and gives us a clear place to enforce station rules later.
+        /// </summary>
+        private bool ValidateCraftingStation(CraftingRecipeDef recipe, out string failureReason)
+        {
+            failureReason = string.Empty;
+            return true;
         }
         private string ResolveSkillId(CraftingCategory category)
         {
@@ -413,48 +641,8 @@ namespace HuntersAndCollectors.Crafting
                 _ => string.Empty
             };
         }
-
-        private float RollForAttempt(string recipeId, int attemptIndex)
-        {
-            long serverTick = NetworkManager != null
-                ? (long)NetworkManager.ServerTime.Tick
-                : DateTime.UtcNow.Ticks;
-            int playerKeyHash = playerRoot != null && !string.IsNullOrEmpty(playerRoot.PlayerKey)
-                ? playerRoot.PlayerKey.GetHashCode(StringComparison.Ordinal)
-                : OwnerClientId.GetHashCode();
-
-            int seed = HashCode.Combine(playerKeyHash, attemptIndex,
-                recipeId?.GetHashCode(StringComparison.Ordinal) ?? 0, (int)(serverTick & 0xFFFFFFFF));
-
-            var rng = new System.Random(seed);
-            return (float)rng.NextDouble();
-        }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

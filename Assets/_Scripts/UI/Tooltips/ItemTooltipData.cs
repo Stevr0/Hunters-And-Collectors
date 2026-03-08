@@ -30,7 +30,16 @@ namespace HuntersAndCollectors.UI
         public int BonusIntelligence;
 
         public int Durability;
+        public int MaxDurability;
         public string CraftedBy;
+
+        // Instance-roll values (0 when not applicable).
+        public long InstanceId;
+        public float RolledDamage;
+        public float RolledDefence;
+        public float RolledSwingSpeed;
+        public float RolledMovementSpeed;
     }
 }
+
 

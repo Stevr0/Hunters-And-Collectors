@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemId: it_shroom
   DisplayName: Shroom
   Icon: {fileID: 21300000, guid: f6926d0f42f7acf4e8272843cb3abc46, type: 3}
-  MaxStack: 100
+  MaxStack: 99
   Category: 3
   visualPrefab: {fileID: 953913445220319471, guid: 8769c51edc2f64f4080f5b8a7c2db5b3, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -29,6 +29,17 @@ MonoBehaviour:
   CraftTime: 1
   BaseQuality: 1
   MaxDurability: 0
+  IsInstanceItem: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0
+  SwingSpeedMax: 0
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 0
+  DurabilityMax: 0
   Damage: 0
   Defence: 0
   AttackBonus: 0
@@ -48,3 +59,10 @@ MonoBehaviour:
   FoodHealthRegenBonus: 2
   FoodStaminaRegenBonus: 2
   FoodDurationSeconds: 300
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

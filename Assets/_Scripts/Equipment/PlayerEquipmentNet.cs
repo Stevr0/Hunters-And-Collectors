@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Inventory;
@@ -925,7 +925,7 @@ namespace HuntersAndCollectors.Players
 
         private ItemInstanceData GetEquippedBonusData(EquipSlot slot)
         {
-            ItemInstanceData data;
+            ItemInstanceData data = default;
             switch (slot)
             {
                 case EquipSlot.MainHand:
@@ -1121,6 +1121,7 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
 
 
 

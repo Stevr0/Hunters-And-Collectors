@@ -228,7 +228,7 @@ namespace HuntersAndCollectors.Vendors
                     slot.Stack.Quantity -= line.Qty;
 
                     if (slot.Stack.Quantity <= 0)
-                        chestGrid.Slots[line.SlotIndex] = new InventorySlot { IsEmpty = true };
+                        chestGrid.Slots[line.SlotIndex] = new InventorySlot { IsEmpty = true, ContentType = InventorySlotContentType.Empty };
                     else
                         chestGrid.Slots[line.SlotIndex] = slot;
                 }
@@ -313,4 +313,5 @@ namespace HuntersAndCollectors.Vendors
         }
     }
 }
+
 
