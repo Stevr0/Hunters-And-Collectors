@@ -118,28 +118,34 @@ namespace HuntersAndCollectors.Crafting.UI
             SelectCategory(_activeCategory);
         }
 
-        public void Toggle()
+        public void Open()
         {
-            bool next = !root.activeSelf;
+            EnsureBoundToLocalPlayer();
+            RebuildRecipeList();
+            RefreshDetailsPanel();
 
-            if (next)
-            {
-                EnsureBoundToLocalPlayer();
-                RebuildRecipeList();
-                RefreshDetailsPanel();
-
+            if (root != null)
                 root.SetActive(true);
 
-                // Match other windows
-                InputState.LockGameplay();
+            // Match other windows
+            InputState.LockGameplay();
+        }
 
-                return;
-            }
-
-            root.SetActive(false);
+        public void Close()
+        {
+            if (root != null)
+                root.SetActive(false);
 
             // Match other windows
             InputState.UnlockGameplay();
+        }
+
+        public void Toggle()
+        {
+            if (IsOpen)
+                Close();
+            else
+                Open();
         }
 
         private void SelectCategory(CraftingCategory cat)
@@ -342,3 +348,4 @@ namespace HuntersAndCollectors.Crafting.UI
         }
     }
 }
+

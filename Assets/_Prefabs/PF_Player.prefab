@@ -8071,7 +8071,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Inventory.PlayerInventoryNet
   ShowTopMostFoldoutHeaderGroup: 1
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
-  width: 6
+  width: 8
   height: 4
 --- !u!114 &3901694040463622952
 MonoBehaviour:
@@ -10108,3 +10108,4 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.47901866, y: -0.030463092, z: 0}
     m_Extent: {x: 0.5079102, y: 0.17379045, z: 0.257298}
   m_DirtyAABB: 0
+

@@ -23,6 +23,9 @@ namespace HuntersAndCollectors.UI
         [Header("Drag Visual")]
         [SerializeField] private UIDragGhost dragGhost;
 
+        [Header("Debug")]
+        [SerializeField] private bool debugDragTrace = true;
+
         // Current local drag payload (client-only)
         private DragPayload _payload;
 
@@ -64,6 +67,8 @@ namespace HuntersAndCollectors.UI
                 return;
 
             _payload = DragPayload.FromInventory(fromSlot.SlotIndex, itemId);
+            if (debugDragTrace)
+                Debug.Log($"[InventoryDragTrace][Broker] BeginDrag sourceIndex={fromSlot.SlotIndex} itemId={itemId}");
             dragGhost?.Show(icon);
         }
 
@@ -90,9 +95,14 @@ namespace HuntersAndCollectors.UI
 
             if (!_payload.IsValid)
             {
+                if (debugDragTrace)
+                    Debug.Log($"[InventoryDragTrace][Broker] Drop ignored reason=InvalidPayload targetIndex={targetInventoryIndex}");
                 CancelDrag();
                 return;
             }
+
+            if (debugDragTrace)
+                Debug.Log($"[InventoryDragTrace][Broker] CompleteDrop targetIndex={targetInventoryIndex} sourceKind={_payload.SourceKind} sourceIndex={_payload.SourceInventoryIndex}");
 
             // Equipment -> Inventory = unequip (MVP: server decides where it lands)
             if (_payload.SourceKind == DragSourceKind.Equipment)
@@ -109,9 +119,9 @@ namespace HuntersAndCollectors.UI
             {
                 if (_localInventoryNet != null)
                 {
-                    // ✅ YOU NEED THIS RPC ON PlayerInventoryNet:
-                    // RequestSwapSlotsServerRpc(int a, int b)
-                    _localInventoryNet.RequestMoveSlotServerRpc(_payload.SourceInventoryIndex, targetInventoryIndex); ;
+                    if (debugDragTrace)
+                        Debug.Log($"[InventoryDragTrace][Broker] RequestMove from={_payload.SourceInventoryIndex} to={targetInventoryIndex}");
+                    _localInventoryNet.RequestMoveSlotServerRpc(_payload.SourceInventoryIndex, targetInventoryIndex);
                 }
 
                 CancelDrag();
@@ -127,9 +137,14 @@ namespace HuntersAndCollectors.UI
 
             if (!_payload.IsValid)
             {
+                if (debugDragTrace)
+                    Debug.Log($"[InventoryDragTrace][Broker] Drop ignored reason=InvalidPayload targetEquipSlot={targetSlot}");
                 CancelDrag();
                 return;
             }
+
+            if (debugDragTrace)
+                Debug.Log($"[InventoryDragTrace][Broker] CompleteDrop targetEquipSlot={targetSlot} sourceKind={_payload.SourceKind} sourceIndex={_payload.SourceInventoryIndex}");
 
             // Inventory -> Equipment = equip
             // MVP: ignore targetSlot and just ask server to equip by rules.
@@ -194,4 +209,8 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
+
 

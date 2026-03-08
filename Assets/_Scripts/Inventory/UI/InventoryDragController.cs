@@ -24,29 +24,22 @@ namespace HuntersAndCollectors.Inventory.UI
 
         private ChestContainerNet activeChest;
 
+        public bool HasActiveChest => activeChest != null;
+
         private DragPayload activePayload;
 
-        /// <summary>
-        /// Called by chest window when a chest is opened.
-        /// </summary>
         public void BindChest(ChestContainerNet chest)
         {
             activeChest = chest;
             CancelDrag();
         }
 
-        /// <summary>
-        /// Called by chest window when closed/unbound.
-        /// </summary>
         public void ClearChest()
         {
             activeChest = null;
             CancelDrag();
         }
 
-        /// <summary>
-        /// Starts a drag from one UI slot.
-        /// </summary>
         public void BeginDrag(InventoryGridSlotUI sourceSlot, string itemId, int quantity, Sprite icon)
         {
             if (sourceSlot == null)
@@ -55,7 +48,6 @@ namespace HuntersAndCollectors.Inventory.UI
             if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
                 return;
 
-            // Chest transfer UI should only run while a chest binding exists.
             if (activeChest == null)
                 return;
 
@@ -79,9 +71,6 @@ namespace HuntersAndCollectors.Inventory.UI
             dragGhost?.Show(icon);
         }
 
-        /// <summary>
-        /// Called by drop target slots to finalize transfer intent.
-        /// </summary>
         public void CompleteDropOnSlot(InventoryContainerType targetContainer, int targetSlotIndex)
         {
             if (!activePayload.IsValid)
@@ -102,14 +91,12 @@ namespace HuntersAndCollectors.Inventory.UI
                     $"[InventoryDrag] Drop target container={targetContainer} slot={targetSlotIndex} sourceContainer={activePayload.SourceContainer} sourceSlot={activePayload.SourceSlotIndex}");
             }
 
-            // Same-container drops are ignored in this first pass chest UX.
             if (activePayload.SourceContainer == targetContainer)
             {
                 CancelDrag();
                 return;
             }
 
-            // Player -> Chest = store request.
             if (activePayload.SourceContainer == InventoryContainerType.Player &&
                 targetContainer == InventoryContainerType.Chest)
             {
@@ -125,7 +112,6 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            // Chest -> Player = take request.
             if (activePayload.SourceContainer == InventoryContainerType.Chest &&
                 targetContainer == InventoryContainerType.Player)
             {
@@ -141,13 +127,9 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            // Any unknown combination is treated as invalid for this MVP.
             CancelDrag();
         }
 
-        /// <summary>
-        /// Cancels active drag and hides drag visual.
-        /// </summary>
         public void CancelDrag()
         {
             activePayload = default;

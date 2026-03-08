@@ -32,6 +32,9 @@ namespace HuntersAndCollectors.Crafting
         [Header("Progression")]
         [SerializeField, Min(1)] private int xpPerAttempt = 1;
 
+        [Header("Debug")]
+        [SerializeField] private bool debugCraftTrace = true;
+
         private PlayerInventoryNet inventoryNet;
         private SkillsNet skillsNet;
         private PlayerNetworkRoot playerRoot;
@@ -60,10 +63,20 @@ namespace HuntersAndCollectors.Crafting
             if (!IsServer)
                 return;
 
+            if (debugCraftTrace)
+                Debug.Log($"[Craft][SERVER] Request recipeId={recipeId} craftCount={craftCount}");
+
             CacheComponents();
 
             if (inventoryNet == null || craftingDatabase == null || skillsNet == null)
+            {
+                if (debugCraftTrace)
+                    Debug.Log("[Craft][SERVER] Craft failed reason=MissingDependencies");
                 return;
+            }
+
+            if (debugCraftTrace)
+                Debug.Log($"[Craft][SERVER] InventoryShape width={inventoryNet.Grid?.Width ?? 0} height={inventoryNet.Grid?.Height ?? 0} slots={inventoryNet.Grid?.Slots?.Length ?? 0}");
 
             craftCount = Mathf.Clamp(craftCount, 1, maxCraftsPerRequest);
 
@@ -90,12 +103,16 @@ namespace HuntersAndCollectors.Crafting
 
             if (!HasIngredientsForAttempts(recipe, craftCount))
             {
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Craft failed reason=MissingIngredients recipeId={recipeId}");
                 SendImmediateFailure(recipeId, recipe.Category, FailureReason.MissingIngredients, craftCount);
                 return;
             }
 
             if (!CanFitOutputs(recipe, craftCount))
             {
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] Craft failed reason=NotEnoughInventorySpace recipeId={recipeId}");
                 SendImmediateFailure(recipeId, recipe.Category, FailureReason.NotEnoughInventorySpace, craftCount);
                 return;
             }
@@ -132,7 +149,9 @@ namespace HuntersAndCollectors.Crafting
                             bonusStr,
                             bonusDex,
                             bonusInt,
-                            craftedBy);
+                            craftedBy);
+                        if (debugCraftTrace)
+                            Debug.Log($"[Craft][SERVER] OutputAdd itemId={recipe.OutputItem.ItemId} qty={Mathf.Max(1, recipe.OutputQuantity)} remainder={remainder}");
 
                         if (remainder > 0)
                         {
@@ -155,6 +174,9 @@ namespace HuntersAndCollectors.Crafting
                         success ? FailureReason.None : FailureReason.CraftFailed,
                         ingredientsConsumed: true,
                         success);
+
+                    if (debugCraftTrace)
+                        Debug.Log($"[Craft][SERVER] Craft {(success ? "succeeded" : "failed")} recipeId={recipeId} attempt={attemptIndex}");
 
                     SendCraftResultToOwner(result);
                 }
@@ -225,7 +247,7 @@ namespace HuntersAndCollectors.Crafting
             return false;
         }
 
-                private FixedString64Bytes ResolveCrafterName()
+        private FixedString64Bytes ResolveCrafterName()
         {
             // Replace with real display-name source when available.
             if (playerRoot != null && !string.IsNullOrWhiteSpace(playerRoot.PlayerKey))
@@ -237,6 +259,9 @@ namespace HuntersAndCollectors.Crafting
         private void SendImmediateFailure(string recipeId, CraftingCategory category, FailureReason reason, int attemptsRequested,
             int attemptIndex = 0)
         {
+            if (debugCraftTrace)
+                Debug.Log($"[Craft][SERVER] Craft failed reason={reason} recipeId={recipeId} attemptIndex={attemptIndex}");
+
             var result = BuildAttemptResult(
                 recipeId,
                 category,
@@ -296,7 +321,7 @@ namespace HuntersAndCollectors.Crafting
 
         private bool HasIngredientsForAttempts(CraftingRecipeDef recipe, int attemptCount)
         {
-            if (recipe == null || inventoryNet == null)
+            if (recipe == null || inventoryNet == null || inventoryNet.Grid == null)
                 return false;
 
             for (int i = 0; i < recipe.Ingredients.Count; i++)
@@ -306,7 +331,12 @@ namespace HuntersAndCollectors.Crafting
                     return false;
 
                 int required = Mathf.Max(1, ing.Quantity) * attemptCount;
-                if (!inventoryNet.ServerHasItem(ing.Item.ItemId, required))
+                int found = CountItemInInventory(ing.Item.ItemId, out int foundInRow3);
+
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] IngredientCheck itemId={ing.Item.ItemId} need={required} found={found} foundInRow3={foundInRow3}");
+
+                if (found < required)
                     return false;
             }
 
@@ -319,8 +349,12 @@ namespace HuntersAndCollectors.Crafting
             {
                 var ing = recipe.Ingredients[i];
                 int qty = Mathf.Max(1, ing.Quantity);
+                bool removed = inventoryNet.ServerRemoveItem(ing.Item.ItemId, qty);
 
-                if (!inventoryNet.ServerRemoveItem(ing.Item.ItemId, qty))
+                if (debugCraftTrace)
+                    Debug.Log($"[Craft][SERVER] IngredientRemove itemId={ing.Item.ItemId} qty={qty} success={removed}");
+
+                if (!removed)
                     return false;
             }
 
@@ -333,9 +367,42 @@ namespace HuntersAndCollectors.Crafting
                 return false;
 
             int totalQuantity = Mathf.Max(1, recipe.OutputQuantity) * attemptCount;
-            return inventoryNet.Grid.CanAdd(recipe.OutputItem.ItemId, totalQuantity, out var remainder) && remainder == 0;
+            bool result = inventoryNet.Grid.CanAdd(recipe.OutputItem.ItemId, totalQuantity, out var remainder) && remainder == 0;
+
+            if (debugCraftTrace)
+                Debug.Log($"[Craft][SERVER] OutputFit itemId={recipe.OutputItem.ItemId} qty={totalQuantity} result={result} remainder={remainder}");
+
+            return result;
         }
 
+
+        private int CountItemInInventory(string itemId, out int foundInRow3)
+        {
+            foundInRow3 = 0;
+
+            if (inventoryNet == null || inventoryNet.Grid == null || string.IsNullOrWhiteSpace(itemId))
+                return 0;
+
+            int count = 0;
+            int width = Mathf.Max(1, inventoryNet.Grid.Width);
+            int row3StartIndex = width * 3;
+            InventorySlot[] slots = inventoryNet.Grid.Slots;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot.IsEmpty)
+                    continue;
+
+                if (!string.Equals(slot.Stack.ItemId, itemId, StringComparison.Ordinal))
+                    continue;
+
+                count += slot.Stack.Quantity;
+                if (i >= row3StartIndex)
+                    foundInRow3 += slot.Stack.Quantity;
+            }
+
+            return count;
+        }
         private string ResolveSkillId(CraftingCategory category)
         {
             return category switch
@@ -364,6 +431,28 @@ namespace HuntersAndCollectors.Crafting
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

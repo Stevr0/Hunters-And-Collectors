@@ -29,6 +29,7 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text qtyText;
         [SerializeField] private Button button;
+        [SerializeField] private Image dropHitboxImage;
         [SerializeField] private UIDragDropBroker dragDrop;
 
         [Header("Container Context")]
@@ -41,6 +42,7 @@ namespace HuntersAndCollectors.Inventory.UI
 
         [Header("Debug")]
         [SerializeField] private bool debugHover;
+        [SerializeField] private bool debugDragTrace = true;
 
         private string itemId = string.Empty;
         private int quantity;
@@ -52,6 +54,10 @@ namespace HuntersAndCollectors.Inventory.UI
         public InventoryContainerType ContainerType => containerType;
 
         private System.Action<int, string, int> onClicked;
+        private System.Action<int, string> onRightClicked;
+
+        // Optional gating callback so windows can disable drag in specific modes.
+        private System.Func<bool> canStartDragResolver;
 
         public void SetSlotIndex(int index)
         {
@@ -69,11 +75,29 @@ namespace HuntersAndCollectors.Inventory.UI
 
         /// <summary>
         /// Allows window presenters to explicitly bind a container drag controller.
-        /// If this is not set, slot falls back to the generic drag broker.
         /// </summary>
         public void SetContainerDragController(InventoryDragController controller)
         {
             containerDragController = controller;
+        }
+
+        public void BindCanStartDrag(System.Func<bool> resolver)
+        {
+            canStartDragResolver = resolver;
+        }
+
+        private bool CanStartDrag()
+        {
+            if (canStartDragResolver == null)
+                return true;
+
+            return canStartDragResolver();
+        }
+
+        private bool ShouldUseContainerDragController()
+        {
+            // Only use chest transfer routing when an active chest session exists.
+            return containerDragController != null && containerDragController.HasActiveChest;
         }
 
         private void Reset()
@@ -90,6 +114,7 @@ namespace HuntersAndCollectors.Inventory.UI
             if (containerDragController == null)
                 containerDragController = FindFirstObjectByType<InventoryDragController>(FindObjectsInactive.Include);
 
+            EnsureDropHitboxGraphic();
             TryAutoBindDurabilityRefs();
             ResetVisuals();
         }
@@ -99,6 +124,11 @@ namespace HuntersAndCollectors.Inventory.UI
             onClicked = onClick;
         }
 
+        public void BindRightClick(System.Action<int, string> onRightClick)
+        {
+            onRightClicked = onRightClick;
+        }
+
         public void SetEmpty()
         {
             itemId = string.Empty;
@@ -106,8 +136,10 @@ namespace HuntersAndCollectors.Inventory.UI
             tooltipData = default;
             ResetVisuals();
 
+            // Keep the slot raycastable so empty slots can still act as valid drop targets.
+            // Click handlers already guard against empty itemIds.
             if (button != null)
-                button.interactable = false;
+                button.interactable = true;
         }
 
         public void SetItem(string newItemId, Sprite iconSprite, int qty, int durability, int maxDurability, ItemTooltipData newTooltipData)
@@ -122,7 +154,7 @@ namespace HuntersAndCollectors.Inventory.UI
             if (!hasItem)
             {
                 if (button != null)
-                    button.interactable = false;
+                    button.interactable = true;
                 return;
             }
 
@@ -157,17 +189,34 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (eventData == null || eventData.button != PointerEventData.InputButton.Left)
+            if (eventData == null || string.IsNullOrWhiteSpace(itemId))
                 return;
 
-            if (string.IsNullOrWhiteSpace(itemId))
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                int clicks = Mathf.Max(1, eventData.clickCount);
+                onClicked?.Invoke(SlotIndex, itemId, clicks);
                 return;
+            }
 
-            // clickCount is provided by EventSystem and supports double-click UX.
-            int clicks = Mathf.Max(1, eventData.clickCount);
-            onClicked?.Invoke(SlotIndex, itemId, clicks);
+            if (eventData.button == PointerEventData.InputButton.Right)
+                onRightClicked?.Invoke(SlotIndex, itemId);
         }
 
+
+        private void EnsureDropHitboxGraphic()
+        {
+            if (dropHitboxImage == null)
+                dropHitboxImage = GetComponent<Image>();
+
+            if (dropHitboxImage == null)
+                dropHitboxImage = gameObject.AddComponent<Image>();
+
+            // Transparent but raycastable catch-all target so OnDrop still fires even when
+            // icon/quantity visuals are disabled for empty slots.
+            dropHitboxImage.color = new Color(1f, 1f, 1f, 0f);
+            dropHitboxImage.raycastTarget = true;
+        }
         private void ResetVisuals()
         {
             if (iconImage != null)
@@ -238,14 +287,22 @@ namespace HuntersAndCollectors.Inventory.UI
             if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
                 return;
 
-            // Prefer the container drag controller for player<->chest transfer UX.
-            if (containerDragController != null)
+            if (!CanStartDrag())
+            {
+                if (debugDragTrace)
+                    Debug.Log($"[InventoryDragTrace][Slot] BeginDrag blocked slot={SlotIndex} container={containerType} reason=CanStartDragFalse");
+                return;
+            }
+
+            if (debugDragTrace)
+                Debug.Log($"[InventoryDragTrace][Slot] BeginDrag sourceIndex={SlotIndex} itemId={itemId} qty={quantity} container={containerType}");
+
+            if (ShouldUseContainerDragController())
             {
                 containerDragController.BeginDrag(this, itemId, quantity, iconImage != null ? iconImage.sprite : null);
                 return;
             }
 
-            // Fallback for existing inventory/equipment drag flows.
             dragDrop?.BeginDragFromInventory(this, itemId, iconImage != null ? iconImage.sprite : null);
         }
 
@@ -255,7 +312,7 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            if (containerDragController != null)
+            if (ShouldUseContainerDragController())
             {
                 containerDragController.CancelDrag();
                 return;
@@ -266,7 +323,17 @@ namespace HuntersAndCollectors.Inventory.UI
 
         public void OnDrop(PointerEventData eventData)
         {
-            if (containerDragController != null)
+            if (!CanStartDrag())
+            {
+                if (debugDragTrace)
+                    Debug.Log($"[InventoryDragTrace][Slot] Drop blocked targetIndex={SlotIndex} container={containerType} reason=CanStartDragFalse");
+                return;
+            }
+
+            if (debugDragTrace)
+                Debug.Log($"[InventoryDragTrace][Slot] OnDrop targetIndex={SlotIndex} container={containerType}");
+
+            if (ShouldUseContainerDragController())
             {
                 containerDragController.CompleteDropOnSlot(containerType, SlotIndex);
                 return;
@@ -276,3 +343,6 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
+
+

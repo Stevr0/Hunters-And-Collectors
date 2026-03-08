@@ -129,10 +129,23 @@ namespace HuntersAndCollectors.UI
                 spawnedRows.Add(row.gameObject);
             }
         }
+        public bool IsOpen => gameObject.activeSelf;
+
+        public void Open()
+        {
+            gameObject.SetActive(true);
+        }
+
+        public void Close()
+        {
+            gameObject.SetActive(false);
+        }
+
         public void Toggle()
         {
             gameObject.SetActive(!gameObject.activeSelf);
         }
+
         private void ClearRows()
         {
             for (int i = 0; i < spawnedRows.Count; i++)
@@ -144,3 +157,4 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+

@@ -11,9 +11,15 @@ namespace HuntersAndCollectors.Inventory
 {
     public sealed class PlayerInventoryNet : NetworkBehaviour
     {
+        private const int AuthoritativeWidth = 8;
+        private const int AuthoritativeHeight = 4;
+
         [SerializeField] private ItemDatabase itemDatabase;
-        [SerializeField] private int width = 6;
-        [SerializeField] private int height = 4;
+        [SerializeField] private int width = AuthoritativeWidth;
+        [SerializeField] private int height = AuthoritativeHeight;
+
+        [Header("Debug")]
+        [SerializeField] private bool debugMoveTrace = true;
 
         private InventoryGrid grid;
         private KnownItemsNet knownItems;
@@ -370,8 +376,13 @@ namespace HuntersAndCollectors.Inventory
         {
             if (IsServer)
             {
+                EnforceAuthoritativeDimensions();
+
                 knownItems = GetComponent<KnownItemsNet>();
                 grid = new InventoryGrid(width, height, itemDatabase);
+
+                if (debugMoveTrace)
+                    Debug.Log($"[InventoryDragTrace][Server] Spawned authoritative inventory W={width} H={height} Slots={grid.Slots.Length}");
 
                 ForceSendSnapshotToOwner();
             }
@@ -386,18 +397,26 @@ namespace HuntersAndCollectors.Inventory
             if (!IsServer)
                 return;
 
+            EnforceAuthoritativeDimensions();
+
             if (saveData == null)
                 return;
 
-            int targetWidth = Mathf.Max(1, saveData.w);
-            int targetHeight = Mathf.Max(1, saveData.h);
+            // Keep player inventory authoritative shape pinned to configured dimensions.
+            // This safely migrates older saves (for example 6x4) into the current fixed layout.
+            int targetWidth = Mathf.Max(1, width);
+            int targetHeight = Mathf.Max(1, height);
             int expectedSlots = targetWidth * targetHeight;
 
             grid = new InventoryGrid(targetWidth, targetHeight, itemDatabase);
 
             if (saveData.slots != null)
             {
-                int copyCount = Mathf.Min(expectedSlots, saveData.slots.Count);
+                int sourceWidth = Mathf.Max(1, saveData.w);
+                int sourceHeight = Mathf.Max(1, saveData.h);
+                int sourceCount = Mathf.Min(Mathf.Max(0, sourceWidth * sourceHeight), saveData.slots.Count);
+
+                int copyCount = Mathf.Min(expectedSlots, sourceCount);
                 for (int i = 0; i < copyCount; i++)
                 {
                     var slot = saveData.slots[i];
@@ -422,6 +441,18 @@ namespace HuntersAndCollectors.Inventory
 
             ForceSendSnapshotToOwner();
         }
+
+        private void EnforceAuthoritativeDimensions()
+        {
+            if (width != AuthoritativeWidth || height != AuthoritativeHeight)
+            {
+                if (debugMoveTrace)
+                    Debug.LogWarning($"[InventoryDragTrace][Server] Correcting inventory dimensions from {width}x{height} to {AuthoritativeWidth}x{AuthoritativeHeight}");
+
+                width = AuthoritativeWidth;
+                height = AuthoritativeHeight;
+            }
+        }
         public void ForceSendSnapshotToOwner()
         {
             if (!IsServer || grid == null) return;
@@ -439,11 +470,37 @@ namespace HuntersAndCollectors.Inventory
         [ServerRpc(RequireOwnership = true)]
         public void RequestMoveSlotServerRpc(int fromIndex, int toIndex)
         {
-            if (!IsServer || grid == null) return;
-            if (fromIndex < 0 || toIndex < 0) return;
+            if (!IsServer || grid == null)
+                return;
 
-            if (grid.TryMoveSlot(fromIndex, toIndex))
-                ForceSendSnapshotToOwner();
+            if (debugMoveTrace)
+                Debug.Log($"[InventoryDragTrace][Server] RequestMove from={fromIndex} to={toIndex} slots={grid.Slots.Length}");
+
+            if (fromIndex < 0 || toIndex < 0)
+            {
+                if (debugMoveTrace)
+                    Debug.Log($"[InventoryDragTrace][Server] RejectMove reason=NegativeIndex from={fromIndex} to={toIndex}");
+                return;
+            }
+
+            if (fromIndex >= grid.Slots.Length || toIndex >= grid.Slots.Length)
+            {
+                if (debugMoveTrace)
+                    Debug.Log($"[InventoryDragTrace][Server] RejectMove reason=OutOfRange from={fromIndex} to={toIndex} max={grid.Slots.Length - 1}");
+                return;
+            }
+
+            if (!grid.TryMoveSlot(fromIndex, toIndex))
+            {
+                if (debugMoveTrace)
+                    Debug.Log($"[InventoryDragTrace][Server] RejectMove reason=GridTryMoveFailed from={fromIndex} to={toIndex}");
+                return;
+            }
+
+            if (debugMoveTrace)
+                Debug.Log($"[InventoryDragTrace][Server] MoveAccepted from={fromIndex} to={toIndex}");
+
+            ForceSendSnapshotToOwner();
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -554,12 +611,5 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
-
-
-
-
-
-
-
 
 

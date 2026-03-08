@@ -291,7 +291,7 @@ namespace HuntersAndCollectors.Persistence
 
         private PlayerSaveData CreateDefaultSave(PlayerNetworkRoot playerRoot, string playerKey)
         {
-            int width = 6;
+            int width = 8;
             int height = 4;
 
             if (playerRoot != null && playerRoot.Inventory != null && playerRoot.Inventory.Grid != null)
@@ -371,5 +371,4 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
-
 

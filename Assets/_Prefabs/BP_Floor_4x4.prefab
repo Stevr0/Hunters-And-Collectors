@@ -66,7 +66,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 323951c58bea5c7448067449b3126d3c, type: 2}
+  - {fileID: 2100000, guid: a5456dbed2eb44a4f866f44904aef5bf, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -164,6 +164,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.PlacedBuildPiece
   ShowTopMostFoldoutHeaderGroup: 1
   sourceItemId: it_floor
+  maxHealth: 100
+  destroyOnZeroHealth: 1
 --- !u!65 &2936037099816057740
 BoxCollider:
   m_ObjectHideFlags: 0

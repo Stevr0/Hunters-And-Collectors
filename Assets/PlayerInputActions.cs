@@ -163,6 +163,42 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ToggleStats"",
+                    ""type"": ""Button"",
+                    ""id"": ""fa45eaf8-2720-4537-91bb-28ff1872d878"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ToggleEquipment"",
+                    ""type"": ""Button"",
+                    ""id"": ""5a39bac9-0baf-426f-b989-460647d46677"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ToggleAll"",
+                    ""type"": ""Button"",
+                    ""id"": ""09448f63-ee1b-4cf8-9e18-64e9a5ff1828"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ToggleMenu"",
+                    ""type"": ""Button"",
+                    ""id"": ""daab93ba-6a6f-4f48-a434-88364598b431"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -308,6 +344,50 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""ToggleCrafting"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7685ba43-0fbe-4e15-87a2-c58cae5515c3"",
+                    ""path"": ""<Keyboard>/l"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ToggleStats"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""575e75b8-0e86-4e69-8490-24a1436bb395"",
+                    ""path"": ""<Keyboard>/p"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ToggleEquipment"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ef85285b-13ff-4253-b3d9-6f8c514f714a"",
+                    ""path"": ""<Keyboard>/tab"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ToggleAll"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ce8a2561-f94d-44e3-b5de-68ab212800a2"",
+                    ""path"": ""<Keyboard>/m"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ToggleMenu"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -324,6 +404,10 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Player_ToggleInventory = m_Player.FindAction("ToggleInventory", throwIfNotFound: true);
         m_Player_ToggleSkills = m_Player.FindAction("ToggleSkills", throwIfNotFound: true);
         m_Player_ToggleCrafting = m_Player.FindAction("ToggleCrafting", throwIfNotFound: true);
+        m_Player_ToggleStats = m_Player.FindAction("ToggleStats", throwIfNotFound: true);
+        m_Player_ToggleEquipment = m_Player.FindAction("ToggleEquipment", throwIfNotFound: true);
+        m_Player_ToggleAll = m_Player.FindAction("ToggleAll", throwIfNotFound: true);
+        m_Player_ToggleMenu = m_Player.FindAction("ToggleMenu", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -412,6 +496,10 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_ToggleInventory;
     private readonly InputAction m_Player_ToggleSkills;
     private readonly InputAction m_Player_ToggleCrafting;
+    private readonly InputAction m_Player_ToggleStats;
+    private readonly InputAction m_Player_ToggleEquipment;
+    private readonly InputAction m_Player_ToggleAll;
+    private readonly InputAction m_Player_ToggleMenu;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -455,6 +543,22 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/ToggleCrafting".
         /// </summary>
         public InputAction @ToggleCrafting => m_Wrapper.m_Player_ToggleCrafting;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/ToggleStats".
+        /// </summary>
+        public InputAction @ToggleStats => m_Wrapper.m_Player_ToggleStats;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/ToggleEquipment".
+        /// </summary>
+        public InputAction @ToggleEquipment => m_Wrapper.m_Player_ToggleEquipment;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/ToggleAll".
+        /// </summary>
+        public InputAction @ToggleAll => m_Wrapper.m_Player_ToggleAll;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/ToggleMenu".
+        /// </summary>
+        public InputAction @ToggleMenu => m_Wrapper.m_Player_ToggleMenu;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -505,6 +609,18 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @ToggleCrafting.started += instance.OnToggleCrafting;
             @ToggleCrafting.performed += instance.OnToggleCrafting;
             @ToggleCrafting.canceled += instance.OnToggleCrafting;
+            @ToggleStats.started += instance.OnToggleStats;
+            @ToggleStats.performed += instance.OnToggleStats;
+            @ToggleStats.canceled += instance.OnToggleStats;
+            @ToggleEquipment.started += instance.OnToggleEquipment;
+            @ToggleEquipment.performed += instance.OnToggleEquipment;
+            @ToggleEquipment.canceled += instance.OnToggleEquipment;
+            @ToggleAll.started += instance.OnToggleAll;
+            @ToggleAll.performed += instance.OnToggleAll;
+            @ToggleAll.canceled += instance.OnToggleAll;
+            @ToggleMenu.started += instance.OnToggleMenu;
+            @ToggleMenu.performed += instance.OnToggleMenu;
+            @ToggleMenu.canceled += instance.OnToggleMenu;
         }
 
         /// <summary>
@@ -540,6 +656,18 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @ToggleCrafting.started -= instance.OnToggleCrafting;
             @ToggleCrafting.performed -= instance.OnToggleCrafting;
             @ToggleCrafting.canceled -= instance.OnToggleCrafting;
+            @ToggleStats.started -= instance.OnToggleStats;
+            @ToggleStats.performed -= instance.OnToggleStats;
+            @ToggleStats.canceled -= instance.OnToggleStats;
+            @ToggleEquipment.started -= instance.OnToggleEquipment;
+            @ToggleEquipment.performed -= instance.OnToggleEquipment;
+            @ToggleEquipment.canceled -= instance.OnToggleEquipment;
+            @ToggleAll.started -= instance.OnToggleAll;
+            @ToggleAll.performed -= instance.OnToggleAll;
+            @ToggleAll.canceled -= instance.OnToggleAll;
+            @ToggleMenu.started -= instance.OnToggleMenu;
+            @ToggleMenu.performed -= instance.OnToggleMenu;
+            @ToggleMenu.canceled -= instance.OnToggleMenu;
         }
 
         /// <summary>
@@ -636,5 +764,33 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnToggleCrafting(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "ToggleStats" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnToggleStats(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "ToggleEquipment" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnToggleEquipment(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "ToggleAll" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnToggleAll(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "ToggleMenu" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnToggleMenu(InputAction.CallbackContext context);
     }
 }
