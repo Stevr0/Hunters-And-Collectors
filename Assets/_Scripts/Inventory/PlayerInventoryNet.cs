@@ -23,6 +23,7 @@ namespace HuntersAndCollectors.Inventory
 
         private InventoryGrid grid;
         private KnownItemsNet knownItems;
+        private PlayerEquipmentNet equipmentNet;
 
         private InventorySnapshot lastSnapshot; // client-side shadow copy
 
@@ -64,6 +65,60 @@ namespace HuntersAndCollectors.Inventory
             }
 
             return TryGetItemDef(itemId, out def);
+        }
+        private bool IsInventorySlotLockedByEquipment(int slotIndex)
+        {
+            if (!IsServer || slotIndex < 0)
+                return false;
+
+            if (equipmentNet == null)
+                equipmentNet = GetComponent<PlayerEquipmentNet>();
+
+            return equipmentNet != null && equipmentNet.ServerIsInventorySlotLockedByReferenceEquip(slotIndex);
+        }
+
+        private bool IsAnyReferenceEquippedItemId(string itemId)
+        {
+            if (!IsServer || string.IsNullOrWhiteSpace(itemId) || grid == null)
+                return false;
+
+            if (equipmentNet == null)
+                equipmentNet = GetComponent<PlayerEquipmentNet>();
+
+            if (equipmentNet == null)
+                return false;
+
+            string canonical = itemId.Trim();
+
+            bool MatchesSlotIndex(int index)
+            {
+                if (index < 0 || index >= grid.Slots.Length)
+                    return false;
+
+                InventorySlot slot = grid.Slots[index];
+                if (slot.IsEmpty)
+                    return false;
+
+                string slotItemId = slot.ContentType == InventorySlotContentType.Instance
+                    ? slot.Instance.ItemId
+                    : slot.Stack.ItemId;
+
+                return string.Equals(slotItemId, canonical, StringComparison.Ordinal);
+            }
+
+            return MatchesSlotIndex(equipmentNet.GetReferenceInventorySlotIndex(EquipSlot.MainHand))
+                || MatchesSlotIndex(equipmentNet.GetReferenceInventorySlotIndex(EquipSlot.OffHand));
+        }
+
+        private void ServerValidateEquipmentReferencesAfterInventoryMutation()
+        {
+            if (!IsServer)
+                return;
+
+            if (equipmentNet == null)
+                equipmentNet = GetComponent<PlayerEquipmentNet>();
+
+            equipmentNet?.ServerValidateReferenceAssignments();
         }
 
         // --------------------------------------------------------------------
@@ -128,12 +183,19 @@ namespace HuntersAndCollectors.Inventory
         public bool ServerRemoveItem(string itemId, int quantity)
         {
             if (!IsServer || grid == null) return false;
+
+            if (IsAnyReferenceEquippedItemId(itemId))
+            {
+                Debug.LogWarning($"[InventoryDragTrace][Server] RejectRemove reason=ReferenceEquipped itemId={itemId}");
+                return false;
+            }
+
             if (!grid.Remove(itemId, quantity)) return false;
 
             MarkDirtyAndMaybeSendSnapshot();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
             return true;
         }
-
         public int ServerAddItem(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
         {
             if (!IsServer) return quantity;
@@ -165,14 +227,15 @@ namespace HuntersAndCollectors.Inventory
         {
             if (!IsServer || grid == null) return false;
             if (slotIndex < 0) return false;
+            if (IsInventorySlotLockedByEquipment(slotIndex)) return false;
 
             if (!grid.TryAddOneToSlot(itemId, slotIndex, durability, bonusStrength, bonusDexterity, bonusIntelligence, craftedBy))
                 return false;
 
             MarkDirtyAndMaybeSendSnapshot();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
             return true;
         }
-
         /// <summary>
         /// Backward-compatible overload.
         /// </summary>
@@ -244,6 +307,9 @@ namespace HuntersAndCollectors.Inventory
             if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
                 return false;
 
+            if (IsInventorySlotLockedByEquipment(slotIndex))
+                return false;
+
             var slot = grid.Slots[slotIndex];
             if (slot.IsEmpty)
                 return false;
@@ -255,6 +321,7 @@ namespace HuntersAndCollectors.Inventory
                 removedInstanceData = slot.InstanceData;
                 grid.Slots[slotIndex] = MakeEmptySlot();
                 MarkDirtyAndMaybeSendSnapshot();
+                ServerValidateEquipmentReferencesAfterInventoryMutation();
                 return true;
             }
 
@@ -279,9 +346,9 @@ namespace HuntersAndCollectors.Inventory
             }
 
             MarkDirtyAndMaybeSendSnapshot();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
             return true;
         }
-
         /// <summary>
         /// SERVER: overwrite a slot with validated state.
         /// This path remains compatibility-friendly for existing systems that write by itemId.
@@ -294,10 +361,14 @@ namespace HuntersAndCollectors.Inventory
             if (slotIndex < 0 || slotIndex >= grid.Slots.Length)
                 return false;
 
+            if (IsInventorySlotLockedByEquipment(slotIndex))
+                return false;
+
             if (string.IsNullOrWhiteSpace(itemId) || qty <= 0)
             {
                 grid.Slots[slotIndex] = MakeEmptySlot();
                 MarkDirtyAndMaybeSendSnapshot();
+                ServerValidateEquipmentReferencesAfterInventoryMutation();
                 return true;
             }
 
@@ -369,9 +440,9 @@ namespace HuntersAndCollectors.Inventory
             }
 
             MarkDirtyAndMaybeSendSnapshot();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
             return true;
         }
-
         /// <summary>
         /// SERVER: damage a specific slot item's durability.
         /// If it breaks, the item is removed from the slot.
@@ -457,15 +528,16 @@ namespace HuntersAndCollectors.Inventory
                 EnforceAuthoritativeDimensions();
 
                 knownItems = GetComponent<KnownItemsNet>();
+                equipmentNet = GetComponent<PlayerEquipmentNet>();
                 grid = new InventoryGrid(width, height, itemDatabase);
 
                 if (debugMoveTrace)
                     Debug.Log($"[InventoryDragTrace][Server] Spawned authoritative inventory W={width} H={height} Slots={grid.Slots.Length}");
 
                 ForceSendSnapshotToOwner();
+                ServerValidateEquipmentReferencesAfterInventoryMutation();
             }
         }
-
 
         /// <summary>
         /// SERVER ONLY: replace authoritative grid from persistence payload and replicate snapshot.
@@ -567,6 +639,7 @@ namespace HuntersAndCollectors.Inventory
             }
 
             ForceSendSnapshotToOwner();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
         }
 
         private void EnforceAuthoritativeDimensions()
@@ -618,6 +691,13 @@ namespace HuntersAndCollectors.Inventory
                 return;
             }
 
+            if (IsInventorySlotLockedByEquipment(fromIndex) || IsInventorySlotLockedByEquipment(toIndex))
+            {
+                if (debugMoveTrace)
+                    Debug.Log($"[InventoryDragTrace][Server] RejectMove reason=ReferenceEquippedLock from={fromIndex} to={toIndex}");
+                return;
+            }
+
             if (!grid.TryMoveSlot(fromIndex, toIndex))
             {
                 if (debugMoveTrace)
@@ -629,15 +709,20 @@ namespace HuntersAndCollectors.Inventory
                 Debug.Log($"[InventoryDragTrace][Server] MoveAccepted from={fromIndex} to={toIndex}");
 
             ForceSendSnapshotToOwner();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
         }
 
         [ServerRpc(RequireOwnership = true)]
         public void RequestSplitStackServerRpc(int index, int splitAmount)
         {
             if (!IsServer || grid == null || splitAmount <= 0) return;
+            if (IsInventorySlotLockedByEquipment(index)) return;
 
             if (grid.TrySplitStack(index, splitAmount, out _))
+            {
                 ForceSendSnapshotToOwner();
+                ServerValidateEquipmentReferencesAfterInventoryMutation();
+            }
         }
 
         [ClientRpc]
@@ -784,3 +869,7 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+
+
+

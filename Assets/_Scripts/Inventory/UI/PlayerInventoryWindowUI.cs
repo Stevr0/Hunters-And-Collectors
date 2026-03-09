@@ -65,6 +65,9 @@ namespace HuntersAndCollectors.Inventory.UI
         [Tooltip("Allow right-click activation on row 0 while collapsed.")]
         [SerializeField] private bool allowRightClickHotbarWhenCollapsed = true;
 
+        [Header("Container Transfer Routing")]
+        [Tooltip("Assigned by storage UI while a chest is open. When set, player slots can route drag/drop transfers to storage via ServerRpc requests.")]
+        [SerializeField] private InventoryDragController activeContainerDragController;
         [Header("Placement UX")]
         [Tooltip("Inventory window alpha while placement mode is active.")]
         [Range(0f, 1f)]
@@ -164,6 +167,25 @@ namespace HuntersAndCollectors.Inventory.UI
         /// Alias helper requested for simpler external use.
         /// </summary>
         public bool IsExpanded() => IsInventoryExpanded();
+        /// <summary>
+        /// Storage UI calls this while a chest is open so player slots can route cross-container drags.
+        /// Passing null restores normal player-inventory-only drag routing.
+        /// </summary>
+        public void SetContainerDragController(InventoryDragController dragController)
+        {
+            activeContainerDragController = dragController;
+            RebindSlotContainerRouting();
+            ForceNextRender();
+            TryRenderIfChanged();
+        }
+
+        /// <summary>
+        /// Convenience helper when a storage session ends.
+        /// </summary>
+        public void ClearContainerDragController()
+        {
+            SetContainerDragController(null);
+        }
 
         public void SetExpanded(bool expanded)
         {
@@ -425,6 +447,11 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
 
             int signature = ComputeSnapshotSignature(snapshot, isExpanded);
+            if (currentEquipmentNet != null)
+            {
+                signature = (signature * 31) + currentEquipmentNet.GetReferenceInventorySlotIndex(EquipSlot.MainHand);
+                signature = (signature * 31) + currentEquipmentNet.GetReferenceInventorySlotIndex(EquipSlot.OffHand);
+            }
             if (signature == lastRenderedSignature)
                 return;
 
@@ -486,9 +513,12 @@ namespace HuntersAndCollectors.Inventory.UI
                 InventoryGridSlotUI uiSlot = slotUIs[i];
 
                 EnsureSlotParentForIndex(i, uiSlot);
-                uiSlot.SetContainerContext(InventoryContainerType.Player, i);
-                uiSlot.SetContainerDragController(null);
+                uiSlot.SetContainerContext(InventoryContainerType.PlayerInventory, i);
+                uiSlot.SetContainerDragController(activeContainerDragController);
                 uiSlot.gameObject.SetActive(IsSlotVisibleInCurrentPresentation(i));
+
+                bool isReferenceEquipped = currentEquipmentNet != null && currentEquipmentNet.IsInventorySlotReferenceEquipped(i);
+                uiSlot.SetReferenceEquipped(isReferenceEquipped);
 
                 if (netSlot.IsEmpty)
                 {
@@ -519,6 +549,7 @@ namespace HuntersAndCollectors.Inventory.UI
             {
                 InventoryGridSlotUI uiSlot = slotUIs[i];
                 EnsureSlotParentForIndex(i, uiSlot);
+                uiSlot.SetReferenceEquipped(false);
                 uiSlot.SetEmpty();
                 uiSlot.gameObject.SetActive(IsSlotVisibleInCurrentPresentation(i));
             }
@@ -588,8 +619,8 @@ namespace HuntersAndCollectors.Inventory.UI
                 Transform parent = ResolveParentForSlot(slotIndex);
                 InventoryGridSlotUI ui = Instantiate(slotPrefab, parent != null ? parent : transform);
 
-                ui.SetContainerContext(InventoryContainerType.Player, slotIndex);
-                ui.SetContainerDragController(null);
+                ui.SetContainerContext(InventoryContainerType.PlayerInventory, slotIndex);
+                ui.SetContainerDragController(activeContainerDragController);
                 ui.BindCanStartDrag(CanStartDragCurrentMode);
                 ui.BindClick(OnSlotClicked);
                 ui.BindRightClick(OnSlotRightClicked);
@@ -605,6 +636,18 @@ namespace HuntersAndCollectors.Inventory.UI
                     Destroy(slotUIs[last].gameObject);
 
                 slotUIs.RemoveAt(last);
+            }
+        }
+
+        private void RebindSlotContainerRouting()
+        {
+            for (int i = 0; i < slotUIs.Count; i++)
+            {
+                if (slotUIs[i] == null)
+                    continue;
+
+                slotUIs[i].SetContainerContext(InventoryContainerType.PlayerInventory, i);
+                slotUIs[i].SetContainerDragController(activeContainerDragController);
             }
         }
 
@@ -894,8 +937,6 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
-
-
 
 
 

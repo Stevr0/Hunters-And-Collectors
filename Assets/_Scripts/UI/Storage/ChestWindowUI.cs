@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using HuntersAndCollectors.Input;
-using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Inventory.UI;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Storage;
-using HuntersAndCollectors.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,16 +11,21 @@ using UnityEngine.UI;
 namespace HuntersAndCollectors.UI.Storage
 {
     /// <summary>
-    /// ChestWindowUI
-    /// --------------------------------------------------------------------
-    /// Container window that shows two grids in one place:
-    /// - Top: Player inventory snapshot
-    /// - Bottom: Chest inventory snapshot
+    /// Storage-only presenter for chest inventories.
     ///
-    /// This keeps one active presenter for the player inventory while chest is open,
-    /// preventing duplicated UI presenters from fighting each other.
+    /// Root-cause fix:
+    /// - The old implementation rendered an extra "player panel" inside this window.
+    /// - In scene wiring, that player panel pointed at the same Transform used by
+    ///   PlayerInventoryWindowUI's hotbar row.
+    /// - Opening chest therefore instantiated a second set of player slot views into the
+    ///   player row hierarchy, causing duplicated visuals and drag interactions on the
+    ///   duplicate instances instead of the canonical player presenter.
     ///
-    /// Drag/drop transfers are routed by InventoryDragController.
+    /// New model:
+    /// - This class renders chest slots only.
+    /// - PlayerInventoryWindowUI remains the only owner of player slot views.
+    /// - While storage is open, we temporarily route player slot drag/drop through
+    ///   InventoryDragController so cross-container transfers use server RPCs.
     /// </summary>
     public sealed class ChestWindowUI : MonoBehaviour
     {
@@ -30,35 +33,24 @@ namespace HuntersAndCollectors.UI.Storage
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private Button closeButton;
 
-        [Header("Player Panel (Top)")]
-        [SerializeField] private Transform playerGridRoot;
-        [SerializeField] private InventoryGridSlotUI playerSlotPrefab;
-
-        [Header("Chest Panel (Bottom)")]
+        [Header("Chest Panel")]
         [SerializeField] private Transform chestGridRoot;
         [SerializeField] private InventoryGridSlotUI chestSlotPrefab;
+
+        [Header("Player Presenter (External)")]
+        [Tooltip("Canonical player inventory presenter. It owns player slots and is never duplicated by storage UI.")]
+        [SerializeField] private PlayerInventoryWindowUI playerInventoryWindow;
 
         [Header("Drag")]
         [SerializeField] private InventoryDragController inventoryDragController;
 
-        [Header("Single Presenter Ownership")]
-        [Tooltip("Optional. If assigned, this character root is closed while chest UI is open so only one player inventory presenter is active.")]
-        [SerializeField] private CharacterWindowRootUI characterWindowRoot;
-
         [Header("Data")]
         [SerializeField] private ItemDatabase itemDatabase;
 
-        private ChestContainerNet activeChest;
-        private PlayerInventoryNet localPlayerInventory;
-
+        private StorageNet activeChest;
         private readonly List<InventoryGridSlotUI> chestSlotUis = new();
-        private readonly List<InventoryGridSlotUI> playerSlotUis = new();
-
         private InventorySnapshot latestChestSnapshot;
-        private InventorySnapshot latestPlayerSnapshot;
-
         private bool gameplayLockHeld;
-        private bool characterWindowWasOpenBeforeChest;
 
         private void Awake()
         {
@@ -71,8 +63,8 @@ namespace HuntersAndCollectors.UI.Storage
             if (inventoryDragController == null)
                 inventoryDragController = FindFirstObjectByType<InventoryDragController>(FindObjectsInactive.Include);
 
-            if (characterWindowRoot == null)
-                characterWindowRoot = FindFirstObjectByType<CharacterWindowRootUI>(FindObjectsInactive.Include);
+            if (playerInventoryWindow == null)
+                playerInventoryWindow = FindFirstObjectByType<PlayerInventoryWindowUI>(FindObjectsInactive.Include);
         }
 
         private void OnEnable()
@@ -82,15 +74,12 @@ namespace HuntersAndCollectors.UI.Storage
                 InputState.LockGameplay();
                 gameplayLockHeld = true;
             }
-
-            BindLocalPlayerInventoryIfNeeded();
         }
 
         private void OnDisable()
         {
-            UnbindActiveSources();
-            ClearAllSlots();
-            RestoreCharacterWindowOwnership();
+            UnbindActiveChestSession();
+            ClearChestSlots();
 
             if (gameplayLockHeld)
             {
@@ -100,9 +89,10 @@ namespace HuntersAndCollectors.UI.Storage
         }
 
         /// <summary>
-        /// Opens chest UI and binds both player/chest snapshots.
+        /// Opens storage UI and binds only to chest snapshots.
+        /// Player slot visuals stay owned by PlayerInventoryWindowUI.
         /// </summary>
-        public void Open(ChestContainerNet chest)
+        public void Open(StorageNet chest)
         {
             if (chest == null)
             {
@@ -116,25 +106,16 @@ namespace HuntersAndCollectors.UI.Storage
                 return;
             }
 
-            BindLocalPlayerInventoryIfNeeded();
-            if (localPlayerInventory == null)
-            {
-                Debug.LogWarning("[ChestWindowUI] Local player inventory not found.");
-                return;
-            }
-
-            // Clean unbind if window was previously bound to a different chest.
-            UnbindActiveSources();
+            UnbindActiveChestSession();
 
             activeChest = chest;
             activeChest.OnChestSnapshotChanged += HandleChestSnapshotChanged;
 
-            localPlayerInventory.OnSnapshotChanged -= HandlePlayerSnapshotChanged;
-            localPlayerInventory.OnSnapshotChanged += HandlePlayerSnapshotChanged;
-
-            // Container drag controller needs the active chest reference.
             if (inventoryDragController != null)
                 inventoryDragController.BindChest(activeChest);
+
+            if (playerInventoryWindow != null)
+                playerInventoryWindow.SetContainerDragController(inventoryDragController);
 
             if (!gameObject.activeSelf)
                 gameObject.SetActive(true);
@@ -142,58 +123,30 @@ namespace HuntersAndCollectors.UI.Storage
             if (titleText != null)
                 titleText.text = "Container";
 
-            TakeCharacterWindowOwnership();
-
-            // Render cached snapshots immediately.
+            // Render current cached chest snapshot first, then request fresh data from server.
             latestChestSnapshot = activeChest.LastSnapshot;
-            latestPlayerSnapshot = localPlayerInventory.LastSnapshot;
-
-            RenderPlayerSnapshot(latestPlayerSnapshot);
             RenderChestSnapshot(latestChestSnapshot);
-
-            // Ask server for latest chest data.
             activeChest.RequestOpenChestServerRpc();
         }
 
-        /// <summary>
-        /// Closes chest window and unbinds all listeners.
-        /// </summary>
         public void Close()
         {
             gameObject.SetActive(false);
         }
 
-        private void BindLocalPlayerInventoryIfNeeded()
-        {
-            if (localPlayerInventory == null)
-            {
-                PlayerInventoryNet[] found = FindObjectsByType<PlayerInventoryNet>(FindObjectsSortMode.None);
-                for (int i = 0; i < found.Length; i++)
-                {
-                    PlayerInventoryNet candidate = found[i];
-                    if (candidate != null && candidate.IsOwner)
-                    {
-                        localPlayerInventory = candidate;
-                        break;
-                    }
-                }
-            }
-        }
-
-        private void UnbindActiveSources()
+        private void UnbindActiveChestSession()
         {
             if (activeChest != null)
                 activeChest.OnChestSnapshotChanged -= HandleChestSnapshotChanged;
 
-            if (localPlayerInventory != null)
-                localPlayerInventory.OnSnapshotChanged -= HandlePlayerSnapshotChanged;
-
             if (inventoryDragController != null)
                 inventoryDragController.ClearChest();
 
+            if (playerInventoryWindow != null)
+                playerInventoryWindow.ClearContainerDragController();
+
             activeChest = null;
             latestChestSnapshot = default;
-            latestPlayerSnapshot = default;
         }
 
         private void HandleChestSnapshotChanged(InventorySnapshot snapshot)
@@ -202,60 +155,28 @@ namespace HuntersAndCollectors.UI.Storage
             RenderChestSnapshot(snapshot);
         }
 
-        private void HandlePlayerSnapshotChanged(InventorySnapshot snapshot)
-        {
-            latestPlayerSnapshot = snapshot;
-            RenderPlayerSnapshot(snapshot);
-        }
-
-        private void RenderPlayerSnapshot(InventorySnapshot snapshot)
-        {
-            if (playerGridRoot == null || playerSlotPrefab == null)
-                return;
-
-            int slotCount = snapshot.Slots == null ? 0 : snapshot.Slots.Length;
-            EnsureSlotCount(
-                playerSlotUis,
-                playerSlotPrefab,
-                playerGridRoot,
-                slotCount,
-                InventoryContainerType.Player);
-
-            for (int i = 0; i < slotCount; i++)
-                BindSlotUiFromSnapshot(playerSlotUis[i], InventoryContainerType.Player, i, snapshot.Slots[i]);
-        }
-
         private void RenderChestSnapshot(InventorySnapshot snapshot)
         {
             if (chestGridRoot == null || chestSlotPrefab == null)
                 return;
 
             int slotCount = snapshot.Slots == null ? 0 : snapshot.Slots.Length;
-            EnsureSlotCount(
-                chestSlotUis,
-                chestSlotPrefab,
-                chestGridRoot,
-                slotCount,
-                InventoryContainerType.Chest);
+            EnsureSlotCount(slotCount);
 
             for (int i = 0; i < slotCount; i++)
-                BindSlotUiFromSnapshot(chestSlotUis[i], InventoryContainerType.Chest, i, snapshot.Slots[i]);
+                BindSlotUiFromSnapshot(chestSlotUis[i], i, snapshot.Slots[i]);
         }
 
-        private void BindSlotUiFromSnapshot(
-            InventoryGridSlotUI slotUi,
-            InventoryContainerType containerType,
-            int slotIndex,
-            InventorySnapshot.SlotDto slot)
+        private void BindSlotUiFromSnapshot(InventoryGridSlotUI slotUi, int slotIndex, InventorySnapshot.SlotDto slot)
         {
             if (slotUi == null)
                 return;
 
-            slotUi.SetContainerContext(containerType, slotIndex);
+            slotUi.SetContainerContext(InventoryContainerType.StorageInventory, slotIndex);
             slotUi.SetContainerDragController(inventoryDragController);
-
-            // Chest window transfer uses drag/drop only in this pass.
+            slotUi.BindCanStartDrag(null);
             slotUi.BindClick(null);
+            slotUi.BindRightClick(null);
 
             if (slot.IsEmpty)
             {
@@ -311,69 +232,41 @@ namespace HuntersAndCollectors.UI.Storage
             return data;
         }
 
-        private void EnsureSlotCount(
-            List<InventoryGridSlotUI> slotList,
-            InventoryGridSlotUI slotPrefab,
-            Transform root,
-            int desiredCount,
-            InventoryContainerType containerType)
+        private void EnsureSlotCount(int desiredCount)
         {
-            while (slotList.Count < desiredCount)
+            while (chestSlotUis.Count < desiredCount)
             {
-                InventoryGridSlotUI slotUi = Instantiate(slotPrefab, root);
-                slotUi.SetContainerContext(containerType, slotList.Count);
+                int slotIndex = chestSlotUis.Count;
+                InventoryGridSlotUI slotUi = Instantiate(chestSlotPrefab, chestGridRoot);
+                slotUi.SetContainerContext(InventoryContainerType.StorageInventory, slotIndex);
                 slotUi.SetContainerDragController(inventoryDragController);
+                slotUi.BindCanStartDrag(null);
                 slotUi.BindClick(null);
+                slotUi.BindRightClick(null);
                 slotUi.SetEmpty();
-                slotList.Add(slotUi);
+                chestSlotUis.Add(slotUi);
             }
 
-            while (slotList.Count > desiredCount)
+            while (chestSlotUis.Count > desiredCount)
             {
-                int last = slotList.Count - 1;
-                if (slotList[last] != null)
-                    Destroy(slotList[last].gameObject);
+                int last = chestSlotUis.Count - 1;
+                if (chestSlotUis[last] != null)
+                    Destroy(chestSlotUis[last].gameObject);
 
-                slotList.RemoveAt(last);
+                chestSlotUis.RemoveAt(last);
             }
         }
 
-        private void ClearAllSlots()
+        private void ClearChestSlots()
         {
-            ClearSlotList(chestSlotUis);
-            ClearSlotList(playerSlotUis);
-        }
-
-        private static void ClearSlotList(List<InventoryGridSlotUI> slots)
-        {
-            for (int i = 0; i < slots.Count; i++)
+            for (int i = 0; i < chestSlotUis.Count; i++)
             {
-                if (slots[i] != null)
-                    Destroy(slots[i].gameObject);
+                if (chestSlotUis[i] != null)
+                    Destroy(chestSlotUis[i].gameObject);
             }
 
-            slots.Clear();
-        }
-
-        private void TakeCharacterWindowOwnership()
-        {
-            if (characterWindowRoot == null)
-                return;
-
-            characterWindowWasOpenBeforeChest = characterWindowRoot.IsOpen;
-            if (characterWindowWasOpenBeforeChest)
-                characterWindowRoot.Close();
-        }
-
-        private void RestoreCharacterWindowOwnership()
-        {
-            if (characterWindowRoot == null)
-                return;
-
-            if (characterWindowWasOpenBeforeChest)
-                characterWindowRoot.Open();
-
-            characterWindowWasOpenBeforeChest = false;
+            chestSlotUis.Clear();
         }
     }
 }
+

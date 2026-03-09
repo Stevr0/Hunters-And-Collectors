@@ -1,4 +1,5 @@
 using HuntersAndCollectors.Inventory;
+using HuntersAndCollectors.Networking.DTO;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using System;
@@ -30,6 +31,7 @@ namespace HuntersAndCollectors.UI
         private PlayerInventoryNet inventoryNet;
 
         private Action equipmentChangedHandler;
+        private Action<InventorySnapshot> inventorySnapshotChangedHandler;
         private readonly Dictionary<EquipSlot, string> lastRenderedSlotIds = new();
         private readonly Dictionary<EquipSlot, int> lastRenderedSlotDurability = new();
 
@@ -111,6 +113,12 @@ namespace HuntersAndCollectors.UI
                 // Also subscribe to per-slot item and durability netvars so UI updates immediately
                 // when server replication changes either field.
                 SubscribeToSlotNetVars();
+
+                if (inventoryNet != null)
+                {
+                    inventorySnapshotChangedHandler = _ => RefreshAll();
+                    inventoryNet.OnSnapshotChanged += inventorySnapshotChangedHandler;
+                }
             }
 
             RefreshAll();
@@ -124,9 +132,13 @@ namespace HuntersAndCollectors.UI
                     equipmentNet.OnEquipmentChanged -= equipmentChangedHandler;
 
                 UnsubscribeFromSlotNetVars();
+
+                if (inventoryNet != null && inventorySnapshotChangedHandler != null)
+                    inventoryNet.OnSnapshotChanged -= inventorySnapshotChangedHandler;
             }
 
             equipmentChangedHandler = null;
+            inventorySnapshotChangedHandler = null;
             equipmentNet = null;
             inventoryNet = null;
             lastRenderedSlotIds.Clear();
@@ -183,11 +195,24 @@ namespace HuntersAndCollectors.UI
                     continue;
 
                 string itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
+                int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
+                ItemTooltipData tooltip = BuildTooltipData(slotUI.Slot, itemId);
+
+                // Hybrid view: hand slots can be reference-equipped from hotbar inventory.
+                // When assigned, resolve icon/stats from inventory snapshot so the panel is a visual reference.
+                if (equipmentNet.IsReferenceEquipSlot(slotUI.Slot) &&
+                    TryResolveReferenceVisualFromInventory(slotUI.Slot, out string referenceItemId, out int referenceDurability, out ItemTooltipData referenceTooltip))
+                {
+                    itemId = referenceItemId;
+                    durability = referenceDurability;
+                    tooltip = referenceTooltip;
+                }
+
                 Sprite icon = ResolveIcon(itemId);
 
                 // Set cache first, icon second, durability last.
                 slotUI.SetEquippedItemCache(itemId, icon);
-                slotUI.SetTooltipData(BuildTooltipData(slotUI.Slot, itemId));
+                slotUI.SetTooltipData(tooltip);
                 slotUI.SetIcon(icon);
 
                 int maxDurability = 0;
@@ -204,8 +229,6 @@ namespace HuntersAndCollectors.UI
                     }
                 }
 
-                int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
-
                 bool showDurability = !string.IsNullOrWhiteSpace(itemId) && maxDurability > 0 && durability > 0;
                 slotUI.SetDurability(durability, showDurability ? maxDurability : 0);
 
@@ -219,7 +242,62 @@ namespace HuntersAndCollectors.UI
                 lastRenderedSlotDurability[slotUI.Slot] = durability;
             }
         }
+        private bool TryResolveReferenceVisualFromInventory(EquipSlot slot, out string itemId, out int durability, out ItemTooltipData tooltip)
+        {
+            itemId = string.Empty;
+            durability = 0;
+            tooltip = default;
 
+            if (equipmentNet == null || inventoryNet == null)
+                return false;
+
+            int inventoryIndex = equipmentNet.GetReferenceInventorySlotIndex(slot);
+            if (inventoryIndex < 0)
+                return false;
+
+            InventorySnapshot snapshot = inventoryNet.LastSnapshot;
+            if (snapshot.Slots == null || inventoryIndex >= snapshot.Slots.Length)
+                return false;
+
+            InventorySnapshot.SlotDto sourceSlot = snapshot.Slots[inventoryIndex];
+            if (sourceSlot.IsEmpty || sourceSlot.Quantity <= 0)
+                return false;
+
+            itemId = sourceSlot.ItemId.ToString();
+            durability = sourceSlot.Durability;
+
+            tooltip = new ItemTooltipData
+            {
+                ItemId = itemId,
+                Durability = durability,
+                MaxDurability = sourceSlot.MaxDurability,
+                BonusStrength = sourceSlot.BonusStrength,
+                BonusDexterity = sourceSlot.BonusDexterity,
+                BonusIntelligence = sourceSlot.BonusIntelligence,
+                CraftedBy = sourceSlot.CraftedBy.ToString(),
+                InstanceId = sourceSlot.InstanceId,
+                RolledDamage = sourceSlot.RolledDamage,
+                RolledDefence = sourceSlot.RolledDefence,
+                RolledSwingSpeed = sourceSlot.RolledSwingSpeed,
+                RolledMovementSpeed = sourceSlot.RolledMovementSpeed
+            };
+
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out ItemDef def) && def != null)
+            {
+                tooltip.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
+                tooltip.Description = def.Description;
+                tooltip.Damage = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDamage > 0f ? sourceSlot.RolledDamage : def.Damage;
+                tooltip.Defence = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDefence > 0f ? sourceSlot.RolledDefence : def.Defence;
+                tooltip.AttackBonus = def.AttackBonus;
+                tooltip.SwingSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledSwingSpeed > 0f ? sourceSlot.RolledSwingSpeed : def.SwingSpeed;
+                tooltip.MoveSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledMovementSpeed > 0f ? sourceSlot.RolledMovementSpeed : def.MovementSpeed;
+                tooltip.Strength = Mathf.Max(0, def.Strength) + sourceSlot.BonusStrength;
+                tooltip.Dexterity = Mathf.Max(0, def.Dexterity) + sourceSlot.BonusDexterity;
+                tooltip.Intelligence = Mathf.Max(0, def.Intelligence) + sourceSlot.BonusIntelligence;
+            }
+
+            return true;
+        }
         private ItemTooltipData BuildTooltipData(EquipSlot slot, string itemId)
         {
             ItemTooltipData data = new ItemTooltipData
@@ -368,6 +446,10 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
+
 
 
 

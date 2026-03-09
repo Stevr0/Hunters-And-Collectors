@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2898741585
+  GlobalObjectIdHash: 3920651140
   InScenePlacedSourceGlobalObjectIdHash: 2898741585
   DeferredDespawnTick: 0
   Ownership: 1
@@ -83,6 +83,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1271801044194224691}
     m_Modifications:
+    - target: {fileID: 368698817381564819, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.85
+      objectReference: {fileID: 0}
     - target: {fileID: 368698817381564819, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -130,8 +134,37 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 368698817381735859, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6206056731931244972}
   m_SourcePrefab: {fileID: 100100000, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}
+--- !u!1 &4595459834094573634 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 368698817381735859, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}
+  m_PrefabInstance: {fileID: 4241189915895612913}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &6206056731931244972
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4595459834094573634}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 4.7295604, y: 2.7920554, z: 0.13635544}
+  m_Center: {x: -0.0016943215, y: 1.3960277, z: 0.04182025}
 --- !u!4 &4595459834095060066 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 368698817381564819, guid: 43d9862cf9630b444a44a93e3da33db8, type: 3}

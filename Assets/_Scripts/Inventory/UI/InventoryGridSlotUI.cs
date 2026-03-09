@@ -12,8 +12,12 @@ namespace HuntersAndCollectors.Inventory.UI
     /// </summary>
     public enum InventoryContainerType
     {
-        Player = 0,
-        Chest = 1
+        PlayerInventory = 0,
+        StorageInventory = 1,
+
+        // Backward-compatible aliases for existing serialized values/usages.
+        Player = PlayerInventory,
+        Chest = StorageInventory
     }
 
     /// <summary>
@@ -33,12 +37,19 @@ namespace HuntersAndCollectors.Inventory.UI
         [SerializeField] private UIDragDropBroker dragDrop;
 
         [Header("Container Context")]
-        [SerializeField] private InventoryContainerType containerType = InventoryContainerType.Player;
+        [SerializeField] private InventoryContainerType containerType = InventoryContainerType.PlayerInventory;
         [SerializeField] private InventoryDragController containerDragController;
 
         [Header("Durability")]
         [SerializeField] private Image durabilityBackground;
         [SerializeField] private Image durabilityFill;
+
+        [Header("Equipped Visual")]
+        [Tooltip("Optional border/overlay image shown when this inventory slot is reference-equipped.")]
+        [SerializeField] private Image equippedStateImage;
+        [SerializeField] private Color equippedStateColor = new Color(0.92f, 0.78f, 0.24f, 0.9f);
+        [SerializeField] private bool tintIconWhenEquipped = true;
+        [SerializeField] private Color equippedIconTint = new Color(1f, 0.97f, 0.78f, 1f);
 
         [Header("Debug")]
         [SerializeField] private bool debugHover;
@@ -47,6 +58,7 @@ namespace HuntersAndCollectors.Inventory.UI
         private string itemId = string.Empty;
         private int quantity;
         private ItemTooltipData tooltipData;
+        private bool isReferenceEquipped;
 
         public int SlotIndex { get; private set; } = -1;
         public string ItemId => itemId;
@@ -84,6 +96,16 @@ namespace HuntersAndCollectors.Inventory.UI
         public void BindCanStartDrag(System.Func<bool> resolver)
         {
             canStartDragResolver = resolver;
+        }
+
+        /// <summary>
+        /// Presentation-only marker for hybrid equipment reference slots.
+        /// This never mutates authoritative inventory state.
+        /// </summary>
+        public void SetReferenceEquipped(bool equipped)
+        {
+            isReferenceEquipped = equipped;
+            ApplyEquippedVisual();
         }
 
         private bool CanStartDrag()
@@ -217,6 +239,23 @@ namespace HuntersAndCollectors.Inventory.UI
             dropHitboxImage.color = new Color(1f, 1f, 1f, 0f);
             dropHitboxImage.raycastTarget = true;
         }
+        private void ApplyEquippedVisual()
+        {
+            if (equippedStateImage != null)
+            {
+                equippedStateImage.enabled = isReferenceEquipped;
+                if (isReferenceEquipped)
+                    equippedStateImage.color = equippedStateColor;
+            }
+
+            if (iconImage != null)
+            {
+                iconImage.color = !tintIconWhenEquipped
+                    ? Color.white
+                    : (isReferenceEquipped ? equippedIconTint : Color.white);
+            }
+        }
+
         private void ResetVisuals()
         {
             if (iconImage != null)
@@ -239,6 +278,8 @@ namespace HuntersAndCollectors.Inventory.UI
                 durabilityFill.enabled = false;
                 durabilityFill.fillAmount = 1f;
             }
+
+            ApplyEquippedVisual();
         }
 
         private void TryAutoBindDurabilityRefs()

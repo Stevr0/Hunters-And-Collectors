@@ -26,7 +26,7 @@ namespace HuntersAndCollectors.Storage
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
-    public sealed class ChestContainerNet : NetworkBehaviour
+    public sealed class StorageNet : NetworkBehaviour
     {
         [Header("Definition")]
         [SerializeField] private ItemDatabase itemDatabase;

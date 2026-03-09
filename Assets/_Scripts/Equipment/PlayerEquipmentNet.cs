@@ -34,6 +34,9 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<FixedString64Bytes> gloves = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> shoulders = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> belt = new("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Hybrid model references for hand slots: points to hotbar inventory index or -1 when not reference-equipped.
+        private readonly NetworkVariable<int> mainHandInventorySlotRef = new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<int> offHandInventorySlotRef = new(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Server writes durability, all clients read for UI.
         private readonly NetworkVariable<int> mainHandDurability = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -120,6 +123,8 @@ namespace HuntersAndCollectors.Players
         public NetworkVariable<int> BeltDurabilityNetVar => beltDurability;
         [Obsolete("Use BootsDurabilityNetVar")]
         public NetworkVariable<int> FeetDurabilityNetVar => feetDurability;
+        public NetworkVariable<int> MainHandInventorySlotRefNetVar => mainHandInventorySlotRef;
+        public NetworkVariable<int> OffHandInventorySlotRefNetVar => offHandInventorySlotRef;
 
         public string GetMainHandItemId() => mainHand.Value.ToString();
 
@@ -155,6 +160,45 @@ namespace HuntersAndCollectors.Players
                 EquipSlot.Belt => beltDurability.Value,
                 _ => 0
             };
+        }
+        /// <summary>
+        /// True when this equip slot is reference-bound to a hotbar inventory slot
+        /// instead of owning moved item data.
+        /// </summary>
+        public bool IsReferenceEquipSlot(EquipSlot slot)
+        {
+            return slot == EquipSlot.MainHand || slot == EquipSlot.OffHand;
+        }
+
+        public int GetReferenceInventorySlotIndex(EquipSlot slot)
+        {
+            return slot switch
+            {
+                EquipSlot.MainHand => mainHandInventorySlotRef.Value,
+                EquipSlot.OffHand => offHandInventorySlotRef.Value,
+                _ => -1
+            };
+        }
+
+        public bool IsInventorySlotReferenceEquipped(int inventorySlotIndex)
+        {
+            if (inventorySlotIndex < 0)
+                return false;
+
+            return mainHandInventorySlotRef.Value == inventorySlotIndex
+                || offHandInventorySlotRef.Value == inventorySlotIndex;
+        }
+
+        /// <summary>
+        /// Server-side guard for inventory mutation paths.
+        /// MVP rule: reference-equipped hotbar items are locked until unequipped.
+        /// </summary>
+        public bool ServerIsInventorySlotLockedByReferenceEquip(int inventorySlotIndex)
+        {
+            if (!IsServer)
+                return false;
+
+            return IsInventorySlotReferenceEquipped(inventorySlotIndex);
         }
 
         public int GetEquippedBonusStrength(EquipSlot slot) => GetEquippedBonusData(slot).BonusStrength;
@@ -263,6 +307,8 @@ namespace HuntersAndCollectors.Players
             gloves.OnValueChanged += OnAnySlotChanged;
             shoulders.OnValueChanged += OnAnySlotChanged;
             belt.OnValueChanged += OnAnySlotChanged;
+            mainHandInventorySlotRef.OnValueChanged += OnAnyReferenceSlotChanged;
+            offHandInventorySlotRef.OnValueChanged += OnAnyReferenceSlotChanged;
 
             mainHandDurability.OnValueChanged += OnAnyDurabilityChanged;
             offHandDurability.OnValueChanged += OnAnyDurabilityChanged;
@@ -312,6 +358,9 @@ namespace HuntersAndCollectors.Players
             shouldersCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
             beltCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
 
+            if (IsServer)
+                ServerValidateReferenceAssignments();
+
             OnEquipmentChanged?.Invoke();
         }
 
@@ -326,6 +375,8 @@ namespace HuntersAndCollectors.Players
             gloves.OnValueChanged -= OnAnySlotChanged;
             shoulders.OnValueChanged -= OnAnySlotChanged;
             belt.OnValueChanged -= OnAnySlotChanged;
+            mainHandInventorySlotRef.OnValueChanged -= OnAnyReferenceSlotChanged;
+            offHandInventorySlotRef.OnValueChanged -= OnAnyReferenceSlotChanged;
 
             mainHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
             offHandDurability.OnValueChanged -= OnAnyDurabilityChanged;
@@ -378,6 +429,9 @@ namespace HuntersAndCollectors.Players
 
         private void OnAnySlotChanged(FixedString64Bytes prev, FixedString64Bytes next)
         {
+            if (IsServer)
+                ServerValidateReferenceAssignments();
+
             OnEquipmentChanged?.Invoke();
         }
 
@@ -393,6 +447,14 @@ namespace HuntersAndCollectors.Players
 
         private void OnAnyCraftedByChanged(FixedString64Bytes prev, FixedString64Bytes next)
         {
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private void OnAnyReferenceSlotChanged(int previous, int next)
+        {
+            if (IsServer)
+                ServerValidateReferenceAssignments();
+
             OnEquipmentChanged?.Invoke();
         }
 
@@ -612,6 +674,19 @@ namespace HuntersAndCollectors.Players
                 return false;
             }
 
+            // Hybrid rule:
+            // - Hand slots are reference-equipped from hotbar only.
+            // - Armor slots keep move-to-equipment behavior.
+            if (IsReferenceEquipSlot(def.EquipSlot))
+            {
+                if (!TryApplyReferenceEquip(def, inventorySlotIndex, slotDurability, slotInstanceData))
+                    return false;
+
+                ServerValidateReferenceAssignments();
+                LogServerEquipmentState($"Reference-equipped itemId={def.ItemId} slot={def.EquipSlot} invRef={inventorySlotIndex}");
+                return true;
+            }
+
             if (!CanEquip(def, out var toUnequipA, out var toUnequipB))
             {
                 Debug.LogWarning($"[Equipment][SERVER] Equip denied: rules failed. itemId={itemId}");
@@ -638,10 +713,125 @@ namespace HuntersAndCollectors.Players
                 removedInstanceData = slotInstanceData;
 
             ApplyEquip(def, finalDurability, removedInstanceData);
-            LogServerEquipmentState($"Equipped itemId={def.ItemId} slot={def.EquipSlot} fromInventorySlot={inventorySlotIndex}");
+            LogServerEquipmentState($"Moved-equipped itemId={def.ItemId} slot={def.EquipSlot} fromInventorySlot={inventorySlotIndex}");
             return true;
         }
 
+        /// <summary>
+        /// SERVER: validates and synchronizes hotbar reference-equipment assignments.
+        /// This keeps replicated hand-slot visuals aligned with the authoritative inventory source.
+        /// </summary>
+        public void ServerValidateReferenceAssignments()
+        {
+            if (!IsServer)
+                return;
+
+            ValidateReferenceSlot(EquipSlot.MainHand);
+            ValidateReferenceSlot(EquipSlot.OffHand);
+        }
+
+        private void ValidateReferenceSlot(EquipSlot equipSlot)
+        {
+            if (!IsReferenceEquipSlot(equipSlot))
+                return;
+
+            int refIndex = GetReferenceInventorySlotIndex(equipSlot);
+            if (refIndex < 0)
+                return;
+
+            if (refIndex >= 8)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing invalid reference (not hotbar). slot={equipSlot} invIndex={refIndex}");
+                ClearReferenceSlot(equipSlot);
+                return;
+            }
+
+            if (inventoryNet == null || !inventoryNet.ServerTryGetSlotItem(refIndex, out string itemId, out int qty, out int durability, out ItemInstanceData data))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing stale reference. slot={equipSlot} invIndex={refIndex}");
+                ClearReferenceSlot(equipSlot);
+                return;
+            }
+
+            if (qty <= 0 || !ValidateCommon(itemId, out ItemDef def) || !def.IsEquippable || !DoesSlotAcceptItem(equipSlot, def))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing incompatible reference. slot={equipSlot} invIndex={refIndex} item={itemId}");
+                ClearReferenceSlot(equipSlot);
+                return;
+            }
+
+            // Keep replicated slot visuals synced to the referenced inventory item.
+            int finalDurability = ResolveInitialDurability(def, durability);
+            SetSlot(equipSlot, itemId, finalDurability, data);
+
+            // Two-handed items mirror both hand references.
+            if (def.Handedness == Handedness.BothHands)
+            {
+                EquipSlot other = equipSlot == EquipSlot.MainHand ? EquipSlot.OffHand : EquipSlot.MainHand;
+                SetReferenceSlotIndex(other, refIndex);
+                SetSlot(other, itemId, finalDurability, data);
+            }
+        }
+
+        private void SetReferenceSlotIndex(EquipSlot slot, int inventorySlotIndex)
+        {
+            switch (slot)
+            {
+                case EquipSlot.MainHand:
+                    mainHandInventorySlotRef.Value = inventorySlotIndex;
+                    break;
+                case EquipSlot.OffHand:
+                    offHandInventorySlotRef.Value = inventorySlotIndex;
+                    break;
+            }
+        }
+
+        private void ClearReferenceSlot(EquipSlot slot)
+        {
+            if (!IsReferenceEquipSlot(slot))
+                return;
+
+            SetReferenceSlotIndex(slot, -1);
+            SetSlot(slot, string.Empty, 0, default);
+        }
+
+        private bool TryApplyReferenceEquip(ItemDef def, int inventorySlotIndex, int durability, ItemInstanceData instanceData)
+        {
+            if (def == null)
+                return false;
+
+            if (!IsReferenceEquipSlot(def.EquipSlot))
+                return false;
+
+            if (inventorySlotIndex < 0 || inventorySlotIndex >= 8)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Reference-equip denied: item must be in hotbar. itemId={def.ItemId} slotIndex={inventorySlotIndex}");
+                return false;
+            }
+
+            if (!CanEquip(def, out EquipSlot toUnequipA, out EquipSlot toUnequipB))
+                return false;
+
+            if (!TryServerUnequipIfNeeded(toUnequipA))
+                return false;
+            if (!TryServerUnequipIfNeeded(toUnequipB))
+                return false;
+
+            int finalDurability = ResolveInitialDurability(def, durability);
+            if (def.Handedness == Handedness.BothHands)
+            {
+                SetReferenceSlotIndex(EquipSlot.MainHand, inventorySlotIndex);
+                SetReferenceSlotIndex(EquipSlot.OffHand, inventorySlotIndex);
+                SetSlot(EquipSlot.MainHand, def.ItemId, finalDurability, instanceData);
+                SetSlot(EquipSlot.OffHand, def.ItemId, finalDurability, instanceData);
+                return true;
+            }
+
+            SetReferenceSlotIndex(def.EquipSlot, inventorySlotIndex);
+            SetSlot(def.EquipSlot, def.ItemId, finalDurability, instanceData);
+
+            return true;
+        }
         private bool ValidateCommon(string itemId, out ItemDef def)
         {
             def = null;
@@ -751,6 +941,17 @@ namespace HuntersAndCollectors.Players
             if (slot == EquipSlot.None) return true;
             if (inventoryNet == null) return false;
 
+            // Hybrid behavior: hand slots can be reference-equipped from hotbar.
+            // Unequipping a reference slot only clears the reference; item remains in inventory.
+            int refIndex = GetReferenceInventorySlotIndex(slot);
+            if (IsReferenceEquipSlot(slot) && refIndex >= 0)
+            {
+                ClearReferenceSlot(slot);
+                Debug.Log($"[Equipment][SERVER] Cleared reference equip slot={slot} invIndex={refIndex}");
+                LogServerEquipmentState($"Post-reference-unequip slot={slot}");
+                return true;
+            }
+
             var equippedId = GetEquippedItemId(slot);
             if (string.IsNullOrWhiteSpace(equippedId))
                 return true;
@@ -849,6 +1050,8 @@ namespace HuntersAndCollectors.Players
             switch (slot)
             {
                 case EquipSlot.MainHand:
+                    if (clear)
+                        mainHandInventorySlotRef.Value = -1;
                     mainHand.Value = fs;
                     mainHandDurability.Value = finalDurability;
                     mainHandBonusStrength.Value = instanceData.BonusStrength;
@@ -857,6 +1060,8 @@ namespace HuntersAndCollectors.Players
                     mainHandCraftedBy.Value = instanceData.CraftedBy;
                     break;
                 case EquipSlot.OffHand:
+                    if (clear)
+                        offHandInventorySlotRef.Value = -1;
                     offHand.Value = fs;
                     offHandDurability.Value = finalDurability;
                     offHandBonusStrength.Value = instanceData.BonusStrength;
@@ -1121,6 +1326,21 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

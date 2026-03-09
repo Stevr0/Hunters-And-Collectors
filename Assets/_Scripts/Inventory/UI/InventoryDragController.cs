@@ -22,13 +22,13 @@ namespace HuntersAndCollectors.Inventory.UI
         [Header("Debug")]
         [SerializeField] private bool debugLogs = true;
 
-        private ChestContainerNet activeChest;
+        private StorageNet activeChest;
 
         public bool HasActiveChest => activeChest != null;
 
         private DragPayload activePayload;
 
-        public void BindChest(ChestContainerNet chest)
+        public void BindChest(StorageNet chest)
         {
             activeChest = chest;
             CancelDrag();
@@ -97,8 +97,8 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            if (activePayload.SourceContainer == InventoryContainerType.Player &&
-                targetContainer == InventoryContainerType.Chest)
+            if (activePayload.SourceContainer == InventoryContainerType.PlayerInventory &&
+                targetContainer == InventoryContainerType.StorageInventory)
             {
                 activeChest.RequestStoreFromPlayerServerRpc(activePayload.SourceSlotIndex, activePayload.Quantity);
 
@@ -112,8 +112,8 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            if (activePayload.SourceContainer == InventoryContainerType.Chest &&
-                targetContainer == InventoryContainerType.Player)
+            if (activePayload.SourceContainer == InventoryContainerType.StorageInventory &&
+                targetContainer == InventoryContainerType.PlayerInventory)
             {
                 activeChest.RequestTakeToPlayerServerRpc(activePayload.SourceSlotIndex, activePayload.Quantity);
 
@@ -150,3 +150,4 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+

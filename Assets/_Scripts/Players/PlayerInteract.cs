@@ -40,14 +40,14 @@ namespace HuntersAndCollectors.Players
 
         private ResourceNodeNet currentNodeFocus;
         private VendorInteractable currentVendorFocus;
-        private ChestContainerNet currentChestFocus;
+        private StorageNet currentChestFocus;
         private ResourceDrop currentDropFocus;
 
         private bool primaryHeld;
         private double nextPrimarySwingAttemptClientTime;
 
         public VendorInteractable CurrentVendorFocus => currentVendorFocus;
-        public ChestContainerNet CurrentChestFocus => currentChestFocus;
+        public StorageNet CurrentChestFocus => currentChestFocus;
         public ResourceDrop CurrentDropFocus => currentDropFocus;
 
         public Camera InteractCamera => playerCamera;
@@ -244,7 +244,7 @@ namespace HuntersAndCollectors.Players
                 return;
             }
 
-            ChestContainerNet chest = ResolveChestFromHit(hit);
+            StorageNet chest = ResolveChestFromHit(hit);
             if (chest != null)
             {
                 if (chestUI == null)
@@ -382,16 +382,16 @@ namespace HuntersAndCollectors.Players
             return hit.collider.GetComponentInChildren<VendorInteractable>();
         }
 
-        private static ChestContainerNet ResolveChestFromHit(RaycastHit hit)
+        private static StorageNet ResolveChestFromHit(RaycastHit hit)
         {
             if (hit.collider == null)
                 return null;
 
-            ChestContainerNet chest = hit.collider.GetComponentInParent<ChestContainerNet>();
+            StorageNet chest = hit.collider.GetComponentInParent<StorageNet>();
             if (chest != null)
                 return chest;
 
-            return hit.collider.GetComponentInChildren<ChestContainerNet>();
+            return hit.collider.GetComponentInChildren<StorageNet>();
         }
     }
 }

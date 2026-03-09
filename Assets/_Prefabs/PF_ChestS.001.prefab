@@ -155,8 +155,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Storage.ChestContainerNet
   ShowTopMostFoldoutHeaderGroup: 1
   itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
-  width: 4
-  height: 4
+  width: 8
+  height: 2
 --- !u!114 &4527927424032983575
 MonoBehaviour:
   m_ObjectHideFlags: 0

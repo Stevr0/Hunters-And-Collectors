@@ -397,25 +397,20 @@ namespace HuntersAndCollectors.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (string.IsNullOrWhiteSpace(_equippedItemIdCached))
-                return;
-
-            dragDrop?.BeginDragFromEquipment(slot, _equippedItemIdCached, _equippedIconCached);
+            // Hybrid equipment MVP: equipment panel is visual + click-to-unequip only.
+            // Dragging from equipment can create ambiguous source semantics for reference-equipped hand slots.
+            // Keep this disabled until a dedicated equipment drag policy is introduced.
         }
 
         public void OnDrag(PointerEventData eventData) { }
 
-        public void OnEndDrag(PointerEventData eventData)
-        {
-            dragDrop?.CancelDrag();
-        }
+        public void OnEndDrag(PointerEventData eventData) { }
 
-        public void OnDrop(PointerEventData eventData)
-        {
-            dragDrop?.CompleteDropOnEquipmentSlot(slot);
-        }
+        public void OnDrop(PointerEventData eventData) { }
     }
 }
+
+
 
 
 
