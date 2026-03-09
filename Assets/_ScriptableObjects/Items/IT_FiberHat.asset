@@ -46,7 +46,7 @@ MonoBehaviour:
   SwingSpeed: 0.01
   MovementSpeed: 0.9
   Strength: 1
-  Dexterity: 2
+  Dexterity: 1
   LegacyDexterity: 0
   Intelligence: 1
   IsEquippable: 1

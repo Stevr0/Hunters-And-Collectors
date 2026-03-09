@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using HuntersAndCollectors.Building;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Vendors;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace HuntersAndCollectors.Persistence
@@ -102,10 +104,54 @@ namespace HuntersAndCollectors.Persistence
                 shelter.vendor = chest.ServerExportSaveData();
             }
 
+            if (snapshot.placedBuildings == null)
+                snapshot.placedBuildings = new List<PlacedBuildingSaveData>();
+
+            snapshot.placedBuildings.Clear();
+
+            // Persist only runtime-spawned placed pieces (not scene defaults).
+            List<PlacedBuildPiece> pieces = PlacedBuildPieceRegistry.Snapshot();
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                PlacedBuildPiece piece = pieces[i];
+                if (piece == null || !piece.IsSpawned || !piece.IsServer)
+                    continue;
+
+                NetworkObject networkObject = piece.NetworkObject;
+                if (networkObject == null || !networkObject.IsSpawned)
+                    continue;
+
+                if (networkObject.IsSceneObject == true)
+                    continue;
+
+                snapshot.placedBuildings.Add(new PlacedBuildingSaveData
+                {
+                    buildPieceId = piece.SourceItemId ?? string.Empty,
+                    position = ToVector3Save(piece.transform.position),
+                    rotation = ToQuaternionSave(piece.transform.rotation),
+                    scale = ToVector3Save(piece.transform.localScale),
+                    ownerPlayerId = piece.OwnerPlayerId,
+                    currentHealth = Mathf.Max(0, piece.CurrentHealth),
+                    maxHealth = Mathf.Max(1, piece.MaxHealth)
+                });
+            }
+
+            // Keep legacy field populated for older external tooling that still reads it.
             if (snapshot.buildPieces == null)
                 snapshot.buildPieces = new List<BuildPieceSaveData>();
 
-            // TODO: Hook real build piece runtime list when BuildingNet/build registry exists.
+            snapshot.buildPieces.Clear();
+            for (int i = 0; i < snapshot.placedBuildings.Count; i++)
+            {
+                PlacedBuildingSaveData placed = snapshot.placedBuildings[i];
+                snapshot.buildPieces.Add(new BuildPieceSaveData
+                {
+                    id = placed.buildPieceId,
+                    pos = placed.position,
+                    rotY = ToQuaternion(placed.rotation).eulerAngles.y
+                });
+            }
+
             return snapshot;
         }
 
@@ -144,69 +190,171 @@ namespace HuntersAndCollectors.Persistence
 
         private void ApplyToRuntime(ShardSaveData data)
         {
-            if (data.shelters == null)
-                return;
-
-            VendorChestNet[] chests = UnityEngine.Object.FindObjectsByType<VendorChestNet>(FindObjectsSortMode.None);
-            var byVendorId = new Dictionary<string, VendorChestNet>(StringComparer.Ordinal);
-            for (int i = 0; i < chests.Length; i++)
+            if (data.shelters != null)
             {
-                VendorChestNet chest = chests[i];
-                if (chest == null || !chest.IsSpawned || !chest.IsServer)
-                    continue;
+                VendorChestNet[] chests = UnityEngine.Object.FindObjectsByType<VendorChestNet>(FindObjectsSortMode.None);
+                var byVendorId = new Dictionary<string, VendorChestNet>(StringComparer.Ordinal);
+                for (int i = 0; i < chests.Length; i++)
+                {
+                    VendorChestNet chest = chests[i];
+                    if (chest == null || !chest.IsSpawned || !chest.IsServer)
+                        continue;
 
-                if (!string.IsNullOrWhiteSpace(chest.VendorId))
-                    byVendorId[chest.VendorId] = chest;
+                    if (!string.IsNullOrWhiteSpace(chest.VendorId))
+                        byVendorId[chest.VendorId] = chest;
+                }
+
+                for (int i = 0; i < data.shelters.Count; i++)
+                {
+                    ShelterSaveData shelter = data.shelters[i];
+                    if (shelter?.vendor == null || string.IsNullOrWhiteSpace(shelter.vendor.vendorId))
+                        continue;
+
+                    if (!byVendorId.TryGetValue(shelter.vendor.vendorId, out VendorChestNet chest))
+                        continue;
+
+                    chest.ServerApplySaveData(shelter.vendor, itemDatabase);
+                }
             }
 
-            for (int i = 0; i < data.shelters.Count; i++)
-            {
-                ShelterSaveData shelter = data.shelters[i];
-                if (shelter?.vendor == null || string.IsNullOrWhiteSpace(shelter.vendor.vendorId))
-                    continue;
-
-                if (!byVendorId.TryGetValue(shelter.vendor.vendorId, out VendorChestNet chest))
-                    continue;
-
-                chest.ServerApplySaveData(shelter.vendor, itemDatabase);
-            }
-
-            // TODO: Hook build pieces and shelter completion flags to gameplay systems when those runtime systems exist.
+            RestorePlacedBuildings(data);
         }
 
+        private void RestorePlacedBuildings(ShardSaveData data)
+        {
+            if (data == null)
+                return;
+
+            // Prevent duplicate runtime pieces on reload.
+            DestroyExistingRuntimePlacedPieces();
+
+            List<PlacedBuildingSaveData> source = data.placedBuildings;
+            if ((source == null || source.Count == 0) && data.buildPieces != null && data.buildPieces.Count > 0)
+                source = ConvertLegacyBuildPieces(data.buildPieces);
+
+            if (source == null || source.Count == 0)
+                return;
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                PlacedBuildingSaveData saved = source[i];
+                if (saved == null || string.IsNullOrWhiteSpace(saved.buildPieceId))
+                    continue;
+
+                if (itemDatabase == null || !itemDatabase.TryGet(saved.buildPieceId, out ItemDef itemDef) || itemDef == null || !itemDef.IsPlaceable || itemDef.PlaceablePrefab == null)
+                {
+                    Debug.LogWarning($"[ShardSaveService] Skipping unknown/invalid placed building id='{saved.buildPieceId}'.");
+                    continue;
+                }
+
+                Vector3 pos = ToVector3(saved.position);
+                Quaternion rot = ToQuaternion(saved.rotation);
+                Vector3 scale = ToVector3(saved.scale);
+                scale.x = Mathf.Clamp(Mathf.Abs(scale.x), 0.01f, 100f);
+                scale.y = Mathf.Clamp(Mathf.Abs(scale.y), 0.01f, 100f);
+                scale.z = Mathf.Clamp(Mathf.Abs(scale.z), 0.01f, 100f);
+
+                NetworkObject spawnedNetworkObject = UnityEngine.Object.Instantiate(itemDef.PlaceablePrefab, pos, rot);
+                if (spawnedNetworkObject == null)
+                    continue;
+
+                spawnedNetworkObject.transform.localScale = scale;
+
+                PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
+                if (placed != null)
+                {
+                    placed.ServerInitializeFromSave(
+                        itemDef,
+                        saved.currentHealth,
+                        saved.maxHealth,
+                        saved.ownerPlayerId);
+                }
+
+                spawnedNetworkObject.Spawn(destroyWithScene: true);
+            }
+        }
+
+        private static List<PlacedBuildingSaveData> ConvertLegacyBuildPieces(List<BuildPieceSaveData> legacy)
+        {
+            var converted = new List<PlacedBuildingSaveData>(legacy.Count);
+            for (int i = 0; i < legacy.Count; i++)
+            {
+                BuildPieceSaveData row = legacy[i];
+                if (row == null || string.IsNullOrWhiteSpace(row.id))
+                    continue;
+
+                converted.Add(new PlacedBuildingSaveData
+                {
+                    buildPieceId = row.id,
+                    position = row.pos ?? new Vector3SaveData(),
+                    rotation = ToQuaternionSave(Quaternion.Euler(0f, row.rotY, 0f)),
+                    scale = new Vector3SaveData { x = 1f, y = 1f, z = 1f },
+                    ownerPlayerId = 0,
+                    currentHealth = 0,
+                    maxHealth = 0
+                });
+            }
+
+            return converted;
+        }
+
+        private static void DestroyExistingRuntimePlacedPieces()
+        {
+            List<PlacedBuildPiece> existing = PlacedBuildPieceRegistry.Snapshot();
+            for (int i = 0; i < existing.Count; i++)
+            {
+                PlacedBuildPiece piece = existing[i];
+                if (piece == null || !piece.IsServer || !piece.IsSpawned)
+                    continue;
+
+                NetworkObject no = piece.NetworkObject;
+                if (no == null || !no.IsSpawned)
+                    continue;
+
+                if (no.IsSceneObject == true)
+                    continue;
+
+                no.Despawn(destroy: true);
+            }
+        }
 
         private static void MigrateV1ToV2(ShardSaveData data)
         {
-            if (data?.shelters == null)
-                return;
-
-            for (int i = 0; i < data.shelters.Count; i++)
+            if (data?.shelters != null)
             {
-                VendorSaveData vendor = data.shelters[i]?.vendor;
-                if (vendor?.chest?.slots == null)
-                    continue;
-
-                for (int s = 0; s < vendor.chest.slots.Count; s++)
+                for (int i = 0; i < data.shelters.Count; i++)
                 {
-                    InventorySlotSaveData slot = vendor.chest.slots[s];
-                    if (slot == null)
+                    VendorSaveData vendor = data.shelters[i]?.vendor;
+                    if (vendor?.chest?.slots == null)
                         continue;
 
-                    slot.kind = "Stack";
-                    slot.instanceId = 0;
-                    slot.rolledDamage = 0f;
-                    slot.rolledDefence = 0f;
-                    slot.rolledSwingSpeed = 0f;
-                    slot.rolledMovementSpeed = 0f;
-                    slot.maxDurability = 0;
-                    slot.currentDurability = 0;
-                    slot.bonusStrength = 0;
-                    slot.bonusDexterity = 0;
-                    slot.bonusIntelligence = 0;
-                    slot.craftedBy = string.Empty;
+                    for (int s = 0; s < vendor.chest.slots.Count; s++)
+                    {
+                        InventorySlotSaveData slot = vendor.chest.slots[s];
+                        if (slot == null)
+                            continue;
+
+                        slot.kind = "Stack";
+                        slot.instanceId = 0;
+                        slot.rolledDamage = 0f;
+                        slot.rolledDefence = 0f;
+                        slot.rolledSwingSpeed = 0f;
+                        slot.rolledMovementSpeed = 0f;
+                        slot.maxDurability = 0;
+                        slot.currentDurability = 0;
+                        slot.bonusStrength = 0;
+                        slot.bonusDexterity = 0;
+                        slot.bonusIntelligence = 0;
+                        slot.craftedBy = string.Empty;
+                    }
                 }
             }
+
+            // Legacy buildPieces are retained and converted during Apply/Validate as needed.
+            if (data.placedBuildings == null)
+                data.placedBuildings = new List<PlacedBuildingSaveData>();
         }
+
         private bool ValidateAndSanitize(ShardSaveData data, out string severeFailureReason)
         {
             severeFailureReason = string.Empty;
@@ -219,6 +367,9 @@ namespace HuntersAndCollectors.Persistence
 
             if (data.shelters == null)
                 data.shelters = new List<ShelterSaveData>();
+
+            if (data.placedBuildings == null)
+                data.placedBuildings = new List<PlacedBuildingSaveData>();
 
             if (data.buildPieces == null)
                 data.buildPieces = new List<BuildPieceSaveData>();
@@ -243,17 +394,44 @@ namespace HuntersAndCollectors.Persistence
                     return false;
             }
 
-            for (int i = 0; i < data.buildPieces.Count; i++)
+            for (int i = data.placedBuildings.Count - 1; i >= 0; i--)
+            {
+                PlacedBuildingSaveData piece = data.placedBuildings[i];
+                if (piece == null || string.IsNullOrWhiteSpace(piece.buildPieceId))
+                {
+                    data.placedBuildings.RemoveAt(i);
+                    continue;
+                }
+
+                piece.position ??= new Vector3SaveData();
+                piece.rotation ??= new QuaternionSaveData { w = 1f };
+                piece.scale ??= new Vector3SaveData { x = 1f, y = 1f, z = 1f };
+
+                SanitizeVector(piece.position, 0f);
+                SanitizeQuaternion(piece.rotation);
+                SanitizeVector(piece.scale, 1f);
+
+                piece.scale.x = Mathf.Clamp(Mathf.Abs(piece.scale.x), 0.01f, 100f);
+                piece.scale.y = Mathf.Clamp(Mathf.Abs(piece.scale.y), 0.01f, 100f);
+                piece.scale.z = Mathf.Clamp(Mathf.Abs(piece.scale.z), 0.01f, 100f);
+
+                if (piece.maxHealth < 0) piece.maxHealth = 0;
+                if (piece.currentHealth < 0) piece.currentHealth = 0;
+            }
+
+            for (int i = data.buildPieces.Count - 1; i >= 0; i--)
             {
                 BuildPieceSaveData piece = data.buildPieces[i];
                 if (piece == null || string.IsNullOrWhiteSpace(piece.id))
                 {
-                    data.buildPieces.RemoveAt(i--);
+                    data.buildPieces.RemoveAt(i);
                     continue;
                 }
 
-                if (piece.pos == null)
-                    piece.pos = new Vector3SaveData();
+                piece.pos ??= new Vector3SaveData();
+                SanitizeVector(piece.pos, 0f);
+                if (!float.IsFinite(piece.rotY))
+                    piece.rotY = 0f;
             }
 
             return true;
@@ -304,6 +482,7 @@ namespace HuntersAndCollectors.Persistence
                 schemaVersion = SavePaths.CurrentSchemaVersion,
                 shardKey = shardKey,
                 shelters = new List<ShelterSaveData>(),
+                placedBuildings = new List<PlacedBuildingSaveData>(),
                 buildPieces = new List<BuildPieceSaveData>()
             };
         }
@@ -320,6 +499,83 @@ namespace HuntersAndCollectors.Persistence
                 Debug.LogError($"[ShardSaveService] Failed to archive corrupt file '{filePath}': {ex.Message}");
             }
         }
+
+        private static Vector3SaveData ToVector3Save(Vector3 value)
+        {
+            return new Vector3SaveData { x = value.x, y = value.y, z = value.z };
+        }
+
+        private static QuaternionSaveData ToQuaternionSave(Quaternion value)
+        {
+            return new QuaternionSaveData { x = value.x, y = value.y, z = value.z, w = value.w };
+        }
+
+        private static Vector3 ToVector3(Vector3SaveData value)
+        {
+            if (value == null)
+                return Vector3.zero;
+
+            float x = float.IsFinite(value.x) ? value.x : 0f;
+            float y = float.IsFinite(value.y) ? value.y : 0f;
+            float z = float.IsFinite(value.z) ? value.z : 0f;
+            return new Vector3(x, y, z);
+        }
+
+        private static Quaternion ToQuaternion(QuaternionSaveData value)
+        {
+            if (value == null)
+                return Quaternion.identity;
+
+            Quaternion q = new Quaternion(
+                float.IsFinite(value.x) ? value.x : 0f,
+                float.IsFinite(value.y) ? value.y : 0f,
+                float.IsFinite(value.z) ? value.z : 0f,
+                float.IsFinite(value.w) ? value.w : 1f);
+
+            if ((q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w) < 0.0001f)
+                return Quaternion.identity;
+
+            q.Normalize();
+            return q;
+        }
+
+        private static void SanitizeVector(Vector3SaveData value, float fallback)
+        {
+            if (value == null)
+                return;
+
+            if (!float.IsFinite(value.x)) value.x = fallback;
+            if (!float.IsFinite(value.y)) value.y = fallback;
+            if (!float.IsFinite(value.z)) value.z = fallback;
+        }
+
+        private static void SanitizeQuaternion(QuaternionSaveData value)
+        {
+            if (value == null)
+                return;
+
+            if (!float.IsFinite(value.x)) value.x = 0f;
+            if (!float.IsFinite(value.y)) value.y = 0f;
+            if (!float.IsFinite(value.z)) value.z = 0f;
+            if (!float.IsFinite(value.w)) value.w = 1f;
+
+            Quaternion q = new Quaternion(value.x, value.y, value.z, value.w);
+            if ((q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w) < 0.0001f)
+            {
+                value.x = 0f;
+                value.y = 0f;
+                value.z = 0f;
+                value.w = 1f;
+                return;
+            }
+
+            q.Normalize();
+            value.x = q.x;
+            value.y = q.y;
+            value.z = q.z;
+            value.w = q.w;
+        }
     }
 }
+
 

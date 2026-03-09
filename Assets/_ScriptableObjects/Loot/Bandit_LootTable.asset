@@ -15,17 +15,17 @@ MonoBehaviour:
   entries:
   - item: {fileID: 11400000, guid: 8ca4f84c9289b34409be57f4ead07baa, type: 2}
     minQuantity: 1
-    maxQuantity: 3
+    maxQuantity: 5
     dropChance01: 0.5
   - item: {fileID: 11400000, guid: e0cb007c4e184044197b914976e1f795, type: 2}
     minQuantity: 1
-    maxQuantity: 3
+    maxQuantity: 5
     dropChance01: 0.5
   - item: {fileID: 11400000, guid: b5b9e311348865e49bd49ed9b02b261d, type: 2}
     minQuantity: 1
-    maxQuantity: 3
+    maxQuantity: 5
     dropChance01: 0.5
   - item: {fileID: 11400000, guid: 095eb913c03dfd24399b0efe270d8c65, type: 2}
     minQuantity: 2
     maxQuantity: 10
-    dropChance01: 0.2
+    dropChance01: 0.5

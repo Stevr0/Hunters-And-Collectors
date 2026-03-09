@@ -46,11 +46,11 @@ MonoBehaviour:
   SwingSpeed: 0.01
   MovementSpeed: 0.7
   Strength: 1
-  Dexterity: 2
+  Dexterity: 1
   LegacyDexterity: 0
   Intelligence: 1
   IsEquippable: 1
-  EquipSlot: 22
+  EquipSlot: 21
   Handedness: 0
   ToolTags: 
   IsFood: 0

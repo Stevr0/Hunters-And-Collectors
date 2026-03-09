@@ -14,7 +14,8 @@ namespace HuntersAndCollectors.Harvesting
     {
         None = 0,
         Axe = 1,
-        Pickaxe = 2
+        Pickaxe = 2,
+        Knife = 3,
     }
 
     [DisallowMultipleComponent]

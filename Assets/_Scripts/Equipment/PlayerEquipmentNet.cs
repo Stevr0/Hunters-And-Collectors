@@ -3,6 +3,7 @@ using System.Text;
 using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Persistence;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -205,6 +206,69 @@ namespace HuntersAndCollectors.Players
         public int GetEquippedBonusDexterity(EquipSlot slot) => GetEquippedBonusData(slot).BonusDexterity;
         public int GetEquippedBonusIntelligence(EquipSlot slot) => GetEquippedBonusData(slot).BonusIntelligence;
         public string GetEquippedCraftedBy(EquipSlot slot) => GetEquippedBonusData(slot).CraftedBy.ToString();
+
+        /// <summary>
+        /// SERVER: exports authoritative equipment state for persistence.
+        /// Hybrid model:
+        /// - Armor slots save moved-equipment item payload.
+        /// - Hand slots save inventory reference indices (+ expected item ids) only.
+        /// </summary>
+        public PlayerEquipmentSaveData ServerExportSaveData()
+        {
+            var save = new PlayerEquipmentSaveData
+            {
+                helmet = ExportMovedSlotSave(EquipSlot.Helmet),
+                chest = ExportMovedSlotSave(EquipSlot.Chest),
+                legs = ExportMovedSlotSave(EquipSlot.Legs),
+                boots = ExportMovedSlotSave(EquipSlot.Boots),
+                gloves = ExportMovedSlotSave(EquipSlot.Gloves),
+                shoulders = ExportMovedSlotSave(EquipSlot.Shoulders),
+                belt = ExportMovedSlotSave(EquipSlot.Belt),
+                mainHandInventorySlotRef = mainHandInventorySlotRef.Value,
+                offHandInventorySlotRef = offHandInventorySlotRef.Value,
+                mainHandExpectedItemId = GetReferenceExpectedItemId(EquipSlot.MainHand),
+                offHandExpectedItemId = GetReferenceExpectedItemId(EquipSlot.OffHand)
+            };
+
+            return save;
+        }
+
+        /// <summary>
+        /// SERVER: restores authoritative equipment state from persistence after inventory load.
+        /// This method intentionally performs full validation and clears invalid rows safely.
+        /// </summary>
+        public void ServerApplySaveData(PlayerEquipmentSaveData saveData)
+        {
+            if (!IsServer)
+                return;
+
+            // Hard reset first so stale runtime state never leaks through partial saves.
+            ServerClearAllEquipmentState();
+
+            if (saveData == null)
+            {
+                ServerValidateReferenceAssignments();
+                OnEquipmentChanged?.Invoke();
+                return;
+            }
+
+            // Restore moved equipment (armor/worn slots).
+            ApplyMovedSlotSave(EquipSlot.Helmet, saveData.helmet);
+            ApplyMovedSlotSave(EquipSlot.Chest, saveData.chest);
+            ApplyMovedSlotSave(EquipSlot.Legs, saveData.legs);
+            ApplyMovedSlotSave(EquipSlot.Boots, saveData.boots);
+            ApplyMovedSlotSave(EquipSlot.Gloves, saveData.gloves);
+            ApplyMovedSlotSave(EquipSlot.Shoulders, saveData.shoulders);
+            ApplyMovedSlotSave(EquipSlot.Belt, saveData.belt);
+
+            // Restore reference-equip hand slots from inventory references.
+            ApplyReferenceSlotSave(EquipSlot.MainHand, saveData.mainHandInventorySlotRef, saveData.mainHandExpectedItemId);
+            ApplyReferenceSlotSave(EquipSlot.OffHand, saveData.offHandInventorySlotRef, saveData.offHandExpectedItemId);
+
+            // Final server-side canonical validation pass.
+            ServerValidateReferenceAssignments();
+            OnEquipmentChanged?.Invoke();
+        }
 
         /// <summary>
         /// True if any equipped item satisfies the requested tool category (server authoritative).
@@ -615,6 +679,31 @@ namespace HuntersAndCollectors.Players
             if (!ValidateCommon(itemId, out var def))
                 return false;
 
+            // Hybrid durability rule:
+            // - Reference-equipped hand slots must damage the authoritative inventory item.
+            // - Moved equipment slots keep damaging equipment storage durability.
+            int referenceIndex = GetReferenceInventorySlotIndex(slot);
+            if (IsReferenceEquipSlot(slot) && referenceIndex >= 0)
+            {
+                if (inventoryNet == null)
+                    return false;
+
+                if (!inventoryNet.ServerDamageDurabilityAtSlot(referenceIndex, amount, out broke))
+                    return false;
+
+                brokenItemId = broke ? itemId : string.Empty;
+
+                // Re-sync replicated hand slot data (and clear stale refs if item broke/changed).
+                ServerValidateReferenceAssignments();
+
+                if (broke)
+                    Debug.Log($"[Durability] Reference item broke item={itemId} slot={slot} invIndex={referenceIndex} owner={OwnerClientId}", this);
+                else
+                    Debug.Log($"[Durability] Used reference item={itemId} slot={slot} invIndex={referenceIndex}", this);
+
+                return true;
+            }
+
             int maxDurability = Mathf.Max(0, def.MaxDurability);
             if (maxDurability <= 0)
                 return false;
@@ -831,6 +920,136 @@ namespace HuntersAndCollectors.Players
             SetSlot(def.EquipSlot, def.ItemId, finalDurability, instanceData);
 
             return true;
+        }
+        private EquipmentSlotSaveData ExportMovedSlotSave(EquipSlot slot)
+        {
+            if (IsReferenceEquipSlot(slot))
+                return null;
+
+            string itemId = GetEquippedItemId(slot);
+            if (string.IsNullOrWhiteSpace(itemId))
+                return null;
+
+            ItemInstanceData bonus = GetEquippedBonusData(slot);
+            int durability = Mathf.Max(0, GetEquippedDurability(slot));
+            int maxDurability = 0;
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out ItemDef def) && def != null)
+                maxDurability = Mathf.Max(0, def.ResolveDurabilityMax());
+
+            return new EquipmentSlotSaveData
+            {
+                itemId = itemId,
+                durability = durability,
+                maxDurability = maxDurability,
+                bonusStrength = bonus.BonusStrength,
+                bonusDexterity = bonus.BonusDexterity,
+                bonusIntelligence = bonus.BonusIntelligence,
+                craftedBy = bonus.CraftedBy.ToString()
+            };
+        }
+
+        private string GetReferenceExpectedItemId(EquipSlot slot)
+        {
+            if (!IsReferenceEquipSlot(slot))
+                return string.Empty;
+
+            int refIndex = GetReferenceInventorySlotIndex(slot);
+            if (refIndex < 0 || inventoryNet == null)
+                return string.Empty;
+
+            if (!inventoryNet.ServerTryGetSlotItem(refIndex, out string itemId, out int qty, out _, out _))
+                return string.Empty;
+
+            if (qty <= 0)
+                return string.Empty;
+
+            return itemId ?? string.Empty;
+        }
+
+        private void ServerClearAllEquipmentState()
+        {
+            SetSlot(EquipSlot.MainHand, string.Empty, 0, default);
+            SetSlot(EquipSlot.OffHand, string.Empty, 0, default);
+            SetSlot(EquipSlot.Helmet, string.Empty, 0, default);
+            SetSlot(EquipSlot.Chest, string.Empty, 0, default);
+            SetSlot(EquipSlot.Legs, string.Empty, 0, default);
+            SetSlot(EquipSlot.Boots, string.Empty, 0, default);
+            SetSlot(EquipSlot.Gloves, string.Empty, 0, default);
+            SetSlot(EquipSlot.Shoulders, string.Empty, 0, default);
+            SetSlot(EquipSlot.Belt, string.Empty, 0, default);
+            SetReferenceSlotIndex(EquipSlot.MainHand, -1);
+            SetReferenceSlotIndex(EquipSlot.OffHand, -1);
+        }
+
+        private void ApplyMovedSlotSave(EquipSlot slot, EquipmentSlotSaveData saveSlot)
+        {
+            if (saveSlot == null || string.IsNullOrWhiteSpace(saveSlot.itemId))
+                return;
+
+            if (!ValidateCommon(saveSlot.itemId, out ItemDef def) || !def.IsEquippable || IsReferenceEquipSlot(slot) || def.EquipSlot != slot)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Ignoring invalid moved slot save slot={slot} itemId={saveSlot.itemId}");
+                return;
+            }
+
+            int maxDurability = Mathf.Max(0, saveSlot.maxDurability > 0 ? saveSlot.maxDurability : def.ResolveDurabilityMax());
+            int finalDurability = maxDurability > 0
+                ? Mathf.Clamp(saveSlot.durability > 0 ? saveSlot.durability : maxDurability, 1, maxDurability)
+                : 0;
+
+            ItemInstanceData data = default;
+            data.BonusStrength = saveSlot.bonusStrength;
+            data.BonusDexterity = saveSlot.bonusDexterity;
+            data.BonusIntelligence = saveSlot.bonusIntelligence;
+            data.CraftedBy = new FixedString64Bytes(saveSlot.craftedBy ?? string.Empty);
+
+            SetSlot(slot, def.ItemId, finalDurability, data);
+        }
+
+        private void ApplyReferenceSlotSave(EquipSlot slot, int inventorySlotIndex, string expectedItemId)
+        {
+            if (!IsReferenceEquipSlot(slot))
+                return;
+
+            if (inventorySlotIndex < 0)
+                return;
+
+            if (inventorySlotIndex >= 8)
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing invalid saved reference slot={slot} index={inventorySlotIndex} (not hotbar)");
+                return;
+            }
+
+            if (inventoryNet == null || !inventoryNet.ServerTryGetSlotItem(inventorySlotIndex, out string itemId, out int qty, out int durability, out ItemInstanceData data))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing invalid saved reference slot={slot} index={inventorySlotIndex} (missing inventory row)");
+                return;
+            }
+
+            if (qty <= 0 || string.IsNullOrWhiteSpace(itemId))
+                return;
+
+            // The expected id guard prevents stale references from binding to unrelated items
+            // when the inventory changed between save and load.
+            if (!string.IsNullOrWhiteSpace(expectedItemId) && !string.Equals(itemId, expectedItemId, StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"[Equipment][SERVER] Clearing mismatched saved reference slot={slot} index={inventorySlotIndex} expected={expectedItemId} actual={itemId}");
+                return;
+            }
+
+            if (!ValidateCommon(itemId, out ItemDef def) || !def.IsEquippable || !DoesSlotAcceptItem(slot, def))
+                return;
+
+            int finalDurability = ResolveInitialDurability(def, durability);
+            SetReferenceSlotIndex(slot, inventorySlotIndex);
+            SetSlot(slot, itemId, finalDurability, data);
+
+            if (def.Handedness == Handedness.BothHands)
+            {
+                EquipSlot other = slot == EquipSlot.MainHand ? EquipSlot.OffHand : EquipSlot.MainHand;
+                SetReferenceSlotIndex(other, inventorySlotIndex);
+                SetSlot(other, itemId, finalDurability, data);
+            }
         }
         private bool ValidateCommon(string itemId, out ItemDef def)
         {
@@ -1326,6 +1545,9 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
+
 
 
 

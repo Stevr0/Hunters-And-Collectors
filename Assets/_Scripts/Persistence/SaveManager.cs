@@ -57,6 +57,12 @@ namespace HuntersAndCollectors.Persistence
             UnsubscribeFromNetworkCallbacks();
         }
 
+        private void OnApplicationQuit()
+        {
+            // Server-authoritative shutdown save hook.
+            if (IsServerReady() && initialized)
+                SaveAllNow();
+        }
         private void Update()
         {
             if (!IsServerReady())
@@ -249,4 +255,5 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
 

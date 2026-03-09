@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_Rabbit
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  ActorId: Rabbit
+  DisplayName: Rabbit
+  DefaultFactionId: 3
+  DefaultPvpEnabled: 0
+  BaseStrength: 2
+  BaseDexterity: 2
+  BaseIntelligence: 2
+  BaseMoveSpeedMult: 1
+  BaseDamage: 1
+  BaseDefence: 0
+  BaseSwingSpeed: 0.5
+  AiDef: {fileID: 11400000, guid: 4f8f0f48faab0234e98198d9fc3fd4df, type: 2}
+  StartingSkills: []

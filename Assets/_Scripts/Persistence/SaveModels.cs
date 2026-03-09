@@ -12,6 +12,7 @@ namespace HuntersAndCollectors.Persistence
         public List<SkillSaveData> skills = new();
         public List<KnownItemSaveData> knownItems = new();
         public InventoryGridSaveData inventory = new();
+        public PlayerEquipmentSaveData equipment = new();
     }
 
     [Serializable]
@@ -77,7 +78,43 @@ namespace HuntersAndCollectors.Persistence
         public int schemaVersion = 2;
         public string shardKey = string.Empty;
         public List<ShelterSaveData> shelters = new();
+
+        // Canonical runtime world structures list.
+        public List<PlacedBuildingSaveData> placedBuildings = new();
+
+        // Legacy v1/v2 field retained for backward compatibility with older saves.
         public List<BuildPieceSaveData> buildPieces = new();
+    }
+
+    [Serializable]
+    public sealed class PlayerEquipmentSaveData
+    {
+        // Move-equip armor slots (authoritative equipment storage).
+        public EquipmentSlotSaveData helmet;
+        public EquipmentSlotSaveData chest;
+        public EquipmentSlotSaveData legs;
+        public EquipmentSlotSaveData boots;
+        public EquipmentSlotSaveData gloves;
+        public EquipmentSlotSaveData shoulders;
+        public EquipmentSlotSaveData belt;
+
+        // Reference-equip hand slots (authoritative inventory index references).
+        public int mainHandInventorySlotRef = -1;
+        public int offHandInventorySlotRef = -1;
+        public string mainHandExpectedItemId = string.Empty;
+        public string offHandExpectedItemId = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class EquipmentSlotSaveData
+    {
+        public string itemId = string.Empty;
+        public int durability;
+        public int maxDurability;
+        public int bonusStrength;
+        public int bonusDexterity;
+        public int bonusIntelligence;
+        public string craftedBy = string.Empty;
     }
 
     [Serializable]
@@ -107,11 +144,32 @@ namespace HuntersAndCollectors.Persistence
     }
 
     [Serializable]
+    public sealed class PlacedBuildingSaveData
+    {
+        public string buildPieceId = string.Empty;
+        public Vector3SaveData position = new();
+        public QuaternionSaveData rotation = new();
+        public Vector3SaveData scale = new() { x = 1f, y = 1f, z = 1f };
+        public ulong ownerPlayerId;
+        public int currentHealth;
+        public int maxHealth;
+    }
+
+    [Serializable]
     public sealed class Vector3SaveData
     {
         public float x;
         public float y;
         public float z;
+    }
+
+    [Serializable]
+    public sealed class QuaternionSaveData
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float w = 1f;
     }
 
     [Serializable]

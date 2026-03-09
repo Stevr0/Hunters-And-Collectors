@@ -307,9 +307,9 @@ MonoBehaviour:
   requiredToolItem: {fileID: 11400000, guid: f08ad907b04b6f3469e7069fc6bbe5cb, type: 2}
   baseHarvestSeconds: 3
   dropItem: {fileID: 11400000, guid: 8ca4f84c9289b34409be57f4ead07baa, type: 2}
-  baseYield: 3
-  respawnSeconds: 10
-  maxHealth: 3
+  baseYield: 5
+  respawnSeconds: 20
+  maxHealth: 5
   rareDrops:
   - ItemId: it_shroom
     Quantity: 2

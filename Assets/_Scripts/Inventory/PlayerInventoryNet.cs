@@ -484,16 +484,13 @@ namespace HuntersAndCollectors.Inventory
                 }
 
                 MarkDirtyAndMaybeSendSnapshot();
+                ServerValidateEquipmentReferencesAfterInventoryMutation();
                 return true;
             }
 
             // Stack slots are not durable in current model.
             return false;
         }
-
-        /// <summary>
-        /// SERVER: find first non-empty slot containing itemId.
-        /// </summary>
         public bool ServerTryFindFirstSlotWithItem(string itemId, out int slotIndex)
         {
             slotIndex = -1;
@@ -869,6 +866,9 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+
+
 
 
 

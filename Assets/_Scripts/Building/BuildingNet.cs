@@ -345,7 +345,10 @@ namespace HuntersAndCollectors.Building
 
             PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
             if (placed != null)
+            {
                 placed.ServerInitializeFromItem(itemDef);
+                placed.ServerSetOwnerPlayerId(OwnerClientId);
+            }
 
             // World structures are server-owned authoritative objects.
             spawnedNetworkObject.Spawn(destroyWithScene: true);
@@ -367,6 +370,8 @@ namespace HuntersAndCollectors.Building
 #endif
     }
 }
+
+
 
 
 

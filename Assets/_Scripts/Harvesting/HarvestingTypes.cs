@@ -10,7 +10,8 @@ namespace HuntersAndCollectors.Harvesting
     {
         Wood = 0,
         Stone = 1,
-        Fiber = 2
+        Fiber = 2,
+        Meat,
     }
 
     /// <summary>

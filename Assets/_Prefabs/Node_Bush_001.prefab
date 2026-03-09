@@ -82,8 +82,8 @@ MonoBehaviour:
   baseHarvestSeconds: 3
   dropItem: {fileID: 11400000, guid: e0cb007c4e184044197b914976e1f795, type: 2}
   baseYield: 5
-  respawnSeconds: 10
-  maxHealth: 3
+  respawnSeconds: 20
+  maxHealth: 5
   rareDrops:
   - ItemId: it_berry
     Quantity: 2

@@ -138,6 +138,7 @@ namespace HuntersAndCollectors.Persistence
             }
 
             data.inventory = BuildInventorySave(playerRoot.Inventory);
+            data.equipment = BuildEquipmentSave(playerRoot.Equipment);
             return data;
         }
 
@@ -199,6 +200,14 @@ namespace HuntersAndCollectors.Persistence
             }
 
             return inventoryData;
+        }
+
+        private PlayerEquipmentSaveData BuildEquipmentSave(PlayerEquipmentNet equipmentNet)
+        {
+            if (equipmentNet == null || !equipmentNet.IsServer)
+                return new PlayerEquipmentSaveData();
+
+            return equipmentNet.ServerExportSaveData() ?? new PlayerEquipmentSaveData();
         }
 
         private bool ValidateAndSanitize(PlayerSaveData data, PlayerNetworkRoot playerRoot, out string severeFailureReason)
@@ -341,7 +350,99 @@ namespace HuntersAndCollectors.Persistence
                 }
             }
 
+            ValidateAndSanitizeEquipment(data);
             return true;
+        }
+
+        private void ValidateAndSanitizeEquipment(PlayerSaveData data)
+        {
+            if (data.equipment == null)
+                data.equipment = new PlayerEquipmentSaveData();
+
+            data.equipment.mainHandExpectedItemId ??= string.Empty;
+            data.equipment.offHandExpectedItemId ??= string.Empty;
+
+            data.equipment.mainHandInventorySlotRef = SanitizeReferenceIndex(
+                data.equipment.mainHandInventorySlotRef,
+                data.inventory,
+                data.equipment.mainHandExpectedItemId,
+                EquipSlot.MainHand);
+
+            data.equipment.offHandInventorySlotRef = SanitizeReferenceIndex(
+                data.equipment.offHandInventorySlotRef,
+                data.inventory,
+                data.equipment.offHandExpectedItemId,
+                EquipSlot.OffHand);
+
+            SanitizeArmorSlot(ref data.equipment.helmet, EquipSlot.Helmet);
+            SanitizeArmorSlot(ref data.equipment.chest, EquipSlot.Chest);
+            SanitizeArmorSlot(ref data.equipment.legs, EquipSlot.Legs);
+            SanitizeArmorSlot(ref data.equipment.boots, EquipSlot.Boots);
+            SanitizeArmorSlot(ref data.equipment.gloves, EquipSlot.Gloves);
+            SanitizeArmorSlot(ref data.equipment.shoulders, EquipSlot.Shoulders);
+            SanitizeArmorSlot(ref data.equipment.belt, EquipSlot.Belt);
+        }
+
+        private int SanitizeReferenceIndex(int index, InventoryGridSaveData inventory, string expectedItemId, EquipSlot slot)
+        {
+            if (index < 0)
+                return -1;
+
+            int count = inventory?.slots?.Count ?? 0;
+            if (index >= count)
+                return -1;
+
+            // Reference-equip is hotbar-only (authoritative row 0 = slots 0..7).
+            if (index >= 8)
+                return -1;
+
+            InventorySlotSaveData slotData = inventory.slots[index];
+            if (slotData == null || string.IsNullOrWhiteSpace(slotData.id))
+                return -1;
+
+            if (!string.IsNullOrWhiteSpace(expectedItemId) && !string.Equals(slotData.id, expectedItemId, StringComparison.Ordinal))
+                return -1;
+
+            if (itemDatabase == null || !itemDatabase.TryGet(slotData.id, out ItemDef def) || def == null)
+                return -1;
+
+            if (!def.IsEquippable || def.EquipSlot != slot)
+                return -1;
+
+            return index;
+        }
+
+        private void SanitizeArmorSlot(ref EquipmentSlotSaveData slotData, EquipSlot expectedSlot)
+        {
+            if (slotData == null || string.IsNullOrWhiteSpace(slotData.itemId))
+            {
+                slotData = null;
+                return;
+            }
+
+            if (itemDatabase == null || !itemDatabase.TryGet(slotData.itemId, out ItemDef def) || def == null || !def.IsEquippable || def.EquipSlot != expectedSlot)
+            {
+                slotData = null;
+                return;
+            }
+
+            int max = Mathf.Max(0, slotData.maxDurability > 0 ? slotData.maxDurability : def.ResolveDurabilityMax());
+            slotData.maxDurability = max;
+
+            if (max > 0)
+            {
+                int current = slotData.durability > 0 ? slotData.durability : max;
+                slotData.durability = Mathf.Clamp(current, 1, max);
+            }
+            else
+            {
+                slotData.durability = 0;
+            }
+
+            if (slotData.bonusStrength < 0) slotData.bonusStrength = 0;
+            if (slotData.bonusDexterity < 0) slotData.bonusDexterity = 0;
+            if (slotData.bonusIntelligence < 0) slotData.bonusIntelligence = 0;
+            slotData.craftedBy ??= string.Empty;
         }
 
         private static void MigrateV1ToV2(PlayerSaveData data)
@@ -377,6 +478,7 @@ namespace HuntersAndCollectors.Persistence
             playerRoot.Skills?.ServerLoadEntries(data.skills);
             playerRoot.KnownItems?.ServerLoadEntries(data.knownItems);
             playerRoot.Inventory?.ServerLoadGrid(data.inventory);
+            playerRoot.Equipment?.ServerApplySaveData(data.equipment);
 
             Debug.Log($"[PlayerSaveService] Applied save for player '{playerRoot.PlayerKey}'.");
         }

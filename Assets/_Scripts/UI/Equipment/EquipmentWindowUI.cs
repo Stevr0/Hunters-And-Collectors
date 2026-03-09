@@ -190,44 +190,38 @@ namespace HuntersAndCollectors.UI
 
             for (int i = 0; i < slots.Count; i++)
             {
-                var slotUI = slots[i];
+                EquipmentSlotUI slotUI = slots[i];
                 if (slotUI == null)
                     continue;
 
-                string itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
-                int durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
-                ItemTooltipData tooltip = BuildTooltipData(slotUI.Slot, itemId);
+                bool isReferenceSlot = equipmentNet.IsReferenceEquipSlot(slotUI.Slot);
 
-                // Hybrid view: hand slots can be reference-equipped from hotbar inventory.
-                // When assigned, resolve icon/stats from inventory snapshot so the panel is a visual reference.
-                if (equipmentNet.IsReferenceEquipSlot(slotUI.Slot) &&
-                    TryResolveReferenceVisualFromInventory(slotUI.Slot, out string referenceItemId, out int referenceDurability, out ItemTooltipData referenceTooltip))
+                string itemId = string.Empty;
+                int durability = 0;
+                int maxDurability = 0;
+                ItemTooltipData tooltip = default;
+
+                if (isReferenceSlot)
                 {
-                    itemId = referenceItemId;
-                    durability = referenceDurability;
-                    tooltip = referenceTooltip;
+                    // Reference slot: render ONLY from inventory snapshot + reference index.
+                    // Never mix in moved-equipment payload values for hand slots.
+                    TryResolveReferenceVisualFromInventory(slotUI.Slot, out itemId, out durability, out maxDurability, out tooltip);
+                }
+                else
+                {
+                    // Moved-equipment slot (armor): render from equipment net state.
+                    itemId = equipmentNet.GetEquippedItemId(slotUI.Slot);
+                    durability = equipmentNet.GetEquippedDurability(slotUI.Slot);
+                    tooltip = BuildTooltipData(slotUI.Slot, itemId);
+                    maxDurability = ResolveMaxDurabilityFromItem(itemId);
                 }
 
                 Sprite icon = ResolveIcon(itemId);
 
-                // Set cache first, icon second, durability last.
+                // Always overwrite all visuals from one source path.
                 slotUI.SetEquippedItemCache(itemId, icon);
                 slotUI.SetTooltipData(tooltip);
                 slotUI.SetIcon(icon);
-
-                int maxDurability = 0;
-                if (!string.IsNullOrWhiteSpace(itemId))
-                {
-                    if (itemDatabase != null && itemDatabase.TryGet(itemId, out var defFromDb) && defFromDb != null)
-                    {
-                        maxDurability = Mathf.Max(0, defFromDb.MaxDurability);
-                    }
-                    else if (equipmentNet.TryGetItemDef(itemId, out var defFromEquip) && defFromEquip != null)
-                    {
-                        // Fallback when ItemDatabase isn't bound on this UI.
-                        maxDurability = Mathf.Max(0, defFromEquip.MaxDurability);
-                    }
-                }
 
                 bool showDurability = !string.IsNullOrWhiteSpace(itemId) && maxDurability > 0 && durability > 0;
                 slotUI.SetDurability(durability, showDurability ? maxDurability : 0);
@@ -235,17 +229,19 @@ namespace HuntersAndCollectors.UI
                 if (debugDurabilityRefresh)
                 {
                     string itemLabel = string.IsNullOrWhiteSpace(itemId) ? "<empty>" : itemId;
-                    Debug.Log($"[DurUI] Slot={slotUI.Slot} item={itemLabel} dur={durability}/{maxDurability} show={showDurability}");
+                    string source = isReferenceSlot ? "ReferenceInventory" : "MovedEquipment";
+                    Debug.Log($"[DurUI] Slot={slotUI.Slot} source={source} item={itemLabel} dur={durability}/{maxDurability} show={showDurability}");
                 }
 
                 lastRenderedSlotIds[slotUI.Slot] = itemId ?? string.Empty;
                 lastRenderedSlotDurability[slotUI.Slot] = durability;
             }
         }
-        private bool TryResolveReferenceVisualFromInventory(EquipSlot slot, out string itemId, out int durability, out ItemTooltipData tooltip)
+        private bool TryResolveReferenceVisualFromInventory(EquipSlot slot, out string itemId, out int durability, out int maxDurability, out ItemTooltipData tooltip)
         {
             itemId = string.Empty;
             durability = 0;
+            maxDurability = 0;
             tooltip = default;
 
             if (equipmentNet == null || inventoryNet == null)
@@ -265,12 +261,13 @@ namespace HuntersAndCollectors.UI
 
             itemId = sourceSlot.ItemId.ToString();
             durability = sourceSlot.Durability;
+            maxDurability = sourceSlot.MaxDurability;
 
             tooltip = new ItemTooltipData
             {
                 ItemId = itemId,
                 Durability = durability,
-                MaxDurability = sourceSlot.MaxDurability,
+                MaxDurability = maxDurability,
                 BonusStrength = sourceSlot.BonusStrength,
                 BonusDexterity = sourceSlot.BonusDexterity,
                 BonusIntelligence = sourceSlot.BonusIntelligence,
@@ -294,9 +291,31 @@ namespace HuntersAndCollectors.UI
                 tooltip.Strength = Mathf.Max(0, def.Strength) + sourceSlot.BonusStrength;
                 tooltip.Dexterity = Mathf.Max(0, def.Dexterity) + sourceSlot.BonusDexterity;
                 tooltip.Intelligence = Mathf.Max(0, def.Intelligence) + sourceSlot.BonusIntelligence;
+
+                // Fallback only for missing snapshot max values.
+                if (maxDurability <= 0)
+                    maxDurability = Mathf.Max(0, def.MaxDurability);
+            }
+
+            if (debugDurabilityRefresh)
+            {
+                Debug.Log($"[DurRef] slot={slot} invIndex={inventoryIndex} item={itemId} dur={durability}/{maxDurability}");
             }
 
             return true;
+        }
+        private int ResolveMaxDurabilityFromItem(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId))
+                return 0;
+
+            if (itemDatabase != null && itemDatabase.TryGet(itemId, out var defFromDb) && defFromDb != null)
+                return Mathf.Max(0, defFromDb.MaxDurability);
+
+            if (equipmentNet != null && equipmentNet.TryGetItemDef(itemId, out var defFromEquip) && defFromEquip != null)
+                return Mathf.Max(0, defFromEquip.MaxDurability);
+
+            return 0;
         }
         private ItemTooltipData BuildTooltipData(EquipSlot slot, string itemId)
         {
@@ -367,22 +386,44 @@ namespace HuntersAndCollectors.UI
 
             for (int i = 0; i < slots.Count; i++)
             {
-                var slotUI = slots[i];
+                EquipmentSlotUI slotUI = slots[i];
                 if (slotUI == null)
                     continue;
 
-                var latestId = equipmentNet.GetEquippedItemId(slotUI.Slot) ?? string.Empty;
-                if (!lastRenderedSlotIds.TryGetValue(slotUI.Slot, out var lastId) || !string.Equals(latestId, lastId, StringComparison.Ordinal))
+                bool isReferenceSlot = equipmentNet.IsReferenceEquipSlot(slotUI.Slot);
+
+                string latestId;
+                int latestDurability;
+
+                if (isReferenceSlot)
+                {
+                    // Reference slots are driven from inventory snapshot only.
+                    if (TryResolveReferenceVisualFromInventory(slotUI.Slot, out string refItemId, out int refDurability, out _, out _))
+                    {
+                        latestId = refItemId ?? string.Empty;
+                        latestDurability = refDurability;
+                    }
+                    else
+                    {
+                        latestId = string.Empty;
+                        latestDurability = 0;
+                    }
+                }
+                else
+                {
+                    latestId = equipmentNet.GetEquippedItemId(slotUI.Slot) ?? string.Empty;
+                    latestDurability = equipmentNet.GetEquippedDurability(slotUI.Slot);
+                }
+
+                if (!lastRenderedSlotIds.TryGetValue(slotUI.Slot, out string lastId) || !string.Equals(latestId, lastId, StringComparison.Ordinal))
                     return true;
 
-                int latestDurability = equipmentNet.GetEquippedDurability(slotUI.Slot);
-                if (!lastRenderedSlotDurability.TryGetValue(slotUI.Slot, out var lastDurability) || latestDurability != lastDurability)
+                if (!lastRenderedSlotDurability.TryGetValue(slotUI.Slot, out int lastDurability) || latestDurability != lastDurability)
                     return true;
             }
 
             return false;
         }
-
         private void SubscribeToSlotNetVars()
         {
             if (equipmentNet == null)
@@ -446,6 +487,7 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
 
 
 

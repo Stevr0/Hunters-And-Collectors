@@ -15,6 +15,7 @@ namespace HuntersAndCollectors.Building
     /// - Accept server-side damage.
     /// - Despawn on zero health.
     /// - Trigger shelter re-evaluation after destruction.
+    /// - Register/unregister with runtime persistence registry.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -27,6 +28,9 @@ namespace HuntersAndCollectors.Building
         [Min(1)]
         [SerializeField] private int maxHealth = 100;
         [SerializeField] private bool destroyOnZeroHealth = true;
+
+        [Header("Persistence")]
+        [SerializeField] private ulong ownerPlayerId;
 
         // Server-authoritative health state. Clients only observe.
         private readonly NetworkVariable<int> currentHealth =
@@ -48,6 +52,8 @@ namespace HuntersAndCollectors.Building
         /// Backward-compatible alias for older code still reading BuildPieceId.
         /// </summary>
         public string BuildPieceId => sourceItemId;
+
+        public ulong OwnerPlayerId => ownerPlayerId;
 
         /// <summary>
         /// Current replicated structure health.
@@ -86,6 +92,14 @@ namespace HuntersAndCollectors.Building
             sourceItemId = value ?? string.Empty;
         }
 
+        public void ServerSetOwnerPlayerId(ulong value)
+        {
+            if (!IsServer)
+                return;
+
+            ownerPlayerId = value;
+        }
+
         /// <summary>
         /// Backward-compatible setter wrapper.
         /// </summary>
@@ -115,6 +129,27 @@ namespace HuntersAndCollectors.Building
             isDestroyedOrPendingDestroy = false;
 
             Debug.Log($"[PlacedBuildPiece][SERVER] Initialized sourceItemId={sourceItemId} maxHealth={maxHealth}", this);
+        }
+
+        /// <summary>
+        /// SERVER ONLY: restore this runtime piece from save data.
+        /// </summary>
+        public void ServerInitializeFromSave(ItemDef sourceItemDef, int savedCurrentHealth, int savedMaxHealth, ulong savedOwnerPlayerId)
+        {
+            if (!IsServer)
+                return;
+
+            ServerInitializeFromItem(sourceItemDef);
+            ownerPlayerId = savedOwnerPlayerId;
+
+            int baseMax = Mathf.Max(1, sourceItemDef != null ? sourceItemDef.StructureMaxHealth : maxHealth);
+            int restoredMax = Mathf.Max(1, savedMaxHealth > 0 ? savedMaxHealth : baseMax);
+            int restoredCurrent = Mathf.Clamp(savedCurrentHealth > 0 ? savedCurrentHealth : restoredMax, 1, restoredMax);
+
+            maxHealth = restoredMax;
+            replicatedMaxHealth.Value = restoredMax;
+            currentHealth.Value = restoredCurrent;
+            isDestroyedOrPendingDestroy = false;
         }
 
         /// <summary>
@@ -192,7 +227,22 @@ namespace HuntersAndCollectors.Building
             if (currentHealth.Value < 1)
                 currentHealth.Value = replicatedMaxHealth.Value;
 
+            PlacedBuildPieceRegistry.Register(this);
             Debug.Log($"[PlacedBuildPiece][SERVER] Spawned sourceItemId={sourceItemId} health={CurrentHealth}/{MaxHealth} at pos={transform.position}", this);
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (!IsServer)
+                return;
+
+            PlacedBuildPieceRegistry.Unregister(this);
+        }
+
+        public override void OnDestroy()
+        {
+            // Defensive cleanup when object is destroyed while not fully spawned.
+            PlacedBuildPieceRegistry.Unregister(this);
         }
 
         private void ServerNotifyShelterStatePieceChanged()
@@ -219,4 +269,42 @@ namespace HuntersAndCollectors.Building
         }
 #endif
     }
+
+    /// <summary>
+    /// Server-side runtime registry for placed build pieces.
+    /// Kept in this compiled file so it is always included by Unity-generated csproj.
+    /// </summary>
+    public static class PlacedBuildPieceRegistry
+    {
+        private static readonly System.Collections.Generic.HashSet<PlacedBuildPiece> Active = new();
+
+        public static void Register(PlacedBuildPiece piece)
+        {
+            if (piece == null)
+                return;
+
+            Active.Add(piece);
+        }
+
+        public static void Unregister(PlacedBuildPiece piece)
+        {
+            if (piece == null)
+                return;
+
+            Active.Remove(piece);
+        }
+
+        public static System.Collections.Generic.List<PlacedBuildPiece> Snapshot()
+        {
+            var result = new System.Collections.Generic.List<PlacedBuildPiece>(Active.Count);
+            foreach (PlacedBuildPiece piece in Active)
+            {
+                if (piece != null)
+                    result.Add(piece);
+            }
+
+            return result;
+        }
+    }
 }
+
