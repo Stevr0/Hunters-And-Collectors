@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HuntersAndCollectors.Building;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Storage;
 using HuntersAndCollectors.Vendors;
 using Unity.Netcode;
 using UnityEngine;
@@ -91,10 +92,10 @@ namespace HuntersAndCollectors.Persistence
             if (snapshot.shelters == null)
                 snapshot.shelters = new List<ShelterSaveData>();
 
-            VendorChestNet[] chests = UnityEngine.Object.FindObjectsByType<VendorChestNet>(FindObjectsSortMode.None);
-            for (int i = 0; i < chests.Length; i++)
+            VendorChestNet[] vendorChests = UnityEngine.Object.FindObjectsByType<VendorChestNet>(FindObjectsSortMode.None);
+            for (int i = 0; i < vendorChests.Length; i++)
             {
-                VendorChestNet chest = chests[i];
+                VendorChestNet chest = vendorChests[i];
                 if (chest == null || !chest.IsSpawned || !chest.IsServer)
                     continue;
 
@@ -106,8 +107,14 @@ namespace HuntersAndCollectors.Persistence
 
             if (snapshot.placedBuildings == null)
                 snapshot.placedBuildings = new List<PlacedBuildingSaveData>();
+            if (snapshot.placedStorageChests == null)
+                snapshot.placedStorageChests = new List<PlacedStorageChestSaveData>();
+            if (snapshot.buildPieces == null)
+                snapshot.buildPieces = new List<BuildPieceSaveData>();
 
             snapshot.placedBuildings.Clear();
+            snapshot.placedStorageChests.Clear();
+            snapshot.buildPieces.Clear();
 
             // Persist only runtime-spawned placed pieces (not scene defaults).
             List<PlacedBuildPiece> pieces = PlacedBuildPieceRegistry.Snapshot();
@@ -126,6 +133,7 @@ namespace HuntersAndCollectors.Persistence
 
                 snapshot.placedBuildings.Add(new PlacedBuildingSaveData
                 {
+                    persistentId = piece.PersistentId ?? string.Empty,
                     buildPieceId = piece.SourceItemId ?? string.Empty,
                     position = ToVector3Save(piece.transform.position),
                     rotation = ToQuaternionSave(piece.transform.rotation),
@@ -136,11 +144,31 @@ namespace HuntersAndCollectors.Persistence
                 });
             }
 
-            // Keep legacy field populated for older external tooling that still reads it.
-            if (snapshot.buildPieces == null)
-                snapshot.buildPieces = new List<BuildPieceSaveData>();
+            List<StorageNet> placedStorages = PlacedStorageRegistry.Snapshot();
+            int savedChestCount = 0;
+            for (int i = 0; i < placedStorages.Count; i++)
+            {
+                StorageNet storage = placedStorages[i];
+                if (storage == null || !storage.IsSpawned || !storage.IsServer)
+                    continue;
 
-            snapshot.buildPieces.Clear();
+                NetworkObject networkObject = storage.NetworkObject;
+                if (networkObject == null || !networkObject.IsSpawned || networkObject.IsSceneObject == true)
+                    continue;
+
+                string persistentId = storage.PersistentId;
+                if (string.IsNullOrWhiteSpace(persistentId))
+                    continue;
+
+                PlacedStorageChestSaveData savedChest = storage.ServerExportSaveData();
+                snapshot.placedStorageChests.Add(savedChest);
+                savedChestCount++;
+                Debug.Log($"[ShardSave] Chest saved id={persistentId} nonEmptySlots={storage.CountNonEmptySlots()}");
+            }
+
+            Debug.Log($"[ShardSave] Saving placed chests count={savedChestCount}");
+
+            // Keep legacy field populated for older tooling that still reads buildPieces.
             for (int i = 0; i < snapshot.placedBuildings.Count; i++)
             {
                 PlacedBuildingSaveData placed = snapshot.placedBuildings[i];
@@ -218,6 +246,7 @@ namespace HuntersAndCollectors.Persistence
             }
 
             RestorePlacedBuildings(data);
+            RestorePlacedStorageChests(data);
         }
 
         private void RestorePlacedBuildings(ShardSaveData data)
@@ -264,6 +293,7 @@ namespace HuntersAndCollectors.Persistence
                 if (placed != null)
                 {
                     placed.ServerInitializeFromSave(
+                        saved.persistentId,
                         itemDef,
                         saved.currentHealth,
                         saved.maxHealth,
@@ -271,6 +301,46 @@ namespace HuntersAndCollectors.Persistence
                 }
 
                 spawnedNetworkObject.Spawn(destroyWithScene: true);
+            }
+        }
+
+        private void RestorePlacedStorageChests(ShardSaveData data)
+        {
+            List<PlacedStorageChestSaveData> source = data?.placedStorageChests;
+            if (source == null)
+                source = new List<PlacedStorageChestSaveData>();
+
+            Debug.Log($"[ShardLoad] Restoring placed chests count={source.Count}");
+
+            List<StorageNet> storages = PlacedStorageRegistry.Snapshot();
+            var byId = new Dictionary<string, StorageNet>(StringComparer.Ordinal);
+            for (int i = 0; i < storages.Count; i++)
+            {
+                StorageNet storage = storages[i];
+                if (storage == null || !storage.IsServer || !storage.IsSpawned)
+                    continue;
+
+                string persistentId = storage.PersistentId;
+                if (string.IsNullOrWhiteSpace(persistentId))
+                    continue;
+
+                byId[persistentId] = storage;
+            }
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                PlacedStorageChestSaveData saved = source[i];
+                if (saved == null || string.IsNullOrWhiteSpace(saved.persistentId))
+                    continue;
+
+                if (!byId.TryGetValue(saved.persistentId, out StorageNet storage) || storage == null)
+                {
+                    Debug.LogWarning($"[ShardLoad] Warning: no spawned chest matched saved id={saved.persistentId}");
+                    continue;
+                }
+
+                storage.ServerApplySaveData(saved);
+                Debug.Log($"[ShardLoad] Restored chest id={saved.persistentId} nonEmptySlots={storage.CountNonEmptySlots()}");
             }
         }
 
@@ -285,6 +355,7 @@ namespace HuntersAndCollectors.Persistence
 
                 converted.Add(new PlacedBuildingSaveData
                 {
+                    persistentId = string.Empty,
                     buildPieceId = row.id,
                     position = row.pos ?? new Vector3SaveData(),
                     rotation = ToQuaternionSave(Quaternion.Euler(0f, row.rotY, 0f)),
@@ -350,9 +421,10 @@ namespace HuntersAndCollectors.Persistence
                 }
             }
 
-            // Legacy buildPieces are retained and converted during Apply/Validate as needed.
             if (data.placedBuildings == null)
                 data.placedBuildings = new List<PlacedBuildingSaveData>();
+            if (data.placedStorageChests == null)
+                data.placedStorageChests = new List<PlacedStorageChestSaveData>();
         }
 
         private bool ValidateAndSanitize(ShardSaveData data, out string severeFailureReason)
@@ -367,10 +439,10 @@ namespace HuntersAndCollectors.Persistence
 
             if (data.shelters == null)
                 data.shelters = new List<ShelterSaveData>();
-
             if (data.placedBuildings == null)
                 data.placedBuildings = new List<PlacedBuildingSaveData>();
-
+            if (data.placedStorageChests == null)
+                data.placedStorageChests = new List<PlacedStorageChestSaveData>();
             if (data.buildPieces == null)
                 data.buildPieces = new List<BuildPieceSaveData>();
 
@@ -403,6 +475,7 @@ namespace HuntersAndCollectors.Persistence
                     continue;
                 }
 
+                piece.persistentId ??= string.Empty;
                 piece.position ??= new Vector3SaveData();
                 piece.rotation ??= new QuaternionSaveData { w = 1f };
                 piece.scale ??= new Vector3SaveData { x = 1f, y = 1f, z = 1f };
@@ -417,6 +490,24 @@ namespace HuntersAndCollectors.Persistence
 
                 if (piece.maxHealth < 0) piece.maxHealth = 0;
                 if (piece.currentHealth < 0) piece.currentHealth = 0;
+            }
+
+            for (int i = data.placedStorageChests.Count - 1; i >= 0; i--)
+            {
+                PlacedStorageChestSaveData chest = data.placedStorageChests[i];
+                if (chest == null || string.IsNullOrWhiteSpace(chest.persistentId))
+                {
+                    data.placedStorageChests.RemoveAt(i);
+                    continue;
+                }
+
+                chest.buildPieceId ??= string.Empty;
+                chest.position ??= new Vector3SaveData();
+                chest.rotation ??= new QuaternionSaveData { w = 1f };
+                chest.chest ??= new InventoryGridSaveData { w = 4, h = 4, slots = new List<InventorySlotSaveData>() };
+                SanitizeVector(chest.position, 0f);
+                SanitizeQuaternion(chest.rotation);
+                ValidateInventoryGrid(chest.chest);
             }
 
             for (int i = data.buildPieces.Count - 1; i >= 0; i--)
@@ -435,6 +526,79 @@ namespace HuntersAndCollectors.Persistence
             }
 
             return true;
+        }
+
+        private void ValidateInventoryGrid(InventoryGridSaveData grid)
+        {
+            if (grid == null)
+                return;
+
+            grid.w = Mathf.Max(1, grid.w);
+            grid.h = Mathf.Max(1, grid.h);
+            int expected = grid.w * grid.h;
+            if (grid.slots == null)
+                grid.slots = new List<InventorySlotSaveData>(expected);
+
+            while (grid.slots.Count < expected)
+                grid.slots.Add(null);
+            while (grid.slots.Count > expected)
+                grid.slots.RemoveAt(grid.slots.Count - 1);
+
+            for (int i = 0; i < grid.slots.Count; i++)
+            {
+                InventorySlotSaveData slot = grid.slots[i];
+                if (slot == null || string.IsNullOrWhiteSpace(slot.id))
+                {
+                    grid.slots[i] = null;
+                    continue;
+                }
+
+                slot.id = slot.id.Trim();
+                if (itemDatabase == null || !itemDatabase.TryGet(slot.id, out ItemDef def) || def == null)
+                {
+                    grid.slots[i] = null;
+                    continue;
+                }
+
+                bool asInstance = string.Equals(slot.kind, "Instance", StringComparison.OrdinalIgnoreCase) || def.UsesItemInstance;
+                if (asInstance)
+                {
+                    slot.kind = "Instance";
+                    slot.q = 1;
+                    slot.maxDurability = slot.maxDurability > 0 ? slot.maxDurability : def.ResolveDurabilityMax();
+                    if (slot.maxDurability < 0) slot.maxDurability = 0;
+                    if (slot.maxDurability > 0)
+                    {
+                        int current = slot.currentDurability > 0 ? slot.currentDurability : slot.maxDurability;
+                        slot.currentDurability = Mathf.Clamp(current, 1, slot.maxDurability);
+                    }
+                    else
+                    {
+                        slot.currentDurability = 0;
+                    }
+                    continue;
+                }
+
+                slot.kind = "Stack";
+                if (slot.q < 1)
+                {
+                    grid.slots[i] = null;
+                    continue;
+                }
+
+                slot.q = Mathf.Clamp(slot.q, 1, Mathf.Max(1, def.MaxStack));
+                slot.instanceId = 0;
+                slot.rolledDamage = 0f;
+                slot.rolledDefence = 0f;
+                slot.rolledSwingSpeed = 0f;
+                slot.rolledMovementSpeed = 0f;
+                slot.maxDurability = 0;
+                slot.currentDurability = 0;
+                slot.bonusStrength = 0;
+                slot.bonusDexterity = 0;
+                slot.bonusIntelligence = 0;
+                slot.craftedBy = string.Empty;
+            }
         }
 
         private static void ValidateVendor(VendorSaveData vendor, ref string severeFailureReason)
@@ -483,6 +647,7 @@ namespace HuntersAndCollectors.Persistence
                 shardKey = shardKey,
                 shelters = new List<ShelterSaveData>(),
                 placedBuildings = new List<PlacedBuildingSaveData>(),
+                placedStorageChests = new List<PlacedStorageChestSaveData>(),
                 buildPieces = new List<BuildPieceSaveData>()
             };
         }
@@ -577,5 +742,4 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
-
 

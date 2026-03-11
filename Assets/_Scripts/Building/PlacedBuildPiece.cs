@@ -1,3 +1,4 @@
+using System;
 using HuntersAndCollectors.Items;
 using Unity.Netcode;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace HuntersAndCollectors.Building
     /// Responsibilities in this first pass:
     /// - Store source item id that created this structure.
     /// - Hold authoritative current health/max health state.
+    /// - Own a stable persistence id for save/load matching.
     /// - Accept server-side damage.
     /// - Despawn on zero health.
     /// - Trigger shelter re-evaluation after destruction.
@@ -24,13 +26,14 @@ namespace HuntersAndCollectors.Building
         [Header("Source")]
         [SerializeField] private string sourceItemId;
 
+        [Header("Persistence")]
+        [SerializeField] private string persistentId;
+        [SerializeField] private ulong ownerPlayerId;
+
         [Header("Structure Health")]
         [Min(1)]
         [SerializeField] private int maxHealth = 100;
         [SerializeField] private bool destroyOnZeroHealth = true;
-
-        [Header("Persistence")]
-        [SerializeField] private ulong ownerPlayerId;
 
         // Server-authoritative health state. Clients only observe.
         private readonly NetworkVariable<int> currentHealth =
@@ -47,6 +50,12 @@ namespace HuntersAndCollectors.Building
         /// Stable source item id used to place this structure (eg: IT_Wall).
         /// </summary>
         public string SourceItemId => sourceItemId;
+
+        /// <summary>
+        /// Stable persistence id used to match shard save rows back to the correct runtime object.
+        /// This is generated once on the server and restored from shard save on reload.
+        /// </summary>
+        public string PersistentId => persistentId;
 
         /// <summary>
         /// Backward-compatible alias for older code still reading BuildPieceId.
@@ -78,7 +87,7 @@ namespace HuntersAndCollectors.Building
             if (string.IsNullOrWhiteSpace(itemId))
                 return false;
 
-            return string.Equals(sourceItemId, itemId, System.StringComparison.OrdinalIgnoreCase);
+            return string.Equals(sourceItemId, itemId, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -98,6 +107,23 @@ namespace HuntersAndCollectors.Building
                 return;
 
             ownerPlayerId = value;
+        }
+
+        public void ServerSetPersistentId(string value)
+        {
+            if (!IsServer)
+                return;
+
+            persistentId = string.IsNullOrWhiteSpace(value) ? GeneratePersistentId() : value.Trim();
+        }
+
+        public void ServerEnsurePersistentId()
+        {
+            if (!IsServer)
+                return;
+
+            if (string.IsNullOrWhiteSpace(persistentId))
+                persistentId = GeneratePersistentId();
         }
 
         /// <summary>
@@ -120,6 +146,7 @@ namespace HuntersAndCollectors.Building
             if (sourceItemDef == null)
                 return;
 
+            ServerEnsurePersistentId();
             sourceItemId = sourceItemDef.ItemId ?? string.Empty;
             maxHealth = Mathf.Max(1, sourceItemDef.StructureMaxHealth);
             destroyOnZeroHealth = sourceItemDef.DestroyOnZeroHealth;
@@ -128,17 +155,18 @@ namespace HuntersAndCollectors.Building
             currentHealth.Value = maxHealth;
             isDestroyedOrPendingDestroy = false;
 
-            Debug.Log($"[PlacedBuildPiece][SERVER] Initialized sourceItemId={sourceItemId} maxHealth={maxHealth}", this);
+            Debug.Log($"[PlacedBuildPiece][SERVER] Initialized persistentId={persistentId} sourceItemId={sourceItemId} maxHealth={maxHealth}", this);
         }
 
         /// <summary>
         /// SERVER ONLY: restore this runtime piece from save data.
         /// </summary>
-        public void ServerInitializeFromSave(ItemDef sourceItemDef, int savedCurrentHealth, int savedMaxHealth, ulong savedOwnerPlayerId)
+        public void ServerInitializeFromSave(string savedPersistentId, ItemDef sourceItemDef, int savedCurrentHealth, int savedMaxHealth, ulong savedOwnerPlayerId)
         {
             if (!IsServer)
                 return;
 
+            ServerSetPersistentId(savedPersistentId);
             ServerInitializeFromItem(sourceItemDef);
             ownerPlayerId = savedOwnerPlayerId;
 
@@ -179,7 +207,7 @@ namespace HuntersAndCollectors.Building
 
             currentHealth.Value = newHealth;
 
-            Debug.Log($"[PlacedBuildPiece][SERVER] Damage applied sourceItemId={sourceItemId} damage={damageAmount} current={newHealth}/{safeMaxHealth}", this);
+            Debug.Log($"[PlacedBuildPiece][SERVER] Damage applied persistentId={persistentId} sourceItemId={sourceItemId} damage={damageAmount} current={newHealth}/{safeMaxHealth}", this);
 
             if (newHealth <= 0)
             {
@@ -206,7 +234,7 @@ namespace HuntersAndCollectors.Building
             isDestroyedOrPendingDestroy = true;
             currentHealth.Value = 0;
 
-            Debug.Log($"[PlacedBuildPiece][SERVER] Destroyed sourceItemId={sourceItemId}", this);
+            Debug.Log($"[PlacedBuildPiece][SERVER] Destroyed persistentId={persistentId} sourceItemId={sourceItemId}", this);
 
             ServerNotifyShelterStatePieceChanged();
 
@@ -220,6 +248,8 @@ namespace HuntersAndCollectors.Building
             if (!IsServer)
                 return;
 
+            ServerEnsurePersistentId();
+
             // Defensive fallback in case object is spawned without explicit initialization.
             if (replicatedMaxHealth.Value < 1)
                 replicatedMaxHealth.Value = Mathf.Max(1, maxHealth);
@@ -228,7 +258,7 @@ namespace HuntersAndCollectors.Building
                 currentHealth.Value = replicatedMaxHealth.Value;
 
             PlacedBuildPieceRegistry.Register(this);
-            Debug.Log($"[PlacedBuildPiece][SERVER] Spawned sourceItemId={sourceItemId} health={CurrentHealth}/{MaxHealth} at pos={transform.position}", this);
+            Debug.Log($"[PlacedBuildPiece][SERVER] Spawned persistentId={persistentId} sourceItemId={sourceItemId} health={CurrentHealth}/{MaxHealth} at pos={transform.position}", this);
         }
 
         public override void OnNetworkDespawn()
@@ -243,6 +273,7 @@ namespace HuntersAndCollectors.Building
         {
             // Defensive cleanup when object is destroyed while not fully spawned.
             PlacedBuildPieceRegistry.Unregister(this);
+            base.OnDestroy();
         }
 
         private void ServerNotifyShelterStatePieceChanged()
@@ -259,6 +290,11 @@ namespace HuntersAndCollectors.Building
 
                 shelterState.ServerReevaluateShelter();
             }
+        }
+
+        private static string GeneratePersistentId()
+        {
+            return $"PB_{Guid.NewGuid():N}";
         }
 
 #if UNITY_EDITOR
@@ -307,4 +343,3 @@ namespace HuntersAndCollectors.Building
         }
     }
 }
-

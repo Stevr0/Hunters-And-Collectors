@@ -82,6 +82,9 @@ namespace HuntersAndCollectors.Persistence
         // Canonical runtime world structures list.
         public List<PlacedBuildingSaveData> placedBuildings = new();
 
+        // Server-authoritative placed storage inventories keyed by persistent placed-object id.
+        public List<PlacedStorageChestSaveData> placedStorageChests = new();
+
         // Legacy v1/v2 field retained for backward compatibility with older saves.
         public List<BuildPieceSaveData> buildPieces = new();
     }
@@ -146,6 +149,7 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class PlacedBuildingSaveData
     {
+        public string persistentId = string.Empty;
         public string buildPieceId = string.Empty;
         public Vector3SaveData position = new();
         public QuaternionSaveData rotation = new();
@@ -153,6 +157,16 @@ namespace HuntersAndCollectors.Persistence
         public ulong ownerPlayerId;
         public int currentHealth;
         public int maxHealth;
+    }
+
+    [Serializable]
+    public sealed class PlacedStorageChestSaveData
+    {
+        public string persistentId = string.Empty;
+        public string buildPieceId = string.Empty;
+        public Vector3SaveData position = new();
+        public QuaternionSaveData rotation = new();
+        public InventoryGridSaveData chest = new();
     }
 
     [Serializable]

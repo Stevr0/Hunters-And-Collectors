@@ -172,6 +172,16 @@ namespace HuntersAndCollectors.Persistence
             Instance.SavePlayerNow(playerRoot);
         }
 
+        public static void NotifyShardStateChanged()
+        {
+            if (Instance == null)
+                return;
+
+            if (!Instance.IsServerReady() || !Instance.initialized)
+                return;
+
+            Instance.SaveShardNow();
+        }
         private IEnumerator LoadPlayerWhenReady(ulong clientId)
         {
             const int maxFrames = 300;
@@ -255,5 +265,6 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
 
 
