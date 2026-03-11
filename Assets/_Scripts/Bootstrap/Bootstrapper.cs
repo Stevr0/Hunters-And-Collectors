@@ -1,4 +1,5 @@
 using HuntersAndCollectors.Actors;
+using HuntersAndCollectors.Combat;
 using HuntersAndCollectors.Persistence;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.UI.Menu;
@@ -43,6 +44,11 @@ namespace HuntersAndCollectors.Bootstrap
         private bool unitySceneLoadedRegistered;
 
         public static Bootstrapper Instance { get; private set; }
+
+        public static bool TryRespawnPlayerAtDefaultSpawn(PlayerNetworkRoot playerRoot)
+        {
+            return Instance != null && Instance.ServerRespawnPlayerAtDefaultSpawn(playerRoot);
+        }
 
         private void Awake()
         {
@@ -369,22 +375,49 @@ namespace HuntersAndCollectors.Bootstrap
                 yield break;
             }
 
-            if (!TryResolvePlayerSpawn(out Vector3 spawnPosition, out Quaternion spawnRotation))
+            // Wait until server-side player save load has had a chance to stage any saved world position.
+            const int maxFramesToWaitForPlayerLoad = 180;
+            for (int i = 0; i < maxFramesToWaitForPlayerLoad; i++)
             {
-                Debug.LogError($"[Bootstrapper] No spawn point found for id '{spawnId}' in scene '{gameplaySceneName}'.");
-                yield break;
+                if (SaveManager.IsPlayerLoadedStatic(clientId))
+                    break;
+
+                yield return null;
             }
 
-            if (snapPlayerToGround)
-                spawnPosition = ResolveGroundedPlayerPosition(client.PlayerObject, spawnPosition);
-
             NetworkObject playerObj = client.PlayerObject;
-            Vector3 before = playerObj.transform.position;
-            Vector3 target = spawnPosition;
+            PlayerNetworkRoot playerRoot = playerObj.GetComponent<PlayerNetworkRoot>();
+            Vector3 target;
+            Quaternion targetRotation;
+            string spawnLabel;
 
+            if (playerRoot != null && playerRoot.ServerTryGetLoadedWorldPosition(out Vector3 savedPosition, out Quaternion savedRotation))
+            {
+                target = savedPosition;
+                targetRotation = savedRotation;
+                spawnLabel = "saved position";
+                Debug.Log($"[PlayerLoad] Applied saved position for key={playerRoot.PlayerKey}");
+            }
+            else
+            {
+                if (!TryResolvePlayerSpawn(out Vector3 spawnPosition, out Quaternion spawnRotation))
+                {
+                    Debug.LogError($"[Bootstrapper] No spawn point found for id '{spawnId}' in scene '{gameplaySceneName}'.");
+                    yield break;
+                }
+
+                if (snapPlayerToGround)
+                    spawnPosition = ResolveGroundedPlayerPosition(playerObj, spawnPosition);
+
+                target = spawnPosition;
+                targetRotation = spawnRotation;
+                spawnLabel = spawnId;
+            }
+
+            Vector3 before = playerObj.transform.position;
             Debug.Log($"[Bootstrapper] Teleport attempt clientId={clientId} netId={playerObj.NetworkObjectId} FROM {before} TO {target}");
 
-            TeleportPlayerToSpawn(playerObj, target, spawnRotation, spawnId);
+            TeleportPlayerToSpawn(playerObj, target, targetRotation, spawnLabel);
 
             yield return null;
 
@@ -394,10 +427,50 @@ namespace HuntersAndCollectors.Bootstrap
             if ((after - target).sqrMagnitude > 0.01f)
             {
                 Debug.LogWarning("[Bootstrapper] Player snapped back after teleport. Forcing teleport again.");
-                TeleportPlayerToSpawn(playerObj, target, spawnRotation, spawnId);
+                TeleportPlayerToSpawn(playerObj, target, targetRotation, spawnLabel);
             }
         }
 
+        private bool ServerRespawnPlayerAtDefaultSpawn(PlayerNetworkRoot playerRoot)
+        {
+            if (playerRoot == null || NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+                return false;
+
+            NetworkObject playerObject = playerRoot.NetworkObject;
+            if (playerObject == null || !playerObject.IsSpawned)
+                return false;
+
+            Debug.Log($"[Respawn] Reusing existing player object id={playerObject.NetworkObjectId}");
+            Debug.Log($"[Respawn] Player object activeInHierarchy={playerObject.gameObject.activeInHierarchy}");
+
+            if (!TryResolvePlayerSpawn(out Vector3 spawnPosition, out Quaternion spawnRotation))
+            {
+                Debug.LogError($"[Respawn] No spawn point found for player key={playerRoot.PlayerKey} using spawnId='{spawnId}'.");
+                return false;
+            }
+
+            if (snapPlayerToGround)
+                spawnPosition = ResolveGroundedPlayerPosition(playerObject, spawnPosition);
+
+            Debug.Log($"[Respawn] Respawning player key={playerRoot.PlayerKey} at spawnId={spawnId}");
+            TeleportPlayerToSpawn(playerObject, spawnPosition, spawnRotation, spawnId);
+            Debug.Log($"[Respawn] Teleported player key={playerRoot.PlayerKey} to pos=({spawnPosition.x:F3},{spawnPosition.y:F3},{spawnPosition.z:F3})");
+            Debug.Log($"[Respawn] Teleport complete for surviving player object id={playerObject.NetworkObjectId}");
+
+            PlayerVitalsNet vitals = playerRoot.GetComponent<PlayerVitalsNet>();
+            if (vitals != null)
+            {
+                vitals.ServerResetToFull();
+            }
+            else
+            {
+                HealthNet health = playerRoot.GetComponent<HealthNet>();
+                health?.ServerResetHealth();
+            }
+
+            Debug.Log($"[Respawn] Restored health for player key={playerRoot.PlayerKey}");
+            return true;
+        }
         private void TrySpawnStartupActors()
         {
             if (startupActorsSpawned)
@@ -541,5 +614,10 @@ namespace HuntersAndCollectors.Bootstrap
         }
     }
 }
+
+
+
+
+
 
 

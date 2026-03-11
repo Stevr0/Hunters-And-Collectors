@@ -13,6 +13,7 @@ namespace HuntersAndCollectors.Persistence
         public List<KnownItemSaveData> knownItems = new();
         public InventoryGridSaveData inventory = new();
         public PlayerEquipmentSaveData equipment = new();
+        public PlayerLocationSaveData location = new();
     }
 
     [Serializable]
@@ -85,8 +86,19 @@ namespace HuntersAndCollectors.Persistence
         // Server-authoritative placed storage inventories keyed by persistent placed-object id.
         public List<PlacedStorageChestSaveData> placedStorageChests = new();
 
+        // Server-authoritative player death graves persisted in shard save.
+        public List<GraveSaveData> graves = new();
+
         // Legacy v1/v2 field retained for backward compatibility with older saves.
         public List<BuildPieceSaveData> buildPieces = new();
+    }
+
+    [Serializable]
+    public sealed class PlayerLocationSaveData
+    {
+        public bool hasSavedPosition;
+        public Vector3SaveData position = new();
+        public float rotationY;
     }
 
     [Serializable]
@@ -170,6 +182,16 @@ namespace HuntersAndCollectors.Persistence
     }
 
     [Serializable]
+    public sealed class GraveSaveData
+    {
+        public string persistentId = string.Empty;
+        public string ownerPlayerKey = string.Empty;
+        public Vector3SaveData position = new();
+        public QuaternionSaveData rotation = new();
+        public InventoryGridSaveData inventory = new();
+    }
+
+    [Serializable]
     public sealed class Vector3SaveData
     {
         public float x;
@@ -214,3 +236,5 @@ namespace HuntersAndCollectors.Persistence
         public string ParseStatus { get; }
     }
 }
+
+

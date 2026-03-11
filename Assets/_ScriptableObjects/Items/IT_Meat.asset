@@ -14,44 +14,44 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_meat
   DisplayName: Meat
-  Icon: {fileID: 21300000, guid: b81e209f025e80c46ad21c6640139d8e, type: 3}
+  Icon: {fileID: 21300000, guid: 8b7347d3246892d4a912f4e905dbc0ba, type: 3}
   MaxStack: 99
-  Category: 0
-  visualPrefab: {fileID: 4243029077377111302, guid: 59302acc2f389e14881279578b78a889, type: 3}
-  equipLocalPosition: {x: -0.026, y: -0.2, z: 0}
-  equipLocalEuler: {x: 0, y: 0, z: -15}
+  Category: 3
+  visualPrefab: {fileID: 4243029077377111302, guid: cda793a225c59dd41b6f67d3aaa73994, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: Meat, better cooked!
+  Description: Tastes better cooked!
   PropertiesText: 
-  BaseValue: 2
+  BaseValue: 1
   Weight: 1
-  Rarity: 0
-  CraftTime: 5
+  Rarity: 1
+  CraftTime: 1
   BaseQuality: 1
-  MaxDurability: 150
+  MaxDurability: 0
   IsInstanceItem: 0
-  DamageMin: 1
-  DamageMax: 10
+  DamageMin: 0
+  DamageMax: 0
   DefenceMin: 0
   DefenceMax: 0
-  SwingSpeedMin: 0.2
-  SwingSpeedMax: 2
+  SwingSpeedMin: 0
+  SwingSpeedMax: 0
   MovementSpeedMin: 0
   MovementSpeedMax: 0
-  DurabilityMin: 10
-  DurabilityMax: 200
-  Damage: 2
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Damage: 0
   Defence: 0
   AttackBonus: 0
   SwingSpeed: 1
   MovementSpeed: 1
-  Strength: 3
-  Dexterity: 2
+  Strength: 0
+  Dexterity: 0
   LegacyDexterity: 0
-  Intelligence: 1
-  IsEquippable: 1
-  EquipSlot: 10
-  Handedness: 1
+  Intelligence: 0
+  IsEquippable: 0
+  EquipSlot: 0
+  Handedness: 0
   ToolTags: 
   IsFood: 1
   FoodMaxHealthBonus: 20

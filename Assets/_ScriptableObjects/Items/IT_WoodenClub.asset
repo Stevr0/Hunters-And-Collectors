@@ -38,7 +38,7 @@ MonoBehaviour:
   SwingSpeedMax: 2
   MovementSpeedMin: 0
   MovementSpeedMax: 0
-  DurabilityMin: 10
+  DurabilityMin: 40
   DurabilityMax: 200
   Damage: 2
   Defence: 0

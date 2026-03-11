@@ -1,5 +1,6 @@
 using HuntersAndCollectors.Actors;
 using HuntersAndCollectors.Players;
+using HuntersAndCollectors.Persistence;
 using HuntersAndCollectors.Stats;
 using Unity.Netcode;
 using UnityEngine;
@@ -184,11 +185,30 @@ namespace HuntersAndCollectors.Combat
             {
                 ServerResolveDeathOnce();
 
-                if (despawnOnZero)
+                if (ShouldDespawnOnDeath())
+                {
                     ServerDespawnSelf();
+                }
+                else if (cachedPlayerVitals != null)
+                {
+                    PlayerNetworkRoot playerRoot = GetComponent<PlayerNetworkRoot>();
+                    string playerKey = playerRoot != null ? playerRoot.PlayerKey : "<unknown>";
+                    Debug.Log($"[Death] Prevented player despawn for key={playerKey}");
+                }
             }
 
             return appliedAmount > 0;
+        }
+
+
+        private bool ShouldDespawnOnDeath()
+        {
+            if (!despawnOnZero)
+                return false;
+
+            // Player death is a state transition on the same owned player object.
+            // Only non-player actors should use the generic despawn cleanup path.
+            return cachedPlayerVitals == null;
         }
 
         [ClientRpc]
@@ -209,6 +229,16 @@ namespace HuntersAndCollectors.Combat
                 return;
 
             serverDeathResolved = true;
+
+            if (cachedPlayerVitals != null)
+            {
+                PlayerNetworkRoot playerRoot = GetComponent<PlayerNetworkRoot>();
+                if (playerRoot != null)
+                {
+                    Debug.Log($"[Death] Player death started key={playerRoot.PlayerKey}");
+                    SaveManager.TryCreateGraveForPlayerDeath(playerRoot, transform.position);
+                }
+            }
 
             if (cachedLootDropper == null)
                 cachedLootDropper = GetComponent<ActorLootDropper>();
@@ -284,3 +314,8 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+
+
+
+
+

@@ -23,11 +23,11 @@ MonoBehaviour:
   OcclusionMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  AttackRange: 2
+  AttackRange: 1
   AttackRangeHysteresis: 0.35
   FlatAttackBonus: 1
   AttackIntervalOverrideSeconds: 0
-  MoveSpeedMultiplier: 1
+  MoveSpeedMultiplier: 0.5
   LeashRange: 40
   ReturnHomeDistance: 0.7
   PatrolRadius: 8

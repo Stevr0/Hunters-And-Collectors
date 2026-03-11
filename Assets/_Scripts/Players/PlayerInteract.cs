@@ -1,4 +1,5 @@
 using System;
+using HuntersAndCollectors.Graves;
 using HuntersAndCollectors.Harvesting;
 using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
@@ -41,6 +42,7 @@ namespace HuntersAndCollectors.Players
         private ResourceNodeNet currentNodeFocus;
         private VendorInteractable currentVendorFocus;
         private StorageNet currentChestFocus;
+        private GraveNet currentGraveFocus;
         private ResourceDrop currentDropFocus;
 
         private bool primaryHeld;
@@ -48,6 +50,7 @@ namespace HuntersAndCollectors.Players
 
         public VendorInteractable CurrentVendorFocus => currentVendorFocus;
         public StorageNet CurrentChestFocus => currentChestFocus;
+        public GraveNet CurrentGraveFocus => currentGraveFocus;
         public ResourceDrop CurrentDropFocus => currentDropFocus;
 
         public Camera InteractCamera => playerCamera;
@@ -231,6 +234,14 @@ namespace HuntersAndCollectors.Players
             if (!TryGetBestInteractHit(ray, out RaycastHit hit))
                 return;
 
+            Debug.Log($"[Interact] Hit object={hit.transform.name}");
+            Debug.Log($"[Interact] Hit collider={hit.collider.name}");
+
+            bool vendorOnHit = hit.collider.GetComponent<VendorInteractable>() != null;
+            bool vendorInParent = hit.collider.GetComponentInParent<VendorInteractable>() != null;
+            Debug.Log($"[Interact] VendorNet on hit? {vendorOnHit}");
+            Debug.Log($"[Interact] VendorNet in parent? {vendorInParent}");
+
             VendorInteractable vendor = ResolveVendorFromHit(hit);
             if (vendor != null)
             {
@@ -240,6 +251,7 @@ namespace HuntersAndCollectors.Players
                     return;
                 }
 
+                Debug.Log($"[Interact] Opening vendor window for vendor id={vendor.name}");
                 vendorUI.Open(vendor);
                 return;
             }
@@ -254,6 +266,13 @@ namespace HuntersAndCollectors.Players
                 }
 
                 chestUI.Open(chest);
+                return;
+            }
+
+            GraveNet grave = ResolveGraveFromHit(hit);
+            if (grave != null)
+            {
+                grave.RequestRecoverAllServerRpc();
                 return;
             }
 
@@ -272,6 +291,7 @@ namespace HuntersAndCollectors.Players
             currentNodeFocus = null;
             currentVendorFocus = null;
             currentChestFocus = null;
+            currentGraveFocus = null;
             currentDropFocus = null;
 
             if (playerCamera == null)
@@ -288,6 +308,10 @@ namespace HuntersAndCollectors.Players
 
             currentChestFocus = ResolveChestFromHit(hit);
             if (currentChestFocus != null)
+                return;
+
+            currentGraveFocus = ResolveGraveFromHit(hit);
+            if (currentGraveFocus != null)
                 return;
 
             currentDropFocus = hit.collider.GetComponentInParent<ResourceDrop>();
@@ -354,6 +378,12 @@ namespace HuntersAndCollectors.Players
                     return true;
                 }
 
+                if (ResolveGraveFromHit(hit) != null)
+                {
+                    bestHit = hit;
+                    return true;
+                }
+
                 if (hit.collider.GetComponentInParent<ResourceDrop>() != null)
                 {
                     bestHit = hit;
@@ -370,28 +400,52 @@ namespace HuntersAndCollectors.Players
             return false;
         }
 
-        private static VendorInteractable ResolveVendorFromHit(RaycastHit hit)
+        public static VendorInteractable ResolveVendorFromHit(RaycastHit hit)
         {
-            if (hit.collider == null)
-                return null;
-
-            VendorInteractable vendor = hit.collider.GetComponentInParent<VendorInteractable>();
-            if (vendor != null)
-                return vendor;
-
-            return hit.collider.GetComponentInChildren<VendorInteractable>();
+            return ResolveComponentFromHitHierarchy<VendorInteractable>(hit);
         }
 
         private static StorageNet ResolveChestFromHit(RaycastHit hit)
         {
+            return ResolveComponentFromHitHierarchy<StorageNet>(hit);
+        }
+
+        private static GraveNet ResolveGraveFromHit(RaycastHit hit)
+        {
+            return ResolveComponentFromHitHierarchy<GraveNet>(hit);
+        }
+
+        /// <summary>
+        /// Resolves an interactable from a hit collider even when the interaction component lives on a
+        /// sibling branch under a larger placed prefab like VendorHouse.
+        /// </summary>
+        private static T ResolveComponentFromHitHierarchy<T>(RaycastHit hit) where T : Component
+        {
             if (hit.collider == null)
                 return null;
 
-            StorageNet chest = hit.collider.GetComponentInParent<StorageNet>();
-            if (chest != null)
-                return chest;
+            T component = hit.collider.GetComponent<T>();
+            if (component != null)
+                return component;
 
-            return hit.collider.GetComponentInChildren<StorageNet>();
+            component = hit.collider.GetComponentInParent<T>();
+            if (component != null)
+                return component;
+
+            component = hit.collider.GetComponentInChildren<T>();
+            if (component != null)
+                return component;
+
+            NetworkObject networkRoot = hit.collider.GetComponentInParent<NetworkObject>();
+            if (networkRoot != null)
+            {
+                component = networkRoot.GetComponentInChildren<T>(true);
+                if (component != null)
+                    return component;
+            }
+
+            Transform root = hit.collider.transform.root;
+            return root != null ? root.GetComponentInChildren<T>(true) : null;
         }
     }
 }

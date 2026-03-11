@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_BearFur
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_bearfur
+  DisplayName: Bear Fur
+  Icon: {fileID: 21300000, guid: 7ed16f605ac92734dab27c43c56c526b, type: 3}
+  MaxStack: 99
+  Category: 0
+  visualPrefab: {fileID: 2115552848541456459, guid: d0ec00b5c956daa44b8dcbe495151728, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  Description: Thick leather, warm fur.
+  PropertiesText: 
+  BaseValue: 10
+  Weight: 2
+  Rarity: 1
+  CraftTime: 6
+  BaseQuality: 1
+  MaxDurability: 100
+  IsInstanceItem: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0
+  SwingSpeedMax: 0
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Damage: 0
+  Defence: 0
+  AttackBonus: 0
+  SwingSpeed: 1
+  MovementSpeed: 1
+  Strength: 0
+  Dexterity: 0
+  LegacyDexterity: 0
+  Intelligence: 0
+  IsEquippable: 0
+  EquipSlot: 0
+  Handedness: 0
+  ToolTags: 
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

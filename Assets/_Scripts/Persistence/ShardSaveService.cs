@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HuntersAndCollectors.Building;
+using HuntersAndCollectors.Graves;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Storage;
@@ -13,11 +14,14 @@ namespace HuntersAndCollectors.Persistence
     public sealed class ShardSaveService
     {
         private readonly ItemDatabase itemDatabase;
+        private readonly GraveNet gravePrefab;
+        private readonly Dictionary<string, PlacedStorageChestSaveData> pendingPlacedStorageRestores = new(StringComparer.Ordinal);
         private ShardSaveData runtimeState;
 
-        public ShardSaveService(ItemDatabase itemDatabase)
+        public ShardSaveService(ItemDatabase itemDatabase, GraveNet gravePrefab)
         {
             this.itemDatabase = itemDatabase;
+            this.gravePrefab = gravePrefab;
         }
 
         public ShardSaveData LoadOrCreateAndApply(string shardKey)
@@ -109,11 +113,14 @@ namespace HuntersAndCollectors.Persistence
                 snapshot.placedBuildings = new List<PlacedBuildingSaveData>();
             if (snapshot.placedStorageChests == null)
                 snapshot.placedStorageChests = new List<PlacedStorageChestSaveData>();
+            if (snapshot.graves == null)
+                snapshot.graves = new List<GraveSaveData>();
             if (snapshot.buildPieces == null)
                 snapshot.buildPieces = new List<BuildPieceSaveData>();
 
             snapshot.placedBuildings.Clear();
             snapshot.placedStorageChests.Clear();
+            snapshot.graves.Clear();
             snapshot.buildPieces.Clear();
 
             // Persist only runtime-spawned placed pieces (not scene defaults).
@@ -164,9 +171,20 @@ namespace HuntersAndCollectors.Persistence
                 snapshot.placedStorageChests.Add(savedChest);
                 savedChestCount++;
                 Debug.Log($"[ShardSave] Chest saved id={persistentId} nonEmptySlots={storage.CountNonEmptySlots()}");
+                Debug.Log($"[ShardSave] Chest saved id={persistentId} slotSummary={storage.DebugDescribeGridSlots()}");
             }
 
             Debug.Log($"[ShardSave] Saving placed chests count={savedChestCount}");
+
+            List<GraveNet> graves = GraveRegistry.Snapshot();
+            for (int i = 0; i < graves.Count; i++)
+            {
+                GraveNet grave = graves[i];
+                if (grave == null || !grave.IsServer || !grave.IsSpawned || grave.IsEmpty())
+                    continue;
+
+                snapshot.graves.Add(grave.ServerExportSaveData());
+            }
 
             // Keep legacy field populated for older tooling that still reads buildPieces.
             for (int i = 0; i < snapshot.placedBuildings.Count; i++)
@@ -245,8 +263,12 @@ namespace HuntersAndCollectors.Persistence
                 }
             }
 
+            // Queue storage records before rebuilding placed objects. This avoids a load-order race
+            // where a StorageNet registers during Spawn before the old one-shot restore pass runs.
+            QueuePlacedStorageRestores(data);
             RestorePlacedBuildings(data);
-            RestorePlacedStorageChests(data);
+            TryApplyPendingPlacedStorageRestores(logWarningsForUnmatched: true);
+            RestoreGraves(data);
         }
 
         private void RestorePlacedBuildings(ShardSaveData data)
@@ -292,6 +314,7 @@ namespace HuntersAndCollectors.Persistence
                 PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
                 if (placed != null)
                 {
+                    Debug.Log($"[PlacedBuildRestore] PreSpawn assign persistentId={saved.persistentId} prefab={itemDef.ItemId}");
                     placed.ServerInitializeFromSave(
                         saved.persistentId,
                         itemDef,
@@ -301,31 +324,18 @@ namespace HuntersAndCollectors.Persistence
                 }
 
                 spawnedNetworkObject.Spawn(destroyWithScene: true);
+                HuntersAndCollectors.Building.NetworkObjectHierarchySpawner.SpawnChildNetworkObjects(spawnedNetworkObject);
             }
         }
 
-        private void RestorePlacedStorageChests(ShardSaveData data)
+        private void QueuePlacedStorageRestores(ShardSaveData data)
         {
             List<PlacedStorageChestSaveData> source = data?.placedStorageChests;
             if (source == null)
                 source = new List<PlacedStorageChestSaveData>();
 
             Debug.Log($"[ShardLoad] Restoring placed chests count={source.Count}");
-
-            List<StorageNet> storages = PlacedStorageRegistry.Snapshot();
-            var byId = new Dictionary<string, StorageNet>(StringComparer.Ordinal);
-            for (int i = 0; i < storages.Count; i++)
-            {
-                StorageNet storage = storages[i];
-                if (storage == null || !storage.IsServer || !storage.IsSpawned)
-                    continue;
-
-                string persistentId = storage.PersistentId;
-                if (string.IsNullOrWhiteSpace(persistentId))
-                    continue;
-
-                byId[persistentId] = storage;
-            }
+            pendingPlacedStorageRestores.Clear();
 
             for (int i = 0; i < source.Count; i++)
             {
@@ -333,14 +343,96 @@ namespace HuntersAndCollectors.Persistence
                 if (saved == null || string.IsNullOrWhiteSpace(saved.persistentId))
                     continue;
 
-                if (!byId.TryGetValue(saved.persistentId, out StorageNet storage) || storage == null)
+                pendingPlacedStorageRestores[saved.persistentId] = saved;
+                int nonEmptySlots = CountNonEmptySlots(saved.chest);
+                Debug.Log($"[ShardLoad] Found pending chest restore id={saved.persistentId} nonEmptySlots={nonEmptySlots}");
+            }
+        }
+
+        public bool TryApplyPendingPlacedStorageRestore(StorageNet storage)
+        {
+            if (storage == null || !storage.IsServer || !storage.IsSpawned)
+                return false;
+
+            string persistentId = storage.PersistentId;
+            if (string.IsNullOrWhiteSpace(persistentId))
+                return false;
+
+            if (!pendingPlacedStorageRestores.TryGetValue(persistentId, out PlacedStorageChestSaveData saved) || saved == null)
+                return false;
+
+            Debug.Log($"[ShardLoad] Applying chest restore id={saved.persistentId} to spawned chest id={persistentId}");
+            storage.ServerApplySaveData(saved);
+            pendingPlacedStorageRestores.Remove(persistentId);
+            Debug.Log($"[ShardLoad] Applied chest restore id={saved.persistentId} nonEmptySlots={storage.CountNonEmptySlots()}");
+            return true;
+        }
+
+        private void TryApplyPendingPlacedStorageRestores(bool logWarningsForUnmatched)
+        {
+            List<StorageNet> storages = PlacedStorageRegistry.Snapshot();
+            for (int i = 0; i < storages.Count; i++)
+            {
+                StorageNet storage = storages[i];
+                if (storage == null)
+                    continue;
+
+                TryApplyPendingPlacedStorageRestore(storage);
+            }
+
+            if (!logWarningsForUnmatched || pendingPlacedStorageRestores.Count == 0)
+                return;
+
+            foreach (KeyValuePair<string, PlacedStorageChestSaveData> pair in pendingPlacedStorageRestores)
+                Debug.LogWarning($"[ShardLoad] Warning: no spawned chest matched saved id={pair.Key}");
+        }
+
+        private void RestoreGraves(ShardSaveData data)
+        {
+            DestroyExistingRuntimeGraves();
+
+            if (gravePrefab == null || data?.graves == null)
+                return;
+
+            for (int i = 0; i < data.graves.Count; i++)
+            {
+                GraveSaveData saved = data.graves[i];
+                if (saved == null || string.IsNullOrWhiteSpace(saved.persistentId))
+                    continue;
+
+                Vector3 position = ToVector3(saved.position);
+                Quaternion rotation = ToQuaternion(saved.rotation);
+                GraveNet grave = UnityEngine.Object.Instantiate(gravePrefab, position, rotation);
+                if (grave == null)
+                    continue;
+
+                grave.ServerApplySaveData(saved);
+                NetworkObject networkObject = grave.GetComponent<NetworkObject>();
+                if (networkObject == null)
                 {
-                    Debug.LogWarning($"[ShardLoad] Warning: no spawned chest matched saved id={saved.persistentId}");
+                    UnityEngine.Object.Destroy(grave.gameObject);
                     continue;
                 }
 
-                storage.ServerApplySaveData(saved);
-                Debug.Log($"[ShardLoad] Restored chest id={saved.persistentId} nonEmptySlots={storage.CountNonEmptySlots()}");
+                networkObject.Spawn(destroyWithScene: true);
+                Debug.Log($"[GraveLoad] Restored grave id={grave.PersistentId} nonEmptySlots={grave.CountNonEmptySlots()}");
+            }
+        }
+
+        private static void DestroyExistingRuntimeGraves()
+        {
+            List<GraveNet> graves = GraveRegistry.Snapshot();
+            for (int i = 0; i < graves.Count; i++)
+            {
+                GraveNet grave = graves[i];
+                if (grave == null || !grave.IsServer || !grave.IsSpawned)
+                    continue;
+
+                NetworkObject networkObject = grave.NetworkObject;
+                if (networkObject == null || !networkObject.IsSpawned)
+                    continue;
+
+                networkObject.Despawn(destroy: true);
             }
         }
 
@@ -425,6 +517,8 @@ namespace HuntersAndCollectors.Persistence
                 data.placedBuildings = new List<PlacedBuildingSaveData>();
             if (data.placedStorageChests == null)
                 data.placedStorageChests = new List<PlacedStorageChestSaveData>();
+            if (data.graves == null)
+                data.graves = new List<GraveSaveData>();
         }
 
         private bool ValidateAndSanitize(ShardSaveData data, out string severeFailureReason)
@@ -443,6 +537,10 @@ namespace HuntersAndCollectors.Persistence
                 data.placedBuildings = new List<PlacedBuildingSaveData>();
             if (data.placedStorageChests == null)
                 data.placedStorageChests = new List<PlacedStorageChestSaveData>();
+            if (data.graves == null)
+                data.graves = new List<GraveSaveData>();
+            if (data.graves == null)
+                data.graves = new List<GraveSaveData>();
             if (data.buildPieces == null)
                 data.buildPieces = new List<BuildPieceSaveData>();
 
@@ -492,6 +590,24 @@ namespace HuntersAndCollectors.Persistence
                 if (piece.currentHealth < 0) piece.currentHealth = 0;
             }
 
+            for (int i = data.graves.Count - 1; i >= 0; i--)
+            {
+                GraveSaveData grave = data.graves[i];
+                if (grave == null || string.IsNullOrWhiteSpace(grave.persistentId))
+                {
+                    data.graves.RemoveAt(i);
+                    continue;
+                }
+
+                grave.ownerPlayerKey ??= string.Empty;
+                grave.position ??= new Vector3SaveData();
+                grave.rotation ??= new QuaternionSaveData { w = 1f };
+                grave.inventory ??= new InventoryGridSaveData { w = 6, h = 8, slots = new List<InventorySlotSaveData>() };
+                SanitizeVector(grave.position, 0f);
+                SanitizeQuaternion(grave.rotation);
+                ValidateInventoryGrid(grave.inventory);
+            }
+
             for (int i = data.placedStorageChests.Count - 1; i >= 0; i--)
             {
                 PlacedStorageChestSaveData chest = data.placedStorageChests[i];
@@ -526,6 +642,22 @@ namespace HuntersAndCollectors.Persistence
             }
 
             return true;
+        }
+
+        private static int CountNonEmptySlots(InventoryGridSaveData grid)
+        {
+            if (grid?.slots == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < grid.slots.Count; i++)
+            {
+                InventorySlotSaveData slot = grid.slots[i];
+                if (slot != null && !string.IsNullOrWhiteSpace(slot.id))
+                    count++;
+            }
+
+            return count;
         }
 
         private void ValidateInventoryGrid(InventoryGridSaveData grid)
@@ -648,6 +780,7 @@ namespace HuntersAndCollectors.Persistence
                 shelters = new List<ShelterSaveData>(),
                 placedBuildings = new List<PlacedBuildingSaveData>(),
                 placedStorageChests = new List<PlacedStorageChestSaveData>(),
+                graves = new List<GraveSaveData>(),
                 buildPieces = new List<BuildPieceSaveData>()
             };
         }
@@ -742,4 +875,16 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 

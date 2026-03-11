@@ -25,6 +25,10 @@ namespace HuntersAndCollectors.Players
 
         public string PlayerKey { get; private set; } = string.Empty;
 
+        private bool hasLoadedWorldPosition;
+        private Vector3 loadedWorldPosition;
+        private float loadedWorldYaw;
+
         public WalletNet Wallet => wallet;
         public SkillsNet Skills => skills;
         public KnownItemsNet KnownItems => knownItems;
@@ -53,6 +57,33 @@ namespace HuntersAndCollectors.Players
             if (equipment == null) equipment = GetComponent<PlayerEquipmentNet>();
         }
 
+        public void ServerSetLoadedWorldPosition(Vector3 position, float yawDegrees)
+        {
+            if (!IsServer)
+                return;
+
+            hasLoadedWorldPosition = true;
+            loadedWorldPosition = position;
+            loadedWorldYaw = yawDegrees;
+        }
+
+        public void ServerClearLoadedWorldPosition()
+        {
+            if (!IsServer)
+                return;
+
+            hasLoadedWorldPosition = false;
+            loadedWorldPosition = default;
+            loadedWorldYaw = 0f;
+        }
+
+        public bool ServerTryGetLoadedWorldPosition(out Vector3 position, out Quaternion rotation)
+        {
+            position = loadedWorldPosition;
+            rotation = Quaternion.Euler(0f, loadedWorldYaw, 0f);
+            return IsServer && hasLoadedWorldPosition;
+        }
+
         public override void OnNetworkSpawn()
         {
             if (!PlayerKeyOverrides.TryGetValue(OwnerClientId, out string overrideKey) || string.IsNullOrWhiteSpace(overrideKey))
@@ -65,4 +96,5 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
 

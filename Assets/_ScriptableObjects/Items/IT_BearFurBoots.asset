@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_BearFurBoots
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_bearfurboots
+  DisplayName: Bear Fur Boots
+  Icon: {fileID: 21300000, guid: dd4c354c8a170e94581c1c7bec1516f1, type: 3}
+  MaxStack: 1
+  Category: 2
+  visualPrefab: {fileID: 919132149155446097, guid: 24ea802a75f53694c9806f4b5c20ba4b, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  Description: Good protection for feet.
+  PropertiesText: 
+  BaseValue: 20
+  Weight: 5
+  Rarity: 1
+  CraftTime: 10
+  BaseQuality: 1
+  MaxDurability: 100
+  IsInstanceItem: 1
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0.5
+  DefenceMax: 2
+  SwingSpeedMin: 0
+  SwingSpeedMax: 0
+  MovementSpeedMin: 0.5
+  MovementSpeedMax: 1
+  DurabilityMin: 20
+  DurabilityMax: 200
+  Damage: 0
+  Defence: 1
+  AttackBonus: 0
+  SwingSpeed: 0.01
+  MovementSpeed: 0.9
+  Strength: 5
+  Dexterity: 2
+  LegacyDexterity: 0
+  Intelligence: 2
+  IsEquippable: 1
+  EquipSlot: 23
+  Handedness: 0
+  ToolTags: 
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

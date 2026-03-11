@@ -1,7 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using HuntersAndCollectors.Bootstrap;
+using HuntersAndCollectors.Graves;
+using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
+using HuntersAndCollectors.Storage;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -14,6 +18,13 @@ namespace HuntersAndCollectors.Persistence
     {
         [SerializeField] private ItemDatabase itemDatabase;
         [SerializeField] private float autosaveIntervalSeconds = 60f;
+        [SerializeField] private GraveNet gravePrefab;
+
+        [Header("Grave Grounding")]
+        [SerializeField] private LayerMask graveGroundMask;
+        [Min(0.1f)] [SerializeField] private float graveGroundRayStartHeight = 2f;
+        [Min(1f)] [SerializeField] private float graveGroundRayDistance = 16f;
+        [Min(0f)] [SerializeField] private float graveGroundOffset = 0.05f;
 
         private PlayerSaveService playerSaveService;
         private ShardSaveService shardSaveService;
@@ -24,6 +35,8 @@ namespace HuntersAndCollectors.Persistence
 
         public static SaveManager Instance { get; private set; }
         public string ActiveShardKey => activeShardKey;
+
+        public bool IsPlayerLoaded(ulong clientId) => loadedClientIds.Contains(clientId);
 
         private void Awake()
         {
@@ -45,7 +58,7 @@ namespace HuntersAndCollectors.Persistence
             }
 
             playerSaveService = new PlayerSaveService(itemDatabase);
-            shardSaveService = new ShardSaveService(itemDatabase);
+            shardSaveService = new ShardSaveService(itemDatabase, gravePrefab);
             SavePaths.EnsureDirectories();
         }
 
@@ -182,6 +195,234 @@ namespace HuntersAndCollectors.Persistence
 
             Instance.SaveShardNow();
         }
+
+        public static void NotifyPlacedStorageSpawned(StorageNet storage)
+        {
+            if (Instance == null || storage == null)
+                return;
+
+            if (!Instance.IsServerReady() || !Instance.initialized || Instance.shardSaveService == null)
+                return;
+
+            // Loaded placed chests can register a frame earlier than the initial restore sweep.
+            // Re-trying on registration keeps chest persistence deterministic instead of timing-sensitive.
+            Instance.shardSaveService.TryApplyPendingPlacedStorageRestore(storage);
+        }
+
+        public static bool IsPlayerLoadedStatic(ulong clientId)
+        {
+            return Instance != null && Instance.IsPlayerLoaded(clientId);
+        }
+
+        public static bool TryCreateGraveForPlayerDeath(PlayerNetworkRoot playerRoot, Vector3 position)
+        {
+            return Instance != null && Instance.ServerCreateGraveForPlayerDeath(playerRoot, position);
+        }
+
+        private bool ServerCreateGraveForPlayerDeath(PlayerNetworkRoot playerRoot, Vector3 position)
+        {
+            if (!IsServerReady() || !initialized || playerRoot == null || playerRoot.Inventory == null)
+                return false;
+
+            if (gravePrefab == null)
+            {
+                Debug.LogWarning("[Grave] Cannot spawn grave because SaveManager.gravePrefab is not assigned.");
+                return false;
+            }
+
+            Vector3 groundedGravePosition = ResolveGroundedGravePosition(position);
+            GraveNet spawnedGrave = Instantiate(gravePrefab, groundedGravePosition, Quaternion.identity);
+            if (spawnedGrave == null)
+                return false;
+
+            Vector3 finalGraveSpawnPosition = AdjustSpawnedGraveToGround(spawnedGrave, groundedGravePosition);
+            Debug.Log($"[Grave] Final grave spawn position=({finalGraveSpawnPosition.x:F3},{finalGraveSpawnPosition.y:F3},{finalGraveSpawnPosition.z:F3})");
+
+            spawnedGrave.ServerInitializeNew(playerRoot.PlayerKey);
+            NetworkObject graveNetworkObject = spawnedGrave.GetComponent<NetworkObject>();
+            if (graveNetworkObject == null)
+            {
+                Destroy(spawnedGrave.gameObject);
+                return false;
+            }
+
+            graveNetworkObject.Spawn(destroyWithScene: true);
+            Debug.Log($"[Death] Grave created id={spawnedGrave.PersistentId} at pos=({position.x:F3},{position.y:F3},{position.z:F3})");
+
+            PlayerEquipmentSaveData equipmentSnapshot = playerRoot.Equipment != null
+                ? playerRoot.Equipment.ServerExportSaveData() ?? new PlayerEquipmentSaveData()
+                : new PlayerEquipmentSaveData();
+
+            int transferredInventoryCount = TransferInventoryToGrave(playerRoot.Inventory, spawnedGrave);
+            Debug.Log($"[Grave] Transferred inventory items count={transferredInventoryCount}");
+
+            int transferredEquipmentCount = TransferMovedEquipmentToGrave(equipmentSnapshot, spawnedGrave);
+            Debug.Log($"[Grave] Transferred equipment items count={transferredEquipmentCount}");
+
+            playerRoot.Equipment?.ServerApplySaveData(new PlayerEquipmentSaveData());
+            playerRoot.Inventory.ForceSendSnapshotToOwner();
+
+            NetworkObject survivingPlayerObject = playerRoot.NetworkObject;
+            bool playerObjectStillAlive = survivingPlayerObject != null && survivingPlayerObject.IsSpawned && playerRoot.gameObject != null;
+            Debug.Log($"[Death] Player object still alive after death handling={playerObjectStillAlive}");
+
+            if (!Bootstrapper.TryRespawnPlayerAtDefaultSpawn(playerRoot))
+                Debug.LogWarning($"[Respawn] Failed to respawn player key={playerRoot.PlayerKey} after death.");
+
+            NotifyPlayerProgressChanged(playerRoot);
+            NotifyShardStateChanged();
+            return true;
+        }
+
+        private Vector3 ResolveGroundedGravePosition(Vector3 deathPosition)
+        {
+            Debug.Log($"[Grave] Raw death position=({deathPosition.x:F3},{deathPosition.y:F3},{deathPosition.z:F3})");
+            EnsureGraveGroundMaskInitialized();
+
+            Vector3 rayOrigin = deathPosition + Vector3.up * Mathf.Max(0.1f, graveGroundRayStartHeight);
+            if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, Mathf.Max(1f, graveGroundRayDistance), graveGroundMask, QueryTriggerInteraction.Ignore))
+            {
+                Debug.LogWarning($"[Grave] Warning: no ground hit found, using raw death position");
+                return deathPosition;
+            }
+
+            Debug.Log($"[Grave] Ground hit point=({hit.point.x:F3},{hit.point.y:F3},{hit.point.z:F3})");
+            return hit.point + Vector3.up * Mathf.Max(0f, graveGroundOffset);
+        }
+
+        private Vector3 AdjustSpawnedGraveToGround(GraveNet grave, Vector3 desiredGroundedPosition)
+        {
+            if (grave == null)
+                return desiredGroundedPosition;
+
+            grave.transform.position = desiredGroundedPosition;
+
+            Collider[] colliders = grave.GetComponentsInChildren<Collider>(true);
+            float lowestPoint = float.PositiveInfinity;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider col = colliders[i];
+                if (col == null || !col.enabled)
+                    continue;
+
+                lowestPoint = Mathf.Min(lowestPoint, col.bounds.min.y);
+            }
+
+            if (!float.IsFinite(lowestPoint))
+                return grave.transform.position;
+
+            float pivotLift = grave.transform.position.y - lowestPoint;
+            if (pivotLift <= 0.001f)
+                return grave.transform.position;
+
+            Vector3 adjusted = grave.transform.position;
+            adjusted.y += pivotLift;
+            grave.transform.position = adjusted;
+            return adjusted;
+        }
+
+        private void EnsureGraveGroundMaskInitialized()
+        {
+            if (graveGroundMask.value != 0)
+                return;
+
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            graveGroundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics.DefaultRaycastLayers;
+        }
+        private static int TransferInventoryToGrave(PlayerInventoryNet inventory, GraveNet grave)
+        {
+            if (inventory == null || inventory.Grid == null || grave == null)
+                return 0;
+
+            int movedCount = 0;
+            InventorySlot[] slots = inventory.Grid.Slots;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot.IsEmpty)
+                    continue;
+
+                if (!grave.ServerTryAddSlotPayload(slot, out int movedQuantity))
+                    continue;
+
+                movedCount++;
+                if (slot.ContentType == InventorySlotContentType.Instance || movedQuantity >= slot.Stack.Quantity)
+                {
+                    slots[i] = MakeEmptySlot();
+                    continue;
+                }
+
+                slot.Stack.Quantity -= movedQuantity;
+                slots[i] = slot;
+            }
+
+            return movedCount;
+        }
+
+        private static int TransferMovedEquipmentToGrave(PlayerEquipmentSaveData equipmentSnapshot, GraveNet grave)
+        {
+            if (equipmentSnapshot == null || grave == null)
+                return 0;
+
+            int movedCount = 0;
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.helmet, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.chest, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.legs, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.boots, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.gloves, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.shoulders, grave);
+            movedCount += TransferMovedEquipmentSlot(equipmentSnapshot.belt, grave);
+            return movedCount;
+        }
+
+        private static int TransferMovedEquipmentSlot(EquipmentSlotSaveData equipmentSlot, GraveNet grave)
+        {
+            if (equipmentSlot == null || string.IsNullOrWhiteSpace(equipmentSlot.itemId) || grave == null)
+                return 0;
+
+            InventorySlot slot = new InventorySlot
+            {
+                IsEmpty = false,
+                ContentType = InventorySlotContentType.Instance,
+                Stack = new ItemStack { ItemId = equipmentSlot.itemId, Quantity = 1 },
+                Instance = new ItemInstance
+                {
+                    InstanceId = 0,
+                    ItemId = equipmentSlot.itemId,
+                    RolledDamage = 0f,
+                    RolledDefence = 0f,
+                    RolledSwingSpeed = 0f,
+                    RolledMovementSpeed = 0f,
+                    MaxDurability = Mathf.Max(0, equipmentSlot.maxDurability),
+                    CurrentDurability = Mathf.Max(0, equipmentSlot.durability)
+                },
+                Durability = Mathf.Max(0, equipmentSlot.durability),
+                InstanceData = new ItemInstanceData
+                {
+                    BonusStrength = equipmentSlot.bonusStrength,
+                    BonusDexterity = equipmentSlot.bonusDexterity,
+                    BonusIntelligence = equipmentSlot.bonusIntelligence,
+                    CraftedBy = new Unity.Collections.FixedString64Bytes(equipmentSlot.craftedBy ?? string.Empty),
+                    MaxDurability = Mathf.Max(0, equipmentSlot.maxDurability),
+                    CurrentDurability = Mathf.Max(0, equipmentSlot.durability)
+                }
+            };
+
+            return grave.ServerTryAddSlotPayload(slot, out int movedQuantity) && movedQuantity > 0 ? 1 : 0;
+        }
+
+        private static InventorySlot MakeEmptySlot()
+        {
+            return new InventorySlot
+            {
+                IsEmpty = true,
+                ContentType = InventorySlotContentType.Empty,
+                Stack = default,
+                Instance = default,
+                Durability = 0,
+                InstanceData = default
+            };
+        }
         private IEnumerator LoadPlayerWhenReady(ulong clientId)
         {
             const int maxFrames = 300;
@@ -265,6 +506,14 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
+
+
+
+
+
 
 
 

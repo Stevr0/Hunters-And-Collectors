@@ -40,6 +40,8 @@ namespace HuntersAndCollectors.Storage
 
         private InventoryGrid chestGrid;
         private PlacedBuildPiece placedBuildPiece;
+        private bool hasAppliedSavedContents;
+        private int restoredNonEmptySlotCount = -1;
 
         /// <summary>
         /// Server-only authoritative grid reference.
@@ -63,6 +65,8 @@ namespace HuntersAndCollectors.Storage
         {
             if (placedBuildPiece == null)
                 placedBuildPiece = GetComponent<PlacedBuildPiece>();
+
+            EnsureItemDatabase();
         }
 
         public override void OnNetworkSpawn()
@@ -73,8 +77,15 @@ namespace HuntersAndCollectors.Storage
             if (placedBuildPiece == null)
                 placedBuildPiece = GetComponent<PlacedBuildPiece>();
 
+            EnsureItemDatabase();
+            Debug.Log($"[StorageNet] OnNetworkSpawn persistentId={PersistentId}", this);
             EnsureServerGrid(Mathf.Max(1, width), Mathf.Max(1, height));
             PlacedStorageRegistry.Register(this);
+
+            // Save/load restores placed chest contents by stable placed-build id.
+            // Notify the shard save service here so a just-spawned chest can consume any
+            // pending restore record instead of depending on a one-frame-perfect load order.
+            SaveManager.NotifyPlacedStorageSpawned(this);
         }
 
         public override void OnNetworkDespawn()
@@ -272,6 +283,7 @@ namespace HuntersAndCollectors.Storage
         /// </summary>
         public PlacedStorageChestSaveData ServerExportSaveData()
         {
+            EnsureItemDatabase();
             int resolvedWidth = chestGrid != null ? chestGrid.Width : Mathf.Max(1, width);
             int resolvedHeight = chestGrid != null ? chestGrid.Height : Mathf.Max(1, height);
             var data = new PlacedStorageChestSaveData
@@ -348,6 +360,11 @@ namespace HuntersAndCollectors.Storage
             if (!IsServer)
                 return;
 
+            EnsureItemDatabase();
+
+            int savedNonEmptySlots = CountNonEmptySlots(data?.chest);
+            Debug.Log($"[StorageNet] ApplySavedContents persistentId={PersistentId} nonEmptySlots={savedNonEmptySlots}", this);
+
             int targetWidth = data?.chest != null ? Mathf.Max(1, data.chest.w) : Mathf.Max(1, width);
             int targetHeight = data?.chest != null ? Mathf.Max(1, data.chest.h) : Mathf.Max(1, height);
             EnsureServerGrid(targetWidth, targetHeight);
@@ -359,6 +376,8 @@ namespace HuntersAndCollectors.Storage
             }
 
             chestGrid = new InventoryGrid(targetWidth, targetHeight, itemDatabase);
+            width = targetWidth;
+            height = targetHeight;
             int copyCount = Mathf.Min(chestGrid.Slots.Length, data.chest.slots.Count);
             for (int i = 0; i < copyCount; i++)
             {
@@ -427,7 +446,61 @@ namespace HuntersAndCollectors.Storage
                 };
             }
 
+            hasAppliedSavedContents = true;
+            restoredNonEmptySlotCount = CountNonEmptySlots();
+            Debug.Log($"[StorageNet] PostApply grid nonEmptySlots={restoredNonEmptySlotCount} persistentId={PersistentId} slotSummary={BuildSlotSummary(chestGrid)}", this);
             BroadcastChestSnapshot();
+        }
+
+        private void EnsureItemDatabase()
+        {
+            if (itemDatabase != null)
+                return;
+
+            ItemDatabase[] databases = Resources.FindObjectsOfTypeAll<ItemDatabase>();
+            if (databases != null && databases.Length > 0)
+                itemDatabase = databases[0];
+        }
+
+        public string DebugDescribeGridSlots()
+        {
+            return BuildSlotSummary(chestGrid);
+        }
+
+        private static int CountNonEmptySlots(InventoryGridSaveData grid)
+        {
+            if (grid?.slots == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < grid.slots.Count; i++)
+            {
+                InventorySlotSaveData slot = grid.slots[i];
+                if (slot != null && !string.IsNullOrWhiteSpace(slot.id))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static string BuildSlotSummary(InventoryGrid grid)
+        {
+            if (grid == null || grid.Slots == null)
+                return "empty";
+
+            var parts = new List<string>();
+            for (int i = 0; i < grid.Slots.Length; i++)
+            {
+                InventorySlot slot = grid.Slots[i];
+                if (slot.IsEmpty)
+                    continue;
+
+                string itemId = slot.ContentType == InventorySlotContentType.Instance ? slot.Instance.ItemId : slot.Stack.ItemId;
+                int qty = slot.ContentType == InventorySlotContentType.Instance ? 1 : slot.Stack.Quantity;
+                parts.Add($"{i}:{itemId}x{qty}");
+            }
+
+            return parts.Count == 0 ? "empty" : string.Join(", ", parts);
         }
 
         public int CountNonEmptySlots()
@@ -509,6 +582,10 @@ namespace HuntersAndCollectors.Storage
             if (chestGrid != null && chestGrid.Width == safeWidth && chestGrid.Height == safeHeight)
                 return;
 
+            if (hasAppliedSavedContents && chestGrid != null && CountNonEmptySlots() > 0)
+                Debug.LogWarning($"[StorageNet] Warning: inventory reset after restore persistentId={PersistentId}", this);
+
+            Debug.Log($"[StorageNet] InitializeGrid persistentId={PersistentId} size={safeWidth}x{safeHeight}", this);
             chestGrid = new InventoryGrid(safeWidth, safeHeight, itemDatabase);
         }
 
@@ -658,3 +735,5 @@ namespace HuntersAndCollectors.Storage
         }
     }
 }
+
+

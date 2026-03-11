@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
+  m_Name: Bear_LootTable
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
+  entries:
+  - item: {fileID: 11400000, guid: a364da5f70c7bbb4ea96e394b1550b98, type: 2}
+    minQuantity: 2
+    maxQuantity: 5
+    dropChance01: 1
+  - item: {fileID: 11400000, guid: 6ab5e173adc3e734ca08899f69643b40, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 1

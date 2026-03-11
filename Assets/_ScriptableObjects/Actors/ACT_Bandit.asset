@@ -12,16 +12,66 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
   m_Name: ACT_Bandit
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
-  ActorId: Bandit
-  DisplayName: Bandit
-  DefaultFactionId: 2
-  DefaultPvpEnabled: 0
-  BaseStrength: 10
-  BaseDexterity: 10
-  BaseIntelligence: 10
-  BaseMoveSpeedMult: 1
-  BaseDamage: 2
-  BaseDefence: 2
-  BaseSwingSpeed: 0.5
-  AiDef: {fileID: 11400000, guid: a2d384325bf19104b92952bcbd92f80b, type: 2}
-  StartingSkills: []
+  actorId: Bandit
+  displayName: Bandit
+  icon: {fileID: 21300000, guid: 7edebf285eb4aa2428eab3d6527e5941, type: 3}
+  prefab: {fileID: 6889116378619088114, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  description: 
+  category: 2
+  factionId: 2
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 0
+  baseHealth: 20
+  baseStamina: 20
+  baseMana: 20
+  baseHealthRegenPerSecond: 0.5
+  baseStaminaRegenPerSecond: 0.2
+  baseManaRegenPerSecond: 0.1
+  attackBonus: 0
+  defenceBonus: 0
+  baseDamageMin: 1
+  baseDamageMax: 3
+  attackRange: 1.75
+  attackIntervalSeconds: 2
+  aggroRange: 8
+  leashRange: 18
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 1
+  runSpeed: 2
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 12
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: a2d384325bf19104b92952bcbd92f80b, type: 2}
+  defaultBehaviourMode: 1
+  lootTable: {fileID: 11400000, guid: bc32f39355c477d4abf4f1dce1c7ac13, type: 2}
+  coinDropMin: 2
+  coinDropMax: 5
+  xpReward: 0
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 1
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 10
+  baseDexterity: 10
+  baseIntelligence: 10
+  baseMoveSpeedMult: 1
+  baseDamage: 2
+  baseDefence: 2
+  baseSwingSpeed: 0.5
+  startingSkills: []

@@ -92,10 +92,11 @@ namespace HuntersAndCollectors.Building
 
         /// <summary>
         /// SERVER ONLY helper so placement system can stamp the source item id.
+        /// Uses server-session authority rather than IsServer so pre-spawn restores can initialize safely.
         /// </summary>
         public void ServerSetSourceItemId(string value)
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             sourceItemId = value ?? string.Empty;
@@ -103,7 +104,7 @@ namespace HuntersAndCollectors.Building
 
         public void ServerSetOwnerPlayerId(ulong value)
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             ownerPlayerId = value;
@@ -111,7 +112,7 @@ namespace HuntersAndCollectors.Building
 
         public void ServerSetPersistentId(string value)
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             persistentId = string.IsNullOrWhiteSpace(value) ? GeneratePersistentId() : value.Trim();
@@ -119,7 +120,7 @@ namespace HuntersAndCollectors.Building
 
         public void ServerEnsurePersistentId()
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             if (string.IsNullOrWhiteSpace(persistentId))
@@ -140,7 +141,7 @@ namespace HuntersAndCollectors.Building
         /// </summary>
         public void ServerInitializeFromItem(ItemDef sourceItemDef)
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             if (sourceItemDef == null)
@@ -163,7 +164,7 @@ namespace HuntersAndCollectors.Building
         /// </summary>
         public void ServerInitializeFromSave(string savedPersistentId, ItemDef sourceItemDef, int savedCurrentHealth, int savedMaxHealth, ulong savedOwnerPlayerId)
         {
-            if (!IsServer)
+            if (!HasServerAuthorityContext())
                 return;
 
             ServerSetPersistentId(savedPersistentId);
@@ -249,6 +250,7 @@ namespace HuntersAndCollectors.Building
                 return;
 
             ServerEnsurePersistentId();
+            Debug.Log($"[PlacedBuildPiece] OnNetworkSpawn persistentId={persistentId}", this);
 
             // Defensive fallback in case object is spawned without explicit initialization.
             if (replicatedMaxHealth.Value < 1)
@@ -276,20 +278,17 @@ namespace HuntersAndCollectors.Building
             base.OnDestroy();
         }
 
+        private bool HasServerAuthorityContext()
+        {
+            return IsServer || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
+        }
+
         private void ServerNotifyShelterStatePieceChanged()
         {
             if (!IsServer)
                 return;
 
-            ShelterState[] shelterStates = FindObjectsByType<ShelterState>(FindObjectsSortMode.None);
-            for (int i = 0; i < shelterStates.Length; i++)
-            {
-                ShelterState shelterState = shelterStates[i];
-                if (shelterState == null)
-                    continue;
-
-                shelterState.ServerReevaluateShelter();
-            }
+            StructureRequirementController.ServerReevaluateAllActive();
         }
 
         private static string GeneratePersistentId()
@@ -343,3 +342,5 @@ namespace HuntersAndCollectors.Building
         }
     }
 }
+
+

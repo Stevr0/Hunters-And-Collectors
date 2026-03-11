@@ -247,23 +247,15 @@ namespace HuntersAndCollectors.Building
 
 
         /// <summary>
-        /// Server helper to notify first-pass shelter tracking after placement succeeds.
-        /// This keeps integration simple without introducing global event systems.
+        /// Server helper to re-evaluate all active requirement controllers after a structure is placed.
+        /// This is intentionally simple for the first pass and avoids introducing a custom event system.
         /// </summary>
         private void ServerNotifyShelterStatePlacementChanged()
         {
             if (!IsServer)
                 return;
 
-            ShelterState[] shelterStates = FindObjectsByType<ShelterState>(FindObjectsSortMode.None);
-            for (int i = 0; i < shelterStates.Length; i++)
-            {
-                ShelterState shelterState = shelterStates[i];
-                if (shelterState == null)
-                    continue;
-
-                shelterState.ServerReevaluateShelter();
-            }
+            StructureRequirementController.ServerReevaluateAllActive();
         }
 
         private bool ServerTryConsumeOneItem(string itemId, out ConsumedItem consumed)
@@ -352,6 +344,7 @@ namespace HuntersAndCollectors.Building
 
             // World structures are server-owned authoritative objects.
             spawnedNetworkObject.Spawn(destroyWithScene: true);
+            NetworkObjectHierarchySpawner.SpawnChildNetworkObjects(spawnedNetworkObject);
             return true;
         }
 
@@ -369,10 +362,32 @@ namespace HuntersAndCollectors.Building
         }
 #endif
     }
+
+    /// <summary>
+    /// Helper for placed structures that contain child NetworkObjects, such as VendorHouse.
+    /// The root placed build still spawns first, then any authored child NetworkObjects are brought online.
+    /// </summary>
+    public static class NetworkObjectHierarchySpawner
+    {
+        public static void SpawnChildNetworkObjects(NetworkObject root)
+        {
+            if (root == null)
+                return;
+
+            NetworkManager networkManager = NetworkManager.Singleton;
+            if (networkManager == null || !networkManager.IsServer)
+                return;
+
+            NetworkObject[] childNetworkObjects = root.GetComponentsInChildren<NetworkObject>(true);
+            for (int i = 0; i < childNetworkObjects.Length; i++)
+            {
+                NetworkObject child = childNetworkObjects[i];
+                if (child == null || child == root || child.IsSpawned)
+                    continue;
+
+                child.Spawn(destroyWithScene: true);
+                Debug.Log($"[VendorPlacement] Spawned child NetworkObject name={child.name} root={root.name}", child);
+            }
+        }
+    }
 }
-
-
-
-
-
-

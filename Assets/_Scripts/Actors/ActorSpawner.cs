@@ -288,12 +288,15 @@ namespace HuntersAndCollectors.Actors
                 if (requestPrefab == null)
                     requestPrefab = ResolvePrefabForActor(request.ActorDef, null);
 
-                return ServerSpawnActor(
+                NetworkObject explicitSpawned = ServerSpawnActor(
                     requestPrefab,
                     request.ActorDef,
                     request.Position,
                     request.Rotation,
                     request.HasOwner ? request.OwnerClientId : (ulong?)null);
+
+                LogSpawnResult(explicitSpawned, request.ActorDef, "<explicit>");
+                return explicitSpawned;
             }
 
             ResolveSpawnTransform(
@@ -654,6 +657,12 @@ namespace HuntersAndCollectors.Actors
 
         private NetworkObject ResolvePrefabForActor(ActorDef actorDef, NetworkObject fallbackPrefab)
         {
+            // ActorDef now supports an optional direct prefab reference. Use it first when present so
+            // authored content can be more self-contained, while still keeping the older binding list
+            // as a safe fallback for existing scenes/assets.
+            if (actorDef != null && actorDef.Prefab != null && actorDef.Prefab.TryGetComponent(out NetworkObject prefabFromDef))
+                return prefabFromDef;
+
             if (actorDef == null || actorPrefabBindings == null || actorPrefabBindings.Count == 0)
                 return fallbackPrefab;
 
@@ -785,6 +794,10 @@ namespace HuntersAndCollectors.Actors
         }
     }
 }
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Items;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,11 +10,15 @@ namespace HuntersAndCollectors.Actors
     public sealed class ActorLootDropper : NetworkBehaviour
     {
         [Header("Loot Source")]
-        [Tooltip("Loot table rolled once when this actor dies.")]
+        [Tooltip("Optional explicit override. When left empty, the component will fall back to ActorDef.LootTable.")]
         [SerializeField] private ActorLootTableDef lootTable;
 
         [Tooltip("Optional reference for future loot-id based flows. Not required for ItemDef-based entries.")]
         [SerializeField] private ItemDatabase itemDatabase;
+
+        [Header("References")]
+        [Tooltip("Optional authored binder reference. Auto-resolved when missing.")]
+        [SerializeField] private ActorDefBinder actorDefBinder;
 
         [Header("Drop Spawn Tuning")]
         [Min(0f)]
@@ -51,6 +55,12 @@ namespace HuntersAndCollectors.Actors
         [Tooltip("Extra vertical nudge after spawn to reduce collider penetration.")]
         [SerializeField] private float extraUpOffsetIfIntersecting = 0.15f;
 
+        private void Awake()
+        {
+            if (actorDefBinder == null)
+                actorDefBinder = GetComponent<ActorDefBinder>();
+        }
+
         public void ServerDropLoot()
         {
             if (!IsServer)
@@ -59,12 +69,13 @@ namespace HuntersAndCollectors.Actors
             if (!IsSpawned)
                 return;
 
-            if (lootTable == null)
+            ActorLootTableDef resolvedLootTable = ResolveLootTable();
+            if (resolvedLootTable == null)
                 return;
 
             Debug.Log($"[ActorLoot][SERVER] Actor died, rolling loot actor='{name}' netId={NetworkObjectId}", this);
 
-            var entries = lootTable.Entries;
+            var entries = resolvedLootTable.Entries;
             if (entries == null || entries.Count == 0)
                 return;
 
@@ -87,6 +98,19 @@ namespace HuntersAndCollectors.Actors
 
                 SpawnLootEntry(entry.item, quantity);
             }
+        }
+
+        private ActorLootTableDef ResolveLootTable()
+        {
+            if (lootTable != null)
+                return lootTable;
+
+            if (actorDefBinder == null)
+                actorDefBinder = GetComponent<ActorDefBinder>();
+
+            return actorDefBinder != null && actorDefBinder.ActorDef != null
+                ? actorDefBinder.ActorDef.LootTable
+                : null;
         }
 
         private void SpawnLootEntry(ItemDef item, int quantity)
@@ -187,6 +211,9 @@ namespace HuntersAndCollectors.Actors
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            if (actorDefBinder == null)
+                actorDefBinder = GetComponent<ActorDefBinder>();
+
             scatterRadius = Mathf.Max(0f, scatterRadius);
             randomForce = Mathf.Max(0f, randomForce);
             spawnHeight = Mathf.Max(0f, spawnHeight);

@@ -139,6 +139,7 @@ namespace HuntersAndCollectors.Persistence
 
             data.inventory = BuildInventorySave(playerRoot.Inventory);
             data.equipment = BuildEquipmentSave(playerRoot.Equipment);
+            data.location = BuildLocationSave(playerRoot, playerKey);
             return data;
         }
 
@@ -208,6 +209,22 @@ namespace HuntersAndCollectors.Persistence
                 return new PlayerEquipmentSaveData();
 
             return equipmentNet.ServerExportSaveData() ?? new PlayerEquipmentSaveData();
+        }
+
+        private PlayerLocationSaveData BuildLocationSave(PlayerNetworkRoot playerRoot, string playerKey)
+        {
+            var location = new PlayerLocationSaveData();
+            if (playerRoot == null || !playerRoot.IsServer)
+                return location;
+
+            Vector3 position = playerRoot.transform.position;
+            float yaw = playerRoot.transform.eulerAngles.y;
+            location.hasSavedPosition = true;
+            location.position = new Vector3SaveData { x = position.x, y = position.y, z = position.z };
+            location.rotationY = yaw;
+
+            Debug.Log($"[PlayerSave] Saving player position key={playerKey} pos=({position.x:F3},{position.y:F3},{position.z:F3})");
+            return location;
         }
 
         private bool ValidateAndSanitize(PlayerSaveData data, PlayerNetworkRoot playerRoot, out string severeFailureReason)
@@ -351,7 +368,31 @@ namespace HuntersAndCollectors.Persistence
             }
 
             ValidateAndSanitizeEquipment(data);
+            ValidateAndSanitizeLocation(data, playerRoot);
             return true;
+        }
+
+        private void ValidateAndSanitizeLocation(PlayerSaveData data, PlayerNetworkRoot playerRoot)
+        {
+            if (data.location == null)
+                data.location = new PlayerLocationSaveData();
+
+            if (!data.location.hasSavedPosition)
+                return;
+
+            Vector3 position = ToVector3(data.location.position);
+            if (!IsValidSavedPosition(position) || !float.IsFinite(data.location.rotationY))
+            {
+                string playerKey = playerRoot != null ? playerRoot.PlayerKey : data.playerKey;
+                Debug.LogWarning($"[PlayerLoad] Invalid saved position for key={playerKey}, fallback to default spawn");
+                data.location.hasSavedPosition = false;
+                data.location.position = new Vector3SaveData();
+                data.location.rotationY = 0f;
+                return;
+            }
+
+            data.location.position = new Vector3SaveData { x = position.x, y = position.y, z = position.z };
+            data.location.rotationY = Mathf.Repeat(data.location.rotationY, 360f);
         }
 
         private void ValidateAndSanitizeEquipment(PlayerSaveData data)
@@ -480,6 +521,16 @@ namespace HuntersAndCollectors.Persistence
             playerRoot.Inventory?.ServerLoadGrid(data.inventory);
             playerRoot.Equipment?.ServerApplySaveData(data.equipment);
 
+            if (TryGetValidatedSavedPosition(data, out Vector3 savedPosition, out float savedYaw))
+            {
+                Debug.Log($"[PlayerLoad] Loaded player position key={playerRoot.PlayerKey} pos=({savedPosition.x:F3},{savedPosition.y:F3},{savedPosition.z:F3})");
+                playerRoot.ServerSetLoadedWorldPosition(savedPosition, savedYaw);
+            }
+            else
+            {
+                playerRoot.ServerClearLoadedWorldPosition();
+            }
+
             Debug.Log($"[PlayerSaveService] Applied save for player '{playerRoot.PlayerKey}'.");
         }
 
@@ -551,6 +602,41 @@ namespace HuntersAndCollectors.Persistence
             return list;
         }
 
+        private static bool TryGetValidatedSavedPosition(PlayerSaveData data, out Vector3 position, out float yaw)
+        {
+            position = default;
+            yaw = 0f;
+
+            if (data?.location == null || !data.location.hasSavedPosition)
+                return false;
+
+            position = ToVector3(data.location.position);
+            yaw = data.location.rotationY;
+            return IsValidSavedPosition(position) && float.IsFinite(yaw);
+        }
+
+        private static Vector3 ToVector3(Vector3SaveData value)
+        {
+            if (value == null)
+                return Vector3.zero;
+
+            return new Vector3(
+                float.IsFinite(value.x) ? value.x : 0f,
+                float.IsFinite(value.y) ? value.y : 0f,
+                float.IsFinite(value.z) ? value.z : 0f);
+        }
+
+        private static bool IsValidSavedPosition(Vector3 position)
+        {
+            const float maxAbsCoordinate = 100000f;
+            return float.IsFinite(position.x)
+                && float.IsFinite(position.y)
+                && float.IsFinite(position.z)
+                && Mathf.Abs(position.x) <= maxAbsCoordinate
+                && Mathf.Abs(position.y) <= maxAbsCoordinate
+                && Mathf.Abs(position.z) <= maxAbsCoordinate;
+        }
+
         private static void ArchiveCorruptFile(string filePath)
         {
             try
@@ -565,3 +651,5 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+

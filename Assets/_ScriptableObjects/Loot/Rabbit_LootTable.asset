@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Rabbit_LootTable
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
   entries:
-  - item: {fileID: 11400000, guid: 84e62b7f81eed5345a85f79ea2b3422f, type: 2}
+  - item: {fileID: 11400000, guid: a364da5f70c7bbb4ea96e394b1550b98, type: 2}
     minQuantity: 1
     maxQuantity: 2
     dropChance01: 1

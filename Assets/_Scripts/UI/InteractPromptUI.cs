@@ -58,14 +58,14 @@ public sealed class InteractPromptUI : MonoBehaviour
             return;
         }
 
-        // 2) Vendor / Drop prompt: raycast using PlayerInteract’s own settings (range + mask + trigger mode)
+        // 2) Vendor / Drop prompt: raycast using PlayerInteract's own settings (range + mask + trigger mode)
         if (!TryRaycastWithPlayerInteract(out var hit))
         {
             SetVisible(false);
             return;
         }
 
-        if (hit.collider.GetComponentInParent<VendorInteractable>() != null)
+        if (PlayerInteract.ResolveVendorFromHit(hit) != null)
         {
             SetPrompt("E: Open Vendor");
             return;
@@ -85,7 +85,6 @@ public sealed class InteractPromptUI : MonoBehaviour
         hit = default;
 
         // We need access to the same camera/range/mask used by PlayerInteract.
-        // Rather than duplicating those values here, expose simple getters on PlayerInteract (see below).
         var cam = playerInteract.InteractCamera;
         if (cam == null)
             return false;

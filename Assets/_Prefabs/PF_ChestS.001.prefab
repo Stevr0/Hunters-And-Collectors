@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: -8581377204563557207}
   - component: {fileID: 4623846738836957667}
   - component: {fileID: 4527927424032983575}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: PF_ChestS.001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -171,6 +171,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.PlacedBuildPiece
   ShowTopMostFoldoutHeaderGroup: 1
   sourceItemId: it_smallstoragechest
+  persistentId: 
+  ownerPlayerId: 0
   maxHealth: 200
   destroyOnZeroHealth: 1
 --- !u!1001 &8270317461425514591
@@ -228,6 +230,10 @@ PrefabInstance:
     - target: {fileID: 672096657956916133, guid: b09b203860739064c97cdac0bd0988ee, type: 3}
       propertyPath: m_Name
       value: ChestS.002
+      objectReference: {fileID: 0}
+    - target: {fileID: 672096657956916133, guid: b09b203860739064c97cdac0bd0988ee, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

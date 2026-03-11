@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 5553895003163089569}
   - component: {fileID: 8571647923374984166}
+  - component: {fileID: 1082557170450842353}
+  - component: {fileID: 5053776820093866392}
   m_Layer: 0
   m_Name: SceneServices
   m_TagString: Untagged
@@ -44,3 +46,81 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fa7f131916e708419a3be54236609c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Harvesting.ResourceNodeRegistry
+--- !u!114 &1082557170450842353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 294337475956184107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daf1685abe7d01a4199797ceb7c6209e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawner
+  actorPrefabBindings:
+  - actorDef: {fileID: 11400000, guid: 60f6e14c1d4c1af48adfd1498e8f00d1, type: 2}
+    actorId: Player
+    prefab: {fileID: 3632684436402908213, guid: 9df120c089f1bec4bbfa1dd1805753e6, type: 3}
+  - actorDef: {fileID: 11400000, guid: 859a84d913e54ee6bc2e9f465bc79584, type: 2}
+    actorId: TrainingDummy
+    prefab: {fileID: 6506320977219844565, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
+  - actorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+    actorId: Bandit
+    prefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  - actorDef: {fileID: 11400000, guid: e442b74752607d24db5b9fd24773a126, type: 2}
+    actorId: BanditLeader
+    prefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  - actorDef: {fileID: 11400000, guid: 0fcecce22fe26c5448ff73faf8be7dd7, type: 2}
+    actorId: Rabbit
+    prefab: {fileID: 6506320977219844565, guid: 2e5cfe5b1180a5d48b8eaf2592bb7adb, type: 3}
+  playerActorPrefab: {fileID: 0}
+  dummyActorPrefab: {fileID: 0}
+  npcActorPrefab: {fileID: 0}
+  spawnPoints: []
+  snapToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 115
+  groundRayStartHeight: 50
+  groundRayDistance: 200
+  groundContactSkin: 0.05
+  obstacleLiftStep: 0.25
+  obstacleLiftMaxSteps: 24
+  spawnConfiguredActorsOnServerStart: 1
+  startupSpawns:
+  - actorDef: {fileID: 11400000, guid: 859a84d913e54ee6bc2e9f465bc79584, type: 2}
+    spawnPointId: SP_001
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: c4ebc3f8acc762b4ba5abd0a47a879eb, type: 3}
+  - actorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+    spawnPointId: SP_Bandit_001
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  - actorDef: {fileID: 11400000, guid: 290d3bc9176a26747a90db6ea2c008f5, type: 2}
+    spawnPointId: SP_Bandit_002
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  - actorDef: {fileID: 11400000, guid: e442b74752607d24db5b9fd24773a126, type: 2}
+    spawnPointId: SP_Bandit_003
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  - actorDef: {fileID: 11400000, guid: 0fcecce22fe26c5448ff73faf8be7dd7, type: 2}
+    spawnPointId: SP_RAB_001
+    count: 1
+    fallbackPrefab: {fileID: 6506320977219844565, guid: 2e5cfe5b1180a5d48b8eaf2592bb7adb, type: 3}
+--- !u!114 &5053776820093866392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 294337475956184107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eae938f96feffb44ebc4f960556b8e26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Building.HeartStoneRegistry
