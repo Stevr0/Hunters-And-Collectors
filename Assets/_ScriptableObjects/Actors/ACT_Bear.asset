@@ -55,7 +55,7 @@ MonoBehaviour:
   collisionRadius: 0.4
   height: 1.8
   interactionRadius: 2
-  aiProfile: {fileID: 11400000, guid: a2d384325bf19104b92952bcbd92f80b, type: 2}
+  aiProfile: {fileID: 11400000, guid: b23695c0df22a9d4395d40fb88ddd17c, type: 2}
   defaultBehaviourMode: 1
   lootTable: {fileID: 11400000, guid: 35cb982f9a964b44babf7aad6dd5a90c, type: 2}
   coinDropMin: 0

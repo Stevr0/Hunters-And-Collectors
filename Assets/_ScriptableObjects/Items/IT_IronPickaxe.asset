@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_IronPickaxe
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_ironpickaxe
+  DisplayName: Iron Pickaxe
+  Category: 1
+  Icon: {fileID: 21300000, guid: 6969f83b82d4e7b47853468a35254616, type: 3}
+  MaxStack: 1
+  Description: A tier 3 pickaxe for mining harder ore veins.
+  PropertiesText: 'Harvest Power: 3
+
+    Damage: 8.1 - 12.6
+
+    Swing Speed: 0.9
+    - 1.08
+
+    Move Speed: 0.93 - 0.98
+
+    Durability: 120 - 180
+
+    Strength:
+    +5
+
+    Dexterity: +2'
+  BaseValue: 11
+  Weight: 2.4
+  Rarity: 2
+  CraftTime: 6
+  IsInstanceItem: 1
+  visualPrefab: {fileID: 4569326234878662587, guid: d112dcaa27bba044dbbf9128f917ecf6, type: 3}
+  equipLocalPosition: {x: -0.009, y: -0.435, z: -0.017}
+  equipLocalEuler: {x: 0, y: -135, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 1
+  EquipSlot: 10
+  Handedness: 1
+  ToolTags: 02000000
+  HarvestPower: 3
+  DamageMin: 8.1
+  DamageMax: 12.6
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.9
+  SwingSpeedMax: 1.08
+  MovementSpeedMin: 0.93
+  MovementSpeedMax: 0.98
+  DurabilityMin: 120
+  DurabilityMax: 180
+  Strength: 5
+  Dexterity: 2
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

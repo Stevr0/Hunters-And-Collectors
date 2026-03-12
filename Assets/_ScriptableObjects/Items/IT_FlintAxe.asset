@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_FlintAxe
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_flintaxe
+  DisplayName: Flint Axe
+  Category: 1
+  Icon: {fileID: 21300000, guid: 7effc6bde61959b4d9a7cfa025e058b9, type: 3}
+  MaxStack: 1
+  Description: A tier 2 axe for woodcutting progression and tougher trees.
+  PropertiesText: 'Harvest Power: 2
+
+    Damage: 4.8 - 7.8
+
+    Swing Speed: 0.95
+    - 1.15
+
+    Move Speed: 0.95 - 1
+
+    Durability: 80 - 120
+
+    Strength:
+    +3
+
+    Dexterity: +1'
+  BaseValue: 8
+  Weight: 2
+  Rarity: 1
+  CraftTime: 4
+  IsInstanceItem: 1
+  visualPrefab: {fileID: 2819201088932385300, guid: fa9cef201de0d794980c8ad4176e54c5, type: 3}
+  equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
+  equipLocalEuler: {x: 0, y: -123, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 1
+  EquipSlot: 10
+  Handedness: 1
+  ToolTags: 01000000
+  HarvestPower: 2
+  DamageMin: 4.8
+  DamageMax: 7.8
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.95
+  SwingSpeedMax: 1.15
+  MovementSpeedMin: 0.95
+  MovementSpeedMax: 1
+  DurabilityMin: 80
+  DurabilityMax: 120
+  Strength: 3
+  Dexterity: 1
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

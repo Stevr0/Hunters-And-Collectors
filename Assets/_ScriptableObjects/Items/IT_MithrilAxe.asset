@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_MithrilAxe
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: it_mithrilaxe
+  DisplayName: Mithril Axe
+  Category: 1
+  Icon: {fileID: 21300000, guid: 7effc6bde61959b4d9a7cfa025e058b9, type: 3}
+  MaxStack: 1
+  Description: A tier 5 axe for woodcutting progression and tougher trees.
+  PropertiesText: 'Harvest Power: 5
+
+    Damage: 12 - 19.5
+
+    Swing Speed: 0.95
+    - 1.15
+
+    Move Speed: 0.95 - 1
+
+    Durability: 200 - 300
+
+    Strength:
+    +6
+
+    Dexterity: +3'
+  BaseValue: 17
+  Weight: 2
+  Rarity: 4
+  CraftTime: 10
+  IsInstanceItem: 1
+  visualPrefab: {fileID: 2819201088932385300, guid: 71de0d5b5f3a70a4cb288fbfa47decb9, type: 3}
+  equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
+  equipLocalEuler: {x: 0, y: -123, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 1
+  EquipSlot: 10
+  Handedness: 1
+  ToolTags: 01000000
+  HarvestPower: 5
+  DamageMin: 12
+  DamageMax: 19.5
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.95
+  SwingSpeedMax: 1.15
+  MovementSpeedMin: 0.95
+  MovementSpeedMax: 1
+  DurabilityMin: 200
+  DurabilityMax: 300
+  Strength: 6
+  Dexterity: 3
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

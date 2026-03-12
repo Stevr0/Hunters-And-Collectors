@@ -13,22 +13,37 @@ MonoBehaviour:
   m_Name: CraftingDatabase
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.CraftingDatabase
   recipes:
-  - {fileID: 11400000, guid: 3aff04cd4c6c431438692b991b9986cc, type: 2}
-  - {fileID: 11400000, guid: 4381d882db2db9644a6aad72eb5f03f1, type: 2}
-  - {fileID: 11400000, guid: b03fe044dd905f1499a4b334f11c3fdf, type: 2}
-  - {fileID: 11400000, guid: 99d4c28728cfd2a4290065fbaa3314ed, type: 2}
-  - {fileID: 11400000, guid: 9435ea8b5ef030b4f84e51ac1ed741f3, type: 2}
-  - {fileID: 11400000, guid: a7a6b211055a035478b59832ddcc57de, type: 2}
+  - {fileID: 11400000, guid: 023380cf1d1a4309a59093042343ca6a, type: 2}
+  - {fileID: 11400000, guid: 02bf115a554c4c80afd98ef4bb7f46db, type: 2}
+  - {fileID: 11400000, guid: 09734701897d6f247906778fed2bed68, type: 2}
+  - {fileID: 11400000, guid: 118ac9766da774f46bfee79c96d56230, type: 2}
+  - {fileID: 11400000, guid: 1209b0eadc629954a9db4e36c639f064, type: 2}
   - {fileID: 11400000, guid: 16f7fcb6dd0106f4ca727e30c6f5c0bf, type: 2}
-  - {fileID: 11400000, guid: f63cbf5d606810a49a514a13607fdf7e, type: 2}
+  - {fileID: 11400000, guid: 1b1d47768b304c75b99f27af512f7c64, type: 2}
+  - {fileID: 11400000, guid: 301ffdec42789b74d8df0488d52ed393, type: 2}
+  - {fileID: 11400000, guid: 3aff04cd4c6c431438692b991b9986cc, type: 2}
   - {fileID: 11400000, guid: 432b00d0b8237664780308aab7091082, type: 2}
-  - {fileID: 11400000, guid: afca16699a509f94c865d69e8eacf6d4, type: 2}
-  - {fileID: 11400000, guid: b9a9a9729a739ed4397be6b37e692630, type: 2}
+  - {fileID: 11400000, guid: 4381d882db2db9644a6aad72eb5f03f1, type: 2}
+  - {fileID: 11400000, guid: 43a99273b3ad485994d44fad34769693, type: 2}
+  - {fileID: 11400000, guid: 5896243f46d3ebb469465832d7b04011, type: 2}
+  - {fileID: 11400000, guid: 5a35ce9c4ebf1c5489861e60bef4b2d1, type: 2}
+  - {fileID: 11400000, guid: 624a9e6dfeda4943a34e96896a082b42, type: 2}
+  - {fileID: 11400000, guid: 6d15844a3c1d47418722bbb63b5d9043, type: 2}
+  - {fileID: 11400000, guid: 6d58767d593641a3a02b3863477ed94b, type: 2}
   - {fileID: 11400000, guid: 752fd3988bcfa4d4c941f9f50267ebe1, type: 2}
   - {fileID: 11400000, guid: 7c6fd2bbb6999c743a99b07410e5dc3c, type: 2}
-  - {fileID: 11400000, guid: 1209b0eadc629954a9db4e36c639f064, type: 2}
-  - {fileID: 11400000, guid: 301ffdec42789b74d8df0488d52ed393, type: 2}
-  - {fileID: 11400000, guid: 09734701897d6f247906778fed2bed68, type: 2}
-  - {fileID: 11400000, guid: 5a35ce9c4ebf1c5489861e60bef4b2d1, type: 2}
-  - {fileID: 11400000, guid: 118ac9766da774f46bfee79c96d56230, type: 2}
-  - {fileID: 11400000, guid: 5896243f46d3ebb469465832d7b04011, type: 2}
+  - {fileID: 11400000, guid: 8529c56703944f8496a76352d56a17ca, type: 2}
+  - {fileID: 11400000, guid: 9435ea8b5ef030b4f84e51ac1ed741f3, type: 2}
+  - {fileID: 11400000, guid: 99d4c28728cfd2a4290065fbaa3314ed, type: 2}
+  - {fileID: 11400000, guid: a2f92ded0b074822986503bb102520e7, type: 2}
+  - {fileID: 11400000, guid: a7a6b211055a035478b59832ddcc57de, type: 2}
+  - {fileID: 11400000, guid: afca16699a509f94c865d69e8eacf6d4, type: 2}
+  - {fileID: 11400000, guid: b03fe044dd905f1499a4b334f11c3fdf, type: 2}
+  - {fileID: 11400000, guid: b85672068ce74b1f9977417959275673, type: 2}
+  - {fileID: 11400000, guid: b9a9a9729a739ed4397be6b37e692630, type: 2}
+  - {fileID: 11400000, guid: c8faa36eaaff44f8bae67b92b2bcd488, type: 2}
+  - {fileID: 11400000, guid: cbc09711f0fb4a9e879040785222a269, type: 2}
+  - {fileID: 11400000, guid: ccc9e5bfb69141fcae8c17e0a622fd67, type: 2}
+  - {fileID: 11400000, guid: eb4594e6b5ed411c968a10760e6b5c3c, type: 2}
+  - {fileID: 11400000, guid: ed959924868f45989d51932005c7c921, type: 2}
+  - {fileID: 11400000, guid: f63cbf5d606810a49a514a13607fdf7e, type: 2}

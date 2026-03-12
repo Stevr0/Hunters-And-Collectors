@@ -14,45 +14,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_stonepickaxe
   DisplayName: Stone Pickaxe
+  Category: 1
   Icon: {fileID: 21300000, guid: 6969f83b82d4e7b47853468a35254616, type: 3}
   MaxStack: 1
-  Category: 1
+  Description: A tier 1 pickaxe for mining harder ore veins.
+  PropertiesText: 
+  BaseValue: 5
+  Weight: 2.4
+  Rarity: 0
+  CraftTime: 2
+  IsInstanceItem: 1
   visualPrefab: {fileID: 4569326234878662587, guid: 7ec58d290cd8c934d80ee49308d50b65, type: 3}
   equipLocalPosition: {x: -0.009, y: -0.435, z: -0.017}
   equipLocalEuler: {x: 0, y: -135, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: With a sharp stone point, breaks rocks.
-  PropertiesText: 
-  BaseValue: 2
-  Weight: 2
-  Rarity: 0
-  CraftTime: 5
-  BaseQuality: 1
-  MaxDurability: 100
-  IsInstanceItem: 1
-  DamageMin: 0.1
-  DamageMax: 5
-  DefenceMin: 0
-  DefenceMax: 0
-  SwingSpeedMin: 0.1
-  SwingSpeedMax: 2
-  MovementSpeedMin: 0
-  MovementSpeedMax: 0
-  DurabilityMin: 1
-  DurabilityMax: 100
-  Damage: 5
-  Defence: 0
-  AttackBonus: 0
-  SwingSpeed: 1
-  MovementSpeed: 0.9
-  Strength: 3
-  Dexterity: 2
-  LegacyDexterity: 0
-  Intelligence: 1
   IsEquippable: 1
   EquipSlot: 10
   Handedness: 1
   ToolTags: 02000000
+  HarvestPower: 1
+  DamageMin: 2.7
+  DamageMax: 4.2
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.9
+  SwingSpeedMax: 1.08
+  MovementSpeedMin: 0.93
+  MovementSpeedMax: 0.98
+  DurabilityMin: 40
+  DurabilityMax: 60
+  Strength: 3
+  Dexterity: 1
+  Intelligence: 0
   IsFood: 0
   FoodMaxHealthBonus: 0
   FoodMaxStaminaBonus: 0
@@ -66,3 +59,4 @@ MonoBehaviour:
   AllowYawRotation: 1
   StructureMaxHealth: 100
   DestroyOnZeroHealth: 1
+

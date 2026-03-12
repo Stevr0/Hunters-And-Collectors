@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 918f060a3f312fe48a5328d6e6631c81, type: 3}
+  m_Name: RE_MithrilPickaxe
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.CraftingRecipeDef
+  RecipeId: RC_MithrilPickaxe
+  Category: 0
+  OutputItem: {fileID: 11400000, guid: 43716c9a31634dd7ad882a7b0c248572, type: 2}
+  OutputQuantity: 1
+  Ingredients:
+  - Item: {fileID: 11400000, guid: e30f3fc3ffe1442f95aca40e2539b995, type: 2}
+    Quantity: 4
+  - Item: {fileID: 11400000, guid: b26bf3a0ff9647409cd45739fc9724ed, type: 2}
+    Quantity: 2
+  - Item: {fileID: 11400000, guid: 86b7cb1f948b4e8fa36d715854d4338a, type: 2}
+    Quantity: 1

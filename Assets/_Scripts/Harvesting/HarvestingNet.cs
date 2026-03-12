@@ -1195,6 +1195,7 @@ namespace HuntersAndCollectors.Harvesting
             string dropId = node != null ? node.DropItemId : string.Empty;
             string requiredTool = node != null ? node.RequiredTool.ToString() : "None";
             string requiredItemId = node != null ? node.RequiredToolItemId : string.Empty;
+            int requiredHarvestPower = node != null ? node.RequiredHarvestPower : 0;
             string nodeId = node != null ? node.NodeId : "null";
             Vector3 nodePos = node != null ? node.transform.position : Vector3.zero;
             Vector3 playerPos = transform.position;
@@ -1205,6 +1206,7 @@ namespace HuntersAndCollectors.Harvesting
                 .Append(" nodeId=").Append(nodeId)
                 .Append(" drop=").Append(string.IsNullOrWhiteSpace(dropId) ? "<none>" : dropId)
                 .Append(" requiredTool=").Append(requiredTool)
+                .Append(" requiredPower=").Append(requiredHarvestPower)
                 .Append(" requiredItem=").Append(string.IsNullOrWhiteSpace(requiredItemId) ? "<none>" : requiredItemId)
                 .Append(" playerPos=").Append(FormatVector(playerPos))
                 .Append(" nodePos=").Append(node != null ? FormatVector(nodePos) : "n/a")
@@ -1241,23 +1243,43 @@ namespace HuntersAndCollectors.Harvesting
                 return false;
             }
 
-            // Specific required item id (ex: IT_IronAxe)
+            float distance = ComputeDistanceToNode(node);
             string requiredItemId = node.RequiredToolItemId;
-            if (!string.IsNullOrWhiteSpace(requiredItemId))
+            bool enforceExactItem = node.RequiredHarvestPower <= 0 && !string.IsNullOrWhiteSpace(requiredItemId);
+
+            if (enforceExactItem)
             {
                 if (!equipment.HasEquippedItem(requiredItemId))
                 {
                     failureReason = HarvestFailureReason.MissingTool;
-                    LogHarvestEvent("ToolValidation.MissingSpecificItem", node, failureReason, ComputeDistanceToNode(node), $"requiredItem={requiredItemId}");
+                    LogHarvestEvent("ToolValidation.MissingSpecificItem", node, failureReason, distance, $"requiredItem={requiredItemId}");
                     return false;
                 }
+
+                return true;
             }
 
-            // Required tool type (Axe, Pickaxe...)
-            if (!HasToolTypeEquipped(node.RequiredTool))
+            ToolTag requiredTag = ToToolTag(node.RequiredTool);
+            bool hasAnyEquippedItem = TryGetSlotItemDef(EquipSlot.MainHand, ToolTag.None, out _, out _) ||
+                                      TryGetSlotItemDef(EquipSlot.OffHand, ToolTag.None, out _, out _);
+
+            if (!TryGetSlotItemDef(EquipSlot.MainHand, requiredTag, out var equippedItemId, out var equippedDef) &&
+                !TryGetSlotItemDef(EquipSlot.OffHand, requiredTag, out equippedItemId, out equippedDef))
             {
-                failureReason = HarvestFailureReason.WrongTool;
-                LogHarvestEvent("ToolValidation.WrongToolType", node, failureReason, ComputeDistanceToNode(node), $"requiredTool={node.RequiredTool}");
+                failureReason = hasAnyEquippedItem ? HarvestFailureReason.WrongTool : HarvestFailureReason.MissingTool;
+                string detail = hasAnyEquippedItem
+                    ? $"requiredTool={node.RequiredTool}, equipped={GetEquipmentSnapshot()}"
+                    : $"requiredTool={node.RequiredTool}";
+                LogHarvestEvent(hasAnyEquippedItem ? "ToolValidation.WrongToolType" : "ToolValidation.MissingTool", node, failureReason, distance, detail);
+                return false;
+            }
+
+            int equippedHarvestPower = equippedDef != null ? Mathf.Max(0, equippedDef.HarvestPower) : 0;
+            int requiredHarvestPower = Mathf.Max(0, node.RequiredHarvestPower);
+            if (equippedHarvestPower < requiredHarvestPower)
+            {
+                failureReason = HarvestFailureReason.InsufficientHarvestPower;
+                LogHarvestEvent("ToolValidation.InsufficientHarvestPower", node, failureReason, distance, $"equippedItem={equippedItemId}, equippedPower={equippedHarvestPower}, requiredPower={requiredHarvestPower}");
                 return false;
             }
 
@@ -1503,9 +1525,12 @@ namespace HuntersAndCollectors.Harvesting
         AlreadyHarvesting,
         CancelledByPlayer,
         CancelledByServer,
-        HitRateLimited
+        HitRateLimited,
+        InsufficientHarvestPower
     }
 }
+
+
 
 
 

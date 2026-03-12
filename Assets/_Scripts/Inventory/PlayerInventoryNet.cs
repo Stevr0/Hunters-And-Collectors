@@ -131,6 +131,7 @@ namespace HuntersAndCollectors.Inventory
 
         public event Action<InventorySnapshot> OnSnapshotReceived;
         public event Action<InventorySnapshot> OnSnapshotChanged;
+        public event Action OnServerInventoryChanged;
 
         public void BeginServerBatch()
         {
@@ -172,6 +173,14 @@ namespace HuntersAndCollectors.Inventory
             }
 
             ForceSendSnapshotToOwner();
+        }
+
+        private void NotifyServerInventoryChanged()
+        {
+            if (!IsServer)
+                return;
+
+            OnServerInventoryChanged?.Invoke();
         }
 
         public bool ServerHasItem(string itemId, int quantity)
@@ -663,6 +672,7 @@ namespace HuntersAndCollectors.Inventory
             };
 
             ReceiveInventorySnapshotClientRpc(ToSnapshot(grid, itemDatabase), rpcParams);
+            NotifyServerInventoryChanged();
         }
 
         [ServerRpc(RequireOwnership = true)]

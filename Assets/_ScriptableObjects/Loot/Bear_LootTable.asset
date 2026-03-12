@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Bear_LootTable
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
   entries:
-  - item: {fileID: 11400000, guid: a364da5f70c7bbb4ea96e394b1550b98, type: 2}
-    minQuantity: 2
-    maxQuantity: 5
+  - item: {fileID: 11400000, guid: 7ebc4758816c0484ab3702096fd6d92c, type: 2}
+    minQuantity: 1
+    maxQuantity: 2
     dropChance01: 1
   - item: {fileID: 11400000, guid: 6ab5e173adc3e734ca08899f69643b40, type: 2}
     minQuantity: 1

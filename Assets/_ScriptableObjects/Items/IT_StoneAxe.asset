@@ -14,45 +14,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_stoneaxe
   DisplayName: Stone Axe
+  Category: 1
   Icon: {fileID: 21300000, guid: 7effc6bde61959b4d9a7cfa025e058b9, type: 3}
   MaxStack: 1
-  Category: 1
+  Description: A tier 1 axe for woodcutting progression and tougher trees.
+  PropertiesText: 
+  BaseValue: 5
+  Weight: 2
+  Rarity: 0
+  CraftTime: 2
+  IsInstanceItem: 1
   visualPrefab: {fileID: 2819201088932385300, guid: 9982a0d50f0045b4ba893b6fd4432463, type: 3}
   equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
   equipLocalEuler: {x: 0, y: -123, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: A basic axe for chopping things
-  PropertiesText: 
-  BaseValue: 2
-  Weight: 2
-  Rarity: 0
-  CraftTime: 5
-  BaseQuality: 1
-  MaxDurability: 100
-  IsInstanceItem: 1
-  DamageMin: 0.1
-  DamageMax: 5
-  DefenceMin: 0
-  DefenceMax: 0
-  SwingSpeedMin: 0.1
-  SwingSpeedMax: 2
-  MovementSpeedMin: 0
-  MovementSpeedMax: 0
-  DurabilityMin: 1
-  DurabilityMax: 100
-  Damage: 1
-  Defence: 0
-  AttackBonus: 0
-  SwingSpeed: 1
-  MovementSpeed: 0.9
-  Strength: 1
-  Dexterity: 1
-  LegacyDexterity: 0
-  Intelligence: 1
   IsEquippable: 1
   EquipSlot: 10
   Handedness: 1
   ToolTags: 01000000
+  HarvestPower: 1
+  DamageMin: 2.4
+  DamageMax: 3.9
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.95
+  SwingSpeedMax: 1.15
+  MovementSpeedMin: 0.95
+  MovementSpeedMax: 1
+  DurabilityMin: 40
+  DurabilityMax: 60
+  Strength: 2
+  Dexterity: 1
+  Intelligence: 0
   IsFood: 0
   FoodMaxHealthBonus: 0
   FoodMaxStaminaBonus: 0
@@ -66,3 +59,4 @@ MonoBehaviour:
   AllowYawRotation: 1
   StructureMaxHealth: 100
   DestroyOnZeroHealth: 1
+

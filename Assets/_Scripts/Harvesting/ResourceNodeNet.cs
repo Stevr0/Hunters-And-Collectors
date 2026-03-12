@@ -20,10 +20,14 @@ namespace HuntersAndCollectors.Harvesting
         [Tooltip("Resource family used for skill + loot routing.")]
         [SerializeField] private ResourceType resourceType = ResourceType.Wood;
 
-        [Tooltip("Tool required to begin harvesting. Fiber is gated by Sickle per MVP doc.")]
+        [Tooltip("Tool family required to harvest this node. Set to None only for intentionally ungated nodes.")]
         [SerializeField] private ToolType requiredTool = ToolType.Axe;
 
-        [Tooltip("Specific item that must be equipped. Leave empty to fall back to tool type.")]
+        [Tooltip("Minimum HarvestPower the equipped tool must have. Higher-tier tools can always harvest lower-tier nodes.")]
+        [Min(0)]
+        [SerializeField] private int requiredHarvestPower = 0;
+
+        [Tooltip("Optional exact item requirement for niche special-case nodes. Standard tiered gathering should usually leave this empty.")]
         [SerializeField] private ItemDef requiredToolItem;
 
         [Tooltip("Base seconds before skill reductions.")]
@@ -71,6 +75,7 @@ namespace HuntersAndCollectors.Harvesting
         public string NodeId => nodeId;
         public ResourceType ResourceType => resourceType;
         public ToolType RequiredTool => requiredTool;
+        public int RequiredHarvestPower => Mathf.Max(0, requiredHarvestPower);
         public ItemDef RequiredToolItem => requiredToolItem;
         public string RequiredToolItemId => requiredToolItem != null ? requiredToolItem.ItemId : string.Empty;
         public float BaseHarvestSeconds => Mathf.Max(0.1f, baseHarvestSeconds);
@@ -172,7 +177,7 @@ namespace HuntersAndCollectors.Harvesting
                 return false;
 
             if (IsLocked)
-                return _lockedByClientId == clientId; // already locked by same client
+                return _lockedByClientId == clientId;
 
             if (!IsHarvestableNow())
                 return false;
@@ -282,9 +287,7 @@ namespace HuntersAndCollectors.Harvesting
             if (respawnSeconds < 0f) respawnSeconds = 0f;
             if (baseHarvestSeconds < 0.1f) baseHarvestSeconds = 0.1f;
             if (maxHealth < 1) maxHealth = 1;
-
-            if (resourceType == ResourceType.Fiber && requiredTool == ToolType.None)
-                requiredTool = ToolType.Knife; // enforce MVP expectation
+            if (requiredHarvestPower < 0) requiredHarvestPower = 0;
 
             if (requiredToolItem != null && requiredTool == ToolType.None)
                 requiredTool = GuessToolTypeFromItem(requiredToolItem);

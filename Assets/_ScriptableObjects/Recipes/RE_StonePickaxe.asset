@@ -11,15 +11,15 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 918f060a3f312fe48a5328d6e6631c81, type: 3}
   m_Name: RE_StonePickaxe
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.RecipeDef
-  RecipeId: CR_StonePickaxe
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.CraftingRecipeDef
+  RecipeId: RC_StonePickaxe
   Category: 0
   OutputItem: {fileID: 11400000, guid: f08ad907b04b6f3469e7069fc6bbe5cb, type: 2}
   OutputQuantity: 1
   Ingredients:
   - Item: {fileID: 11400000, guid: 8ca4f84c9289b34409be57f4ead07baa, type: 2}
-    Quantity: 5
+    Quantity: 4
   - Item: {fileID: 11400000, guid: b5b9e311348865e49bd49ed9b02b261d, type: 2}
-    Quantity: 5
+    Quantity: 2
   - Item: {fileID: 11400000, guid: e0cb007c4e184044197b914976e1f795, type: 2}
-    Quantity: 5
+    Quantity: 1

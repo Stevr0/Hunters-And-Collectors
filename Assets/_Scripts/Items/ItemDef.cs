@@ -1,52 +1,86 @@
 using System.Text;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace HuntersAndCollectors.Items
 {
     /// <summary>
-    /// ItemDef
-    /// -------------------------------------------------------
-    /// Static item type definition (ScriptableObject).
+    /// Static item definition asset.
+    ///
+    /// This ScriptableObject defines what an item TYPE is:
+    /// - identity
+    /// - UI text
+    /// - economy values
+    /// - equipment/tool metadata
+    /// - harvesting capability
+    /// - optional stat roll ranges for future instance-crafted items
     ///
     /// IMPORTANT:
-    /// - This is STATIC data: "what this item type is".
-    /// - Runtime-changing data (durability remaining, rolled stats, quality, etc.)
-    ///   should eventually live in a runtime "ItemInstance" (future version),
-    ///   NOT in this ScriptableObject.
+    /// - This is STATIC template data only.
+    /// - Runtime-changing data (current durability, actual rolled stats, etc.)
+    ///   must NOT live here.
+    /// - Runtime item state belongs in runtime inventory/item instance systems.
     /// </summary>
     [CreateAssetMenu(menuName = "HuntersAndCollectors/Items/Item Definition", fileName = "ItemDef")]
     public sealed class ItemDef : ScriptableObject
     {
         [Header("Identity")]
-        [Tooltip("Stable unique id (eg: IT_Wood, IT_StoneAxe). Must never change once released.")]
+        [Tooltip("Stable unique id (example: IT_Wood, IT_StoneAxe). Must never change once released.")]
         public string ItemId;
 
         [Tooltip("Name shown to players.")]
         public string DisplayName;
 
-        [Tooltip("UI icon.")]
+        [Tooltip("High-level category used by UI and gameplay rules.")]
+        public ItemCategory Category;
+
+        [Tooltip("UI icon used in inventory, crafting, tooltips, etc.")]
         public Sprite Icon;
 
-        [Tooltip("Max quantity per stack. Tools/weapons typically 1.")]
+        [Tooltip("Maximum quantity allowed in one stack. Resources are usually high. Tools/equipment are usually 1.")]
         [Min(1)]
         public int MaxStack = 1;
 
-        [Tooltip("High-level category for UI + rules (Resource/Tool/Crafted/etc).")]
-        public ItemCategory Category;
+        [Header("UI Text")]
+        [TextArea(2, 6)]
+        [Tooltip("Short description shown in item tooltips and lists.")]
+        public string Description;
+
+        [TextArea(2, 10)]
+        [Tooltip("Extra detail lines shown in the tooltip. Example: damage, durability, harvesting power.")]
+        public string PropertiesText;
+
+        [Header("Economy")]
+        [Tooltip("Default base value before player-defined pricing is applied.")]
+        [Min(0)]
+        public int BaseValue = 1;
+
+        [Tooltip("Weight of one unit of this item.")]
+        [Min(0f)]
+        public float Weight = 0f;
+
+        [Tooltip("Display rarity / progression tier for UI and content authoring.")]
+        public ItemRarity Rarity = ItemRarity.Common;
+
+        [Header("Crafting")]
+        [Tooltip("Base craft time in seconds before skill modifiers.")]
+        [Min(0f)]
+        public float CraftTime = 1f;
+
+        [Tooltip("If true, crafted output for this item should become a non-stackable runtime instance rather than a simple stack item.")]
+        public bool IsInstanceItem = false;
 
         [Header("Equip Visual")]
-        [Tooltip("Optional prefab to spawn when equipped (visual-only; should NOT have NetworkObject).")]
+        [Tooltip("Optional visual prefab spawned when this item is equipped. Visual only. Should not contain a NetworkObject.")]
         [SerializeField] private GameObject visualPrefab;
 
-        [Tooltip("Local position offset applied after parenting to the hand anchor.")]
-        [SerializeField] private Vector3 equipLocalPosition;
+        [Tooltip("Local position offset applied after parenting to the equip anchor.")]
+        [SerializeField] private Vector3 equipLocalPosition = Vector3.zero;
 
-        [Tooltip("Local rotation offset (Euler degrees) applied after parenting to the hand anchor.")]
-        [SerializeField] private Vector3 equipLocalEuler;
+        [Tooltip("Local rotation offset in Euler angles applied after parenting to the equip anchor.")]
+        [SerializeField] private Vector3 equipLocalEuler = Vector3.zero;
 
-        [Tooltip("Local scale applied after parenting. Usually (1,1,1).")]
+        [Tooltip("Local scale applied after parenting to the equip anchor.")]
         [SerializeField] private Vector3 equipLocalScale = Vector3.one;
 
         public GameObject VisualPrefab => visualPrefab;
@@ -54,230 +88,210 @@ namespace HuntersAndCollectors.Items
         public Vector3 EquipLocalEuler => equipLocalEuler;
         public Vector3 EquipLocalScale => equipLocalScale;
 
-        [Header("UI Text")]
-        [TextArea(2, 6)]
-        [Tooltip("Short description shown in UI.")]
-        public string Description;
-
-        [TextArea(2, 10)]
-        [Tooltip("Extra lines shown in UI (eg: 'Damage: 12\\nSpeed: 1.2').")]
-        public string PropertiesText;
-
-        [Header("Economy")]
-        [Tooltip("Default base value before player-defined pricing.")]
-        [Min(0)]
-        public int BaseValue = 1;
-
-        [Tooltip("Weight of a single item unit.")]
-        [Min(0f)]
-        public float Weight = 0f;
-
-        [Tooltip("Rarity tier for UI + future loot systems.")]
-        public ItemRarity Rarity = ItemRarity.Common;
-
-        [Header("Crafting")]
-        [Tooltip("Base craft time in seconds (before skill modifiers).")]
-        [Min(0f)]
-        public float CraftTime = 1f;
-
-        [Header("Quality / Durability")]
-        [Tooltip("Legacy template quality value. Not used by instance-roll crafting.")]
-        [Min(0f)]
-        public float BaseQuality = 1f;
-
-        [Tooltip("Legacy template durability cap. For instance-crafted gear, use DurabilityMin/Max.")]
-        [Min(0)]
-        public int MaxDurability = 0;
-
-        [Header("Item Instance / Roll Template")]
-        [Tooltip("If true, crafted output for this item uses ItemInstance runtime data and does not stack.")]
-        public bool IsInstanceItem = false;
-
-        [Tooltip("Server roll range for per-instance damage.")]
-        public float DamageMin = 0f;
-        public float DamageMax = 0f;
-
-        [Tooltip("Server roll range for per-instance defence.")]
-        public float DefenceMin = 0f;
-        public float DefenceMax = 0f;
-
-        [Tooltip("Server roll range for per-instance swing speed.")]
-        public float SwingSpeedMin = 0f;
-        public float SwingSpeedMax = 0f;
-
-        [Tooltip("Server roll range for per-instance movement speed multiplier.")]
-        public float MovementSpeedMin = 0f;
-        public float MovementSpeedMax = 0f;
-
-        [Tooltip("Server roll range for per-instance max durability.")]
-        public int DurabilityMin = 0;
-        public int DurabilityMax = 0;
-        [Header("Combat")]
-        [Tooltip("Base damage (weapons/tools).")]
-        [Min(0f)]
-        public float Damage = 0f;
-
-        [Tooltip("Base defence (armor/shields).")]
-        [Min(0f)]
-        public float Defence = 0f;
-
-        [Tooltip("Flat attack bonus added to d20 attack rolls when this item is used to attack.")]
-        [Min(0)]
-        public int AttackBonus = 0;
-
-        [Tooltip("Attacks per second (or swings per second).")]
-        [Min(0.01f)]
-        public float SwingSpeed = 1f;
-
-        [Header("Movement")]
-        [Tooltip("Movement speed multiplier. 1 = normal speed, 0.9 = -10% speed.")]
-        [Min(0f)]
-        public float MovementSpeed = 1f;
-
-        [Header("Attributes")]
-        [Tooltip("Primary strength attribute bonus.")]
-        [Min(0)]
-        public int Strength = 0;
-
-        [FormerlySerializedAs("Deterity")]
-        [FormerlySerializedAs("Stamina")]
-        [Tooltip("Primary dexterity attribute bonus.")]
-        [Min(0)]
-        public int Dexterity = 0;
-
-        // Hidden legacy float value used by very old assets before int Dexterity existed.
-        [FormerlySerializedAs("Deterity")]
-        [FormerlySerializedAs("Stamina")]
-        [HideInInspector] public float LegacyDexterity;
-
-        [Tooltip("Primary intelligence attribute bonus.")]
-        [Min(0)]
-        public int Intelligence = 0;
-
         [Header("Equipment")]
         [Tooltip("If true, this item can be equipped into an equipment slot.")]
         public bool IsEquippable = false;
 
-        [Tooltip("Which slot this item equips into.")]
+        [Tooltip("Equipment slot used by this item.")]
         public EquipSlot EquipSlot = EquipSlot.None;
 
-        [Tooltip("Hand usage rule for weapons/tools.")]
+        [Tooltip("Hand usage rule for tools/weapons.")]
         public Handedness Handedness = Handedness.None;
 
-        [Tooltip("Tags used for tool checks (eg, Axe for Woodcutting).")]
+        [Header("Harvesting / Tool Data")]
+        [Tooltip("Tags used for harvest validation. Example: Axe, Pickaxe, Knife.")]
         public ToolTag[] ToolTags;
 
-        [Header("Consumable Food (First Pass)")]
-        [Tooltip("If true, this item can be consumed as one of up to 3 active food buffs.")]
+        [Tooltip("Static harvesting capability used for progression and node/tool requirement checks.")]
+        [Min(0)]
+        public int HarvestPower = 0;
+
+        [Header("Instance Roll Template")]
+        [Tooltip("If this item becomes an instance item, server rolls damage in this range during crafting.")]
+        [Min(0f)]
+        public float DamageMin = 0f;
+
+        [Tooltip("Maximum roll value for damage.")]
+        [Min(0f)]
+        public float DamageMax = 0f;
+
+        [Tooltip("If this item becomes an instance item, server rolls defence in this range during crafting.")]
+        [Min(0f)]
+        public float DefenceMin = 0f;
+
+        [Tooltip("Maximum roll value for defence.")]
+        [Min(0f)]
+        public float DefenceMax = 0f;
+
+        [Tooltip("If this item becomes an instance item, server rolls swing speed in this range during crafting.")]
+        [Min(0.01f)]
+        public float SwingSpeedMin = 1f;
+
+        [Tooltip("Maximum roll value for swing speed.")]
+        [Min(0.01f)]
+        public float SwingSpeedMax = 1f;
+
+        [Tooltip("If this item becomes an instance item, server rolls movement speed multiplier in this range during crafting.")]
+        [Min(0f)]
+        public float MovementSpeedMin = 1f;
+
+        [Tooltip("Maximum roll value for movement speed multiplier.")]
+        [Min(0f)]
+        public float MovementSpeedMax = 1f;
+
+        [Tooltip("If this item becomes an instance item, server rolls maximum durability in this range during crafting.")]
+        [Min(0)]
+        public int DurabilityMin = 0;
+
+        [Tooltip("Maximum roll value for durability.")]
+        [Min(0)]
+        public int DurabilityMax = 0;
+
+        [Header("Attributes")]
+        [Tooltip("Flat strength bonus provided by this item type or rolled instance.")]
+        public int Strength = 0;
+
+        [Tooltip("Flat dexterity bonus provided by this item type or rolled instance.")]
+        public int Dexterity = 0;
+
+        [Tooltip("Flat intelligence bonus provided by this item type or rolled instance.")]
+        public int Intelligence = 0;
+
+        [Header("Consumable Food")]
+        [Tooltip("If true, this item can be consumed as a food buff.")]
         public bool IsFood = false;
 
-        [Tooltip("Temporary max health bonus granted while this food buff is active.")]
+        [Tooltip("Temporary max health bonus while the food buff is active.")]
         [Min(0)]
         public int FoodMaxHealthBonus = 0;
 
-        [Tooltip("Temporary max stamina bonus granted while this food buff is active.")]
+        [Tooltip("Temporary max stamina bonus while the food buff is active.")]
         [Min(0)]
         public int FoodMaxStaminaBonus = 0;
 
-        [Tooltip("Flat health regeneration bonus per second while this food buff is active.")]
+        [Tooltip("Flat health regeneration bonus per second while active.")]
         [Min(0f)]
         public float FoodHealthRegenBonus = 0f;
 
-        [Tooltip("Flat stamina regeneration bonus per second while this food buff is active.")]
+        [Tooltip("Flat stamina regeneration bonus per second while active.")]
         [Min(0f)]
         public float FoodStaminaRegenBonus = 0f;
 
-        [Tooltip("How long this food buff remains active after consumption (seconds).")]
+        [Tooltip("Food buff duration in seconds.")]
         [Min(0f)]
         public float FoodDurationSeconds = 0f;
 
-        
-        /// <summary>
-        /// Runtime rule used by authoritative systems to decide whether this item should
-        /// be represented as a unique instance payload in inventory.
-        /// </summary>
-        public bool UsesItemInstance
-        {
-            get
-            {
-                if (IsInstanceItem)
-                    return true;
-
-                // Safe fallback for older assets that were not yet flagged.
-                return MaxStack <= 1 && (IsEquippable || (ToolTags != null && ToolTags.Length > 0));
-            }
-        }
-
-        public float ResolveDamageMin() => DamageMin > 0f ? DamageMin : Damage;
-        public float ResolveDamageMax() => DamageMax > 0f ? DamageMax : Mathf.Max(ResolveDamageMin(), Damage);
-
-        public float ResolveDefenceMin() => DefenceMin > 0f ? DefenceMin : Defence;
-        public float ResolveDefenceMax() => DefenceMax > 0f ? DefenceMax : Mathf.Max(ResolveDefenceMin(), Defence);
-
-        public float ResolveSwingSpeedMin() => SwingSpeedMin > 0f ? SwingSpeedMin : SwingSpeed;
-        public float ResolveSwingSpeedMax() => SwingSpeedMax > 0f ? SwingSpeedMax : Mathf.Max(ResolveSwingSpeedMin(), SwingSpeed);
-
-        public float ResolveMovementSpeedMin() => MovementSpeedMin > 0f ? MovementSpeedMin : MovementSpeed;
-        public float ResolveMovementSpeedMax() => MovementSpeedMax > 0f ? MovementSpeedMax : Mathf.Max(ResolveMovementSpeedMin(), MovementSpeed);
-
-        public int ResolveDurabilityMin() => DurabilityMin > 0 ? DurabilityMin : MaxDurability;
-        public int ResolveDurabilityMax() => DurabilityMax > 0 ? DurabilityMax : Mathf.Max(ResolveDurabilityMin(), MaxDurability);
-        [Header("Placeable Building (Unified Item Model)")]
-        [Tooltip("If true, this item can be placed into the world as a structure.")]
+        [Header("Legacy Building Compatibility")]
+        [Tooltip("Temporary compatibility flag for existing building systems that still read ItemDef placeable data.")]
         public bool IsPlaceable = false;
 
-        [Tooltip("Networked world prefab spawned when this placeable item is used.")]
+        [Tooltip("Temporary compatibility prefab reference for existing building systems.")]
         public NetworkObject PlaceablePrefab;
 
-        [Tooltip("Optional local-only ghost prefab used for placement preview visuals.")]
+        [Tooltip("Temporary compatibility ghost prefab for existing building placement visuals.")]
         public GameObject GhostPrefab;
 
-        [Tooltip("Optional spawn offset applied from requested placement position.")]
+        [Tooltip("Temporary compatibility placement offset for existing building placement code.")]
         public Vector3 PlacementOffset = Vector3.zero;
 
-        [Tooltip("If false, placement ignores requested yaw and uses 0 rotation on Y.")]
+        [Tooltip("Temporary compatibility yaw rotation toggle for existing building placement code.")]
         public bool AllowYawRotation = true;
 
-        [Tooltip("Max health used by the placed world structure for this placeable item.")]
+        [Tooltip("Temporary compatibility placed structure health for existing building runtime code.")]
         [Min(1)]
         public int StructureMaxHealth = 100;
 
-        [Tooltip("If true, placed structure despawns when health reaches zero.")]
+        [Tooltip("Temporary compatibility destroy-on-zero-health flag for existing building runtime code.")]
         public bool DestroyOnZeroHealth = true;
+
+        /// <summary>
+        /// Convenience helper for authoring/debug UI.
+        /// Safe to use for tooltips and inspector summaries.
+        /// </summary>
+        public string BuildPropertiesText()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            if (HarvestPower > 0)
+                sb.AppendLine($"Harvest Power: {HarvestPower}");
+
+            if (IsInstanceItem)
+            {
+                if (DamageMax > 0f)
+                    sb.AppendLine($"Damage: {DamageMin:0.##} - {DamageMax:0.##}");
+
+                if (DefenceMax > 0f)
+                    sb.AppendLine($"Defence: {DefenceMin:0.##} - {DefenceMax:0.##}");
+
+                if (SwingSpeedMax > 0f)
+                    sb.AppendLine($"Swing Speed: {SwingSpeedMin:0.##} - {SwingSpeedMax:0.##}");
+
+                if (MovementSpeedMin != 1f || MovementSpeedMax != 1f)
+                    sb.AppendLine($"Move Speed: {MovementSpeedMin:0.##} - {MovementSpeedMax:0.##}");
+
+                if (DurabilityMax > 0)
+                    sb.AppendLine($"Durability: {DurabilityMin} - {DurabilityMax}");
+            }
+
+            if (Strength != 0)
+                sb.AppendLine($"Strength: {Strength:+#;-#;0}");
+
+            if (Dexterity != 0)
+                sb.AppendLine($"Dexterity: {Dexterity:+#;-#;0}");
+
+            if (Intelligence != 0)
+                sb.AppendLine($"Intelligence: {Intelligence:+#;-#;0}");
+
+            if (IsFood)
+            {
+                if (FoodMaxHealthBonus > 0)
+                    sb.AppendLine($"Food Health: +{FoodMaxHealthBonus}");
+
+                if (FoodMaxStaminaBonus > 0)
+                    sb.AppendLine($"Food Stamina: +{FoodMaxStaminaBonus}");
+
+                if (FoodHealthRegenBonus > 0f)
+                    sb.AppendLine($"Health Regen: +{FoodHealthRegenBonus:0.##}/s");
+
+                if (FoodStaminaRegenBonus > 0f)
+                    sb.AppendLine($"Stamina Regen: +{FoodStaminaRegenBonus:0.##}/s");
+
+                if (FoodDurationSeconds > 0f)
+                    sb.AppendLine($"Duration: {FoodDurationSeconds:0.#}s");
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        // Thin compatibility surface so the rest of the project can migrate to the new template model incrementally.
+        public bool UsesItemInstance => IsInstanceItem;
+        public float Damage => DamageMin;
+        public float Defence => DefenceMin;
+        public int AttackBonus => 0;
+        public float SwingSpeed => SwingSpeedMin;
+        public float MovementSpeed => MovementSpeedMin;
+        public int MaxDurability => DurabilityMax;
+
+        public float ResolveDamageMin() => DamageMin;
+        public float ResolveDamageMax() => DamageMax;
+        public float ResolveDefenceMin() => DefenceMin;
+        public float ResolveDefenceMax() => DefenceMax;
+        public float ResolveSwingSpeedMin() => SwingSpeedMin;
+        public float ResolveSwingSpeedMax() => SwingSpeedMax;
+        public float ResolveMovementSpeedMin() => MovementSpeedMin;
+        public float ResolveMovementSpeedMax() => MovementSpeedMax;
+        public int ResolveDurabilityMin() => DurabilityMin;
+        public int ResolveDurabilityMax() => DurabilityMax;
+        public string BuildPropertiesText(bool appendManualPropertiesText) => BuildPropertiesText();
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (MaxStack < 1) MaxStack = 1;
-            if (SwingSpeed <= 0f) SwingSpeed = 0.01f;
-            if (MovementSpeed < 0f) MovementSpeed = 0f;
-            if (Strength < 0) Strength = 0;
-            if (Dexterity < 0) Dexterity = 0;
-            if (Intelligence < 0) Intelligence = 0;
-            if (AttackBonus < 0) AttackBonus = 0;
-            if (BaseValue < 0) BaseValue = 0;
-            if (BaseQuality < 0f) BaseQuality = 0f;
-            if (MaxDurability < 0) MaxDurability = 0;
-            if (DamageMin < 0f) DamageMin = 0f;
-            if (DamageMax < 0f) DamageMax = 0f;
-            if (DefenceMin < 0f) DefenceMin = 0f;
-            if (DefenceMax < 0f) DefenceMax = 0f;
-            if (SwingSpeedMin < 0f) SwingSpeedMin = 0f;
-            if (SwingSpeedMax < 0f) SwingSpeedMax = 0f;
-            if (MovementSpeedMin < 0f) MovementSpeedMin = 0f;
-            if (MovementSpeedMax < 0f) MovementSpeedMax = 0f;
-            if (DurabilityMin < 0) DurabilityMin = 0;
-            if (DurabilityMax < 0) DurabilityMax = 0;
+            if (MaxStack < 1)
+                MaxStack = 1;
 
-            if (DamageMax > 0f && DamageMin > DamageMax) DamageMin = DamageMax;
-            if (DefenceMax > 0f && DefenceMin > DefenceMax) DefenceMin = DefenceMax;
-            if (SwingSpeedMax > 0f && SwingSpeedMin > SwingSpeedMax) SwingSpeedMin = SwingSpeedMax;
-            if (MovementSpeedMax > 0f && MovementSpeedMin > MovementSpeedMax) MovementSpeedMin = MovementSpeedMax;
-            if (DurabilityMax > 0 && DurabilityMin > DurabilityMax) DurabilityMin = DurabilityMax;
-
-            // One-time migration fallback for old float dexterity assets.
-            if (Dexterity <= 0 && LegacyDexterity > 0f)
-                Dexterity = Mathf.RoundToInt(LegacyDexterity);
+            if (IsInstanceItem)
+                MaxStack = 1;
 
             if (!IsEquippable)
             {
@@ -285,99 +299,63 @@ namespace HuntersAndCollectors.Items
                 Handedness = Handedness.None;
             }
 
-            if (equipLocalScale.x == 0f && equipLocalScale.y == 0f && equipLocalScale.z == 0f)
-                equipLocalScale = Vector3.one;
+            if (BaseValue < 0)
+                BaseValue = 0;
 
-            if (!IsFood)
-            {
+            if (Weight < 0f)
+                Weight = 0f;
+
+            if (CraftTime < 0f)
+                CraftTime = 0f;
+
+            if (HarvestPower < 0)
+                HarvestPower = 0;
+
+            if (FoodMaxHealthBonus < 0)
                 FoodMaxHealthBonus = 0;
+
+            if (FoodMaxStaminaBonus < 0)
                 FoodMaxStaminaBonus = 0;
+
+            if (FoodHealthRegenBonus < 0f)
                 FoodHealthRegenBonus = 0f;
+
+            if (FoodStaminaRegenBonus < 0f)
                 FoodStaminaRegenBonus = 0f;
+
+            if (FoodDurationSeconds < 0f)
                 FoodDurationSeconds = 0f;
-            }
-            else
-            {
-                if (FoodMaxHealthBonus < 0) FoodMaxHealthBonus = 0;
-                if (FoodMaxStaminaBonus < 0) FoodMaxStaminaBonus = 0;
-                if (FoodHealthRegenBonus < 0f) FoodHealthRegenBonus = 0f;
-                if (FoodStaminaRegenBonus < 0f) FoodStaminaRegenBonus = 0f;
-                if (FoodDurationSeconds <= 0f) FoodDurationSeconds = 1f;
 
-            }
-            // Unified model rule:
-            // Placeable build pieces are still regular items, but require a world prefab.
-            if (IsPlaceable && PlaceablePrefab == null)
-                Debug.LogWarning($"[ItemDef] Item '{ItemId}' is marked IsPlaceable but PlaceablePrefab is missing.", this);
+            if (DamageMax < DamageMin)
+                DamageMax = DamageMin;
 
-            // Structure durability for placed world objects.
-            if (StructureMaxHealth < 1) StructureMaxHealth = 1;
+            if (DefenceMax < DefenceMin)
+                DefenceMax = DefenceMin;
+
+            if (SwingSpeedMin < 0.01f)
+                SwingSpeedMin = 0.01f;
+
+            if (SwingSpeedMax < SwingSpeedMin)
+                SwingSpeedMax = SwingSpeedMin;
+
+            if (MovementSpeedMin < 0f)
+                MovementSpeedMin = 0f;
+
+            if (MovementSpeedMax < MovementSpeedMin)
+                MovementSpeedMax = MovementSpeedMin;
+
+            if (DurabilityMin < 0)
+                DurabilityMin = 0;
+
+            if (DurabilityMax < DurabilityMin)
+                DurabilityMax = DurabilityMin;
+
+            if (StructureMaxHealth < 1)
+                StructureMaxHealth = 1;
+
+            if (string.IsNullOrWhiteSpace(PropertiesText))
+                PropertiesText = BuildPropertiesText();
         }
 #endif
-
-        public string BuildPropertiesText(bool appendManualPropertiesText = true)
-        {
-            var sb = new StringBuilder(256);
-
-            void AddLine(string label, string value)
-            {
-                if (sb.Length > 0)
-                    sb.AppendLine();
-                sb.Append(label).Append(": ").Append(value);
-            }
-
-            if (BaseValue > 0) AddLine("Base Value", BaseValue.ToString());
-            if (Weight > 0f) AddLine("Weight", Weight.ToString("0.##"));
-            AddLine("Rarity", Rarity.ToString());
-
-            if (CraftTime > 0f) AddLine("Craft Time", $"{CraftTime:0.##}s");
-
-            if (BaseQuality != 1f) AddLine("Quality", BaseQuality.ToString("0.##"));
-            if (MaxDurability > 0) AddLine("Durability", MaxDurability.ToString());
-
-            if (Strength > 0) AddLine("Strength", Strength.ToString());
-            if (Dexterity > 0) AddLine("Dexterity", Dexterity.ToString());
-            if (Intelligence > 0) AddLine("Intelligence", Intelligence.ToString());
-
-            if (Damage > 0f) AddLine("Damage", Damage.ToString("0.##"));
-            if (Defence > 0f) AddLine("Defence", Defence.ToString("0.##"));
-            if (AttackBonus > 0) AddLine("Attack Bonus", AttackBonus.ToString());
-            if (SwingSpeed > 0f) AddLine("Swing Speed", SwingSpeed.ToString("0.##"));
-            if (MovementSpeed != 1f) AddLine("Move Speed", $"{MovementSpeed:0.##}x");
-
-            if (IsEquippable)
-            {
-                AddLine("Equip Slot", EquipSlot.ToString());
-                if (Handedness != Handedness.None)
-                    AddLine("Handedness", Handedness.ToString());
-            }
-
-            if (ToolTags != null && ToolTags.Length > 0)
-                AddLine("Tool Tags", string.Join(", ", ToolTags));
-
-            if (appendManualPropertiesText && !string.IsNullOrWhiteSpace(PropertiesText))
-            {
-                if (sb.Length > 0)
-                    sb.AppendLine().AppendLine();
-                sb.Append(PropertiesText.Trim());
-            }
-
-            return sb.ToString();
-        }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

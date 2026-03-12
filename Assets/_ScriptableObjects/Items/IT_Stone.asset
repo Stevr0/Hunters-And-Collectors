@@ -14,26 +14,48 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_stone
   DisplayName: Stone
-  Icon: {fileID: 21300000, guid: 23d665cfc2c7bfe48a7d6e17c80055b5, type: 3}
-  MaxStack: 100
   Category: 0
+  Icon: {fileID: 21300000, guid: 23d665cfc2c7bfe48a7d6e17c80055b5, type: 3}
+  MaxStack: 99
+  Description: A tier 1 mineral resource used to craft stone tools.
+  PropertiesText: 
+  BaseValue: 2
+  Weight: 1
+  Rarity: 0
+  CraftTime: 1
+  IsInstanceItem: 0
   visualPrefab: {fileID: 2147834026543980358, guid: dbe5b0d4a2a43954fa4d0ed995323731, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: Stone, used for crafting and building things.
-  PropertiesText: 
-  BaseValue: 1
-  Weight: 1
-  Rarity: 0
-  CraftTime: 1
-  BaseQuality: 1
-  MaxDurability: 0
-  Damage: 0
-  Defence: 0
-  SwingSpeed: 1
-  MovementSpeed: 1
   IsEquippable: 0
   EquipSlot: 0
   Handedness: 0
   ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 1
+  SwingSpeedMax: 1
+  MovementSpeedMin: 1
+  MovementSpeedMax: 1
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Strength: 0
+  Dexterity: 0
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

@@ -14,26 +14,48 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_wood
   DisplayName: Wood
-  Icon: {fileID: 21300000, guid: 60c8f72b171f8d54c8de275535c747a0, type: 3}
-  MaxStack: 100
   Category: 0
+  Icon: {fileID: 21300000, guid: 60c8f72b171f8d54c8de275535c747a0, type: 3}
+  MaxStack: 99
+  Description: A tier 1 wood resource used for stronger tool handles and refined crafting.
+  PropertiesText: 
+  BaseValue: 2
+  Weight: 1
+  Rarity: 0
+  CraftTime: 1
+  IsInstanceItem: 0
   visualPrefab: {fileID: 2194581310374169441, guid: 400b1f870092fdd418a91806ef12e45d, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
-  Description: Wood from a tree, used to craft and build things.
-  PropertiesText: 
-  BaseValue: 1
-  Weight: 1
-  Rarity: 0
-  CraftTime: 1
-  BaseQuality: 1
-  MaxDurability: 0
-  Damage: 0
-  Defence: 0
-  SwingSpeed: 1
-  MovementSpeed: 1
   IsEquippable: 0
   EquipSlot: 0
   Handedness: 0
   ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 1
+  SwingSpeedMax: 1
+  MovementSpeedMin: 1
+  MovementSpeedMax: 1
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Strength: 0
+  Dexterity: 0
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1
