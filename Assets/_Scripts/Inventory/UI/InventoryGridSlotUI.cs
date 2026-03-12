@@ -344,7 +344,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            dragDrop?.BeginDragFromInventory(this, itemId, iconImage != null ? iconImage.sprite : null);
+            dragDrop?.BeginDragFromInventory(this, itemId, quantity, iconImage != null ? iconImage.sprite : null);
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -359,7 +359,7 @@ namespace HuntersAndCollectors.Inventory.UI
                 return;
             }
 
-            dragDrop?.CancelDrag();
+            dragDrop?.EndDrag(eventData);
         }
 
         public void OnDrop(PointerEventData eventData)
@@ -384,6 +384,7 @@ namespace HuntersAndCollectors.Inventory.UI
         }
     }
 }
+
 
 
 

@@ -18,6 +18,7 @@ MonoBehaviour:
   MaxStack: 99
   Category: 3
   visualPrefab: {fileID: 2147834026543980358, guid: 23701766502f56640878b2c424d1d722, type: 3}
+  worldDropPrefab: {fileID: 2147834026543980358, guid: 23701766502f56640878b2c424d1d722, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}

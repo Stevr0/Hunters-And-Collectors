@@ -2,6 +2,7 @@ using HuntersAndCollectors.Inventory.UI;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace HuntersAndCollectors.UI
 {
@@ -15,7 +16,7 @@ namespace HuntersAndCollectors.UI
     /// - Keeps "what happens on drop" consistent and easy to extend.
     ///
     /// Authority rules:
-    /// - UI decides intent (swap, equip, unequip).
+    /// - UI decides intent (swap, equip, unequip, world drop).
     /// - Server validates + applies via ServerRpc.
     /// </summary>
     public sealed class UIDragDropBroker : MonoBehaviour
@@ -28,6 +29,7 @@ namespace HuntersAndCollectors.UI
 
         // Current local drag payload (client-only)
         private DragPayload _payload;
+        private bool _dropHandledThisDrag;
 
         // Cached local player refs (client-side)
         private Inventory.PlayerInventoryNet _localInventoryNet;
@@ -58,17 +60,18 @@ namespace HuntersAndCollectors.UI
         // Begin / End Drag
         // ------------------------
 
-        public void BeginDragFromInventory(InventoryGridSlotUI fromSlot, string itemId, Sprite icon)
+        public void BeginDragFromInventory(InventoryGridSlotUI fromSlot, string itemId, int quantity, Sprite icon)
         {
             EnsureLocalRefs();
 
             // Ignore empty
-            if (fromSlot == null || string.IsNullOrWhiteSpace(itemId))
+            if (fromSlot == null || string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
                 return;
 
-            _payload = DragPayload.FromInventory(fromSlot.SlotIndex, itemId);
+            _payload = DragPayload.FromInventory(fromSlot.SlotIndex, itemId, quantity);
+            _dropHandledThisDrag = false;
             if (debugDragTrace)
-                Debug.Log($"[InventoryDragTrace][Broker] BeginDrag sourceIndex={fromSlot.SlotIndex} itemId={itemId}");
+                Debug.Log($"[InventoryDragTrace][Broker] BeginDrag sourceIndex={fromSlot.SlotIndex} itemId={itemId} qty={quantity}");
             dragGhost?.Show(icon);
         }
 
@@ -80,12 +83,42 @@ namespace HuntersAndCollectors.UI
                 return;
 
             _payload = DragPayload.FromEquipment(slot, itemId);
+            _dropHandledThisDrag = false;
             dragGhost?.Show(icon);
+        }
+
+        public void EndDrag(PointerEventData eventData)
+        {
+            EnsureLocalRefs();
+
+            if (!_payload.IsValid)
+            {
+                CancelDrag();
+                return;
+            }
+
+            if (_dropHandledThisDrag)
+            {
+                CancelDrag();
+                return;
+            }
+
+            if (_payload.SourceKind == DragSourceKind.Inventory && _localInventoryNet != null)
+            {
+                int requestedQuantity = Mathf.Max(1, _payload.SourceQuantity);
+                if (debugDragTrace)
+                    Debug.Log($"[InventoryDragTrace][Broker] WorldDropRequest sourceIndex={_payload.SourceInventoryIndex} itemId={_payload.ItemId} qty={requestedQuantity}");
+
+                _localInventoryNet.RequestDropSlotToWorldServerRpc(_payload.SourceInventoryIndex, requestedQuantity);
+            }
+
+            CancelDrag();
         }
 
         public void CancelDrag()
         {
             _payload = default;
+            _dropHandledThisDrag = false;
             dragGhost?.Hide();
         }
 
@@ -100,6 +133,8 @@ namespace HuntersAndCollectors.UI
                 CancelDrag();
                 return;
             }
+
+            _dropHandledThisDrag = true;
 
             if (debugDragTrace)
                 Debug.Log($"[InventoryDragTrace][Broker] CompleteDrop targetIndex={targetInventoryIndex} sourceKind={_payload.SourceKind} sourceIndex={_payload.SourceInventoryIndex}");
@@ -143,6 +178,8 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
+            _dropHandledThisDrag = true;
+
             if (debugDragTrace)
                 Debug.Log($"[InventoryDragTrace][Broker] CompleteDrop targetEquipSlot={targetSlot} sourceKind={_payload.SourceKind} sourceIndex={_payload.SourceInventoryIndex}");
 
@@ -180,17 +217,19 @@ namespace HuntersAndCollectors.UI
         {
             public DragSourceKind SourceKind;
             public int SourceInventoryIndex;
+            public int SourceQuantity;
             public EquipSlot SourceEquipSlot;
             public Unity.Collections.FixedString64Bytes ItemId;
 
             public bool IsValid => SourceKind != DragSourceKind.None && !ItemId.IsEmpty;
 
-            public static DragPayload FromInventory(int index, string itemId)
+            public static DragPayload FromInventory(int index, string itemId, int quantity)
             {
                 return new DragPayload
                 {
                     SourceKind = DragSourceKind.Inventory,
                     SourceInventoryIndex = index,
+                    SourceQuantity = Mathf.Max(1, quantity),
                     SourceEquipSlot = EquipSlot.None,
                     ItemId = new Unity.Collections.FixedString64Bytes(itemId ?? "")
                 };
@@ -202,6 +241,7 @@ namespace HuntersAndCollectors.UI
                 {
                     SourceKind = DragSourceKind.Equipment,
                     SourceInventoryIndex = -1,
+                    SourceQuantity = 1,
                     SourceEquipSlot = slot,
                     ItemId = new Unity.Collections.FixedString64Bytes(itemId ?? "")
                 };
@@ -209,8 +249,3 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
-
-
-
-
-

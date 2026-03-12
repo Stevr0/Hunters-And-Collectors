@@ -118,10 +118,10 @@ namespace HuntersAndCollectors.Actors
             if (item == null)
                 return;
 
-            GameObject prefab = item.VisualPrefab;
+            GameObject prefab = item.WorldDropPrefab;
             if (prefab == null)
             {
-                Debug.LogError($"[ActorLoot][SERVER] Missing VisualPrefab itemId='{item.ItemId}' actor='{name}'", this);
+                Debug.LogError($"[ActorLoot][SERVER] Missing WorldDropPrefab itemId='{item.ItemId}' actor='{name}'", this);
                 return;
             }
 
@@ -225,3 +225,4 @@ namespace HuntersAndCollectors.Actors
 #endif
     }
 }
+

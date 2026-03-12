@@ -1,4 +1,5 @@
 using System.Collections;
+using HuntersAndCollectors.Inventory;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -17,6 +18,9 @@ namespace HuntersAndCollectors.Items
         // Server-only runtime back-reference.
         // Intentionally not serialized/replicated.
         private PickupSpawnerNet _spawner;
+        private bool _hasInstancePayload;
+        private ItemInstance _instancePayload;
+        private ItemInstanceData _instanceDataPayload;
 
         public ItemDef ItemDefinition => itemDefinition;
         public int Quantity => quantity;
@@ -26,6 +30,9 @@ namespace HuntersAndCollectors.Items
 
         public bool HasSpawner => _spawner != null;
         public string SpawnerName => _spawner != null ? _spawner.name : "<none>";
+        public bool HasInstancePayload => _hasInstancePayload;
+        public ItemInstance InstancePayload => _instancePayload;
+        public ItemInstanceData InstanceDataPayload => _instanceDataPayload;
 
         private Coroutine _autoDespawnRoutine;
         private Coroutine _consumeDespawnRoutine;
@@ -65,10 +72,29 @@ namespace HuntersAndCollectors.Items
 
             // Harvested drops should remain unbound, spawner drops attach explicitly.
             _spawner = null;
+            _hasInstancePayload = false;
+            _instancePayload = default;
+            _instanceDataPayload = default;
             if (newSpawner != null)
                 ServerAttachSpawner(newSpawner);
 
             Debug.Log($"[ResourceDrop][SERVER] INIT name='{name}' netId={(NetworkObject != null && NetworkObject.IsSpawned ? NetworkObject.NetworkObjectId : 0)} item='{ItemId}' qty={quantity} hasSpawner={HasSpawner} spawner={SpawnerName}", this);
+        }
+
+        /// <summary>
+        /// SERVER: Configure runtime state for a dropped concrete item instance.
+        /// This keeps durability and rolled stats intact when the item is picked up again.
+        /// </summary>
+        public void ServerInitializeInstance(in ItemInstance instancePayload, in ItemInstanceData instanceDataPayload, PickupSpawnerNet newSpawner = null, ItemDef overrideItemDefinition = null)
+        {
+            ServerInitialize(1, newSpawner, overrideItemDefinition);
+
+            if (!HasServerAuthority())
+                return;
+
+            _hasInstancePayload = true;
+            _instancePayload = instancePayload;
+            _instanceDataPayload = instanceDataPayload;
         }
 
         /// <summary>
@@ -228,6 +254,9 @@ namespace HuntersAndCollectors.Items
             }
 
             _spawner = null;
+            _hasInstancePayload = false;
+            _instancePayload = default;
+            _instanceDataPayload = default;
         }
 
 #if UNITY_EDITOR
@@ -241,5 +270,3 @@ namespace HuntersAndCollectors.Items
     [System.Obsolete("WorldPickup was renamed to ResourceDrop. Please swap the component when convenient.")]
     public sealed class WorldPickup : ResourceDrop { }
 }
-
-

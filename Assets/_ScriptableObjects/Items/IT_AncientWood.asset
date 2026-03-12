@@ -26,6 +26,7 @@ MonoBehaviour:
   CraftTime: 1
   IsInstanceItem: 0
   visualPrefab: {fileID: 2194581310374169441, guid: 9a878c49f997eb349af3e49f1dc4839f, type: 3}
+  worldDropPrefab: {fileID: 2194581310374169441, guid: 9a878c49f997eb349af3e49f1dc4839f, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}

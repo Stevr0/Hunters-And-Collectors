@@ -409,6 +409,25 @@ namespace HuntersAndCollectors.Harvesting
                 return;
             }
 
+            if (drop.HasInstancePayload)
+            {
+                if (!inventory.ServerTryAddItemInstance(drop.InstancePayload, drop.InstanceDataPayload))
+                {
+                    SendDropResult(false, HarvestFailureReason.InventoryFull, dropNetworkObjectId, itemId, 0);
+                    return;
+                }
+
+                drop.ServerConsumeAndDespawn(0.75f);
+                playerVitals?.ServerMarkBusyFromAction();
+
+                if (playerMovement != null)
+                    playerMovement.PlayGatherClientRpc();
+
+                SendDropResult(true, HarvestFailureReason.None, dropNetworkObjectId, itemId, 1);
+                return;
+            }
+
+            // Optional skill influence for pickup scaling.
             // Optional skill influence for pickup scaling.
             // Some items (e.g., berries/rare drops) may not map to a harvesting skill yet.
             bool hasMappedSkill = TryGetSkillForItem(itemId, out var skillId);
@@ -680,9 +699,9 @@ namespace HuntersAndCollectors.Harvesting
         /// - Drops scatter around the node and get a small physics "pop"
         ///
         /// Prefab requirements:
-        /// - ItemDef.VisualPrefab assigned
-        /// - VisualPrefab has NetworkObject + ResourceDrop
-        /// - VisualPrefab has a Collider on Interactable layer (so PlayerInteract ray can hit)
+        /// - ItemDef.WorldDropPrefab assigned
+        /// - WorldDropPrefab has NetworkObject + ResourceDrop
+        /// - WorldDropPrefab has a Collider on Interactable layer (so PlayerInteract ray can hit)
         /// </summary>
         private bool TrySpawnHarvestedDrop(ResourceNodeNet node, string itemId, int quantityToSpawn)
         {
@@ -698,16 +717,16 @@ namespace HuntersAndCollectors.Harvesting
             if (itemDatabase == null)
                 return false;
 
-            // 1) Lookup item definition (must have VisualPrefab with NetworkObject + ResourceDrop).
+            // 1) Lookup item definition (must have WorldDropPrefab with NetworkObject + ResourceDrop).
             if (!itemDatabase.TryGet(itemId, out var def) || def == null)
             {
                 Debug.LogError($"[HarvestingNet][SERVER] ItemDef not found for itemId='{itemId}'");
                 return false;
             }
 
-            if (def.VisualPrefab == null)
+            if (def.WorldDropPrefab == null)
             {
-                Debug.LogError($"[HarvestingNet][SERVER] ItemDef VisualPrefab missing for itemId='{itemId}'");
+                Debug.LogError($"[HarvestingNet][SERVER] ItemDef WorldDropPrefab missing for itemId='{itemId}'");
                 return false;
             }
 
@@ -785,7 +804,7 @@ namespace HuntersAndCollectors.Harvesting
 
             // 3) Instantiate, ensure not parented, move into node scene.
             Quaternion rot = randomizeDropRotation ? UnityEngine.Random.rotation : Quaternion.identity;
-            GameObject go = Instantiate(def.VisualPrefab, spawnPos, rot);
+            GameObject go = Instantiate(def.WorldDropPrefab, spawnPos, rot);
 
             go.transform.SetParent(null, true); // never parent to node
             SceneManager.MoveGameObjectToScene(go, node.gameObject.scene); // additive-safe
@@ -793,7 +812,7 @@ namespace HuntersAndCollectors.Harvesting
             // 4) Validate required components.
             if (!go.TryGetComponent<NetworkObject>(out var netObj) || netObj == null)
             {
-                Debug.LogError($"[HarvestingNet][SERVER] Drop prefab missing NetworkObject. prefab='{def.VisualPrefab.name}' itemId='{itemId}'");
+                Debug.LogError($"[HarvestingNet][SERVER] Drop prefab missing NetworkObject. prefab='{def.WorldDropPrefab.name}' itemId='{itemId}'");
                 Destroy(go);
                 return false;
             }
@@ -805,7 +824,7 @@ namespace HuntersAndCollectors.Harvesting
 
             if (drop == null)
             {
-                Debug.LogError($"[HarvestingNet][SERVER] Drop prefab missing ResourceDrop. prefab='{def.VisualPrefab.name}' itemId='{itemId}'");
+                Debug.LogError($"[HarvestingNet][SERVER] Drop prefab missing ResourceDrop. prefab='{def.WorldDropPrefab.name}' itemId='{itemId}'");
                 Destroy(go);
                 return false;
             }
@@ -1529,6 +1548,12 @@ namespace HuntersAndCollectors.Harvesting
         InsufficientHarvestPower
     }
 }
+
+
+
+
+
+
 
 
 

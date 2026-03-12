@@ -74,6 +74,11 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Optional visual prefab spawned when this item is equipped. Visual only. Should not contain a NetworkObject.")]
         [SerializeField] private GameObject visualPrefab;
 
+        [Header("World Drop")]
+        [Tooltip("Dedicated runtime world pickup prefab for drops and harvesting. Must use a root NetworkObject and must not contain nested child NetworkObjects.")]
+        [SerializeField] private GameObject worldDropPrefab;
+
+        [Header("Equip Visual")]
         [Tooltip("Local position offset applied after parenting to the equip anchor.")]
         [SerializeField] private Vector3 equipLocalPosition = Vector3.zero;
 
@@ -84,6 +89,7 @@ namespace HuntersAndCollectors.Items
         [SerializeField] private Vector3 equipLocalScale = Vector3.one;
 
         public GameObject VisualPrefab => visualPrefab;
+        public GameObject WorldDropPrefab => worldDropPrefab;
         public Vector3 EquipLocalPosition => equipLocalPosition;
         public Vector3 EquipLocalEuler => equipLocalEuler;
         public Vector3 EquipLocalScale => equipLocalScale;
@@ -359,3 +365,5 @@ namespace HuntersAndCollectors.Items
 #endif
     }
 }
+
+

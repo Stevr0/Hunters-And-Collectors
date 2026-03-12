@@ -6,6 +6,7 @@ using System;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace HuntersAndCollectors.Inventory
 {
@@ -20,6 +21,19 @@ namespace HuntersAndCollectors.Inventory
 
         [Header("Debug")]
         [SerializeField] private bool debugMoveTrace = true;
+
+        [Header("World Drop")]
+        [Tooltip("How far in front of the player a dropped item should spawn.")]
+        [Min(0f)]
+        [SerializeField] private float worldDropForwardOffset = 1f;
+
+        [Tooltip("Vertical offset applied when spawning an inventory-dropped pickup.")]
+        [Min(0f)]
+        [SerializeField] private float worldDropHeight = 0.25f;
+
+        [Tooltip("Optional clutter cleanup for player-dropped pickups. 0 = never despawn.")]
+        [Min(0f)]
+        [SerializeField] private float worldDropLifetimeSeconds = 120f;
 
         private InventoryGrid grid;
         private KnownItemsNet knownItems;
@@ -132,6 +146,7 @@ namespace HuntersAndCollectors.Inventory
         public event Action<InventorySnapshot> OnSnapshotReceived;
         public event Action<InventorySnapshot> OnSnapshotChanged;
         public event Action OnServerInventoryChanged;
+        public event Action<WorldDropResultEvent> OnWorldDropResult;
 
         public void BeginServerBatch()
         {
@@ -676,6 +691,279 @@ namespace HuntersAndCollectors.Inventory
         }
 
         [ServerRpc(RequireOwnership = true)]
+        public void RequestDropSlotToWorldServerRpc(int slotIndex, int quantity)
+        {
+            if (!IsServer || grid == null)
+            {
+                SendWorldDropResult(false, string.Empty, 0, "Drop failed: inventory unavailable.");
+                return;
+            }
+
+            if (!ServerIsValidSlotIndex(slotIndex))
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=InvalidSlot slot={slotIndex} owner={OwnerClientId}");
+                SendWorldDropResult(false, string.Empty, 0, "Drop failed: invalid inventory slot.");
+                return;
+            }
+
+            if (quantity <= 0)
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=InvalidQuantity slot={slotIndex} qty={quantity} owner={OwnerClientId}");
+                SendWorldDropResult(false, string.Empty, 0, "Drop failed: invalid quantity.");
+                return;
+            }
+
+            if (IsInventorySlotLockedByEquipment(slotIndex))
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=ReferenceEquippedLock slot={slotIndex} owner={OwnerClientId}");
+                SendWorldDropResult(false, string.Empty, 0, "Drop failed: item is currently equipped.");
+                return;
+            }
+
+            InventorySlot sourceSlot = grid.Slots[slotIndex];
+            if (sourceSlot.IsEmpty)
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=EmptySlot slot={slotIndex} owner={OwnerClientId}");
+                SendWorldDropResult(false, string.Empty, 0, "Drop failed: slot is empty.");
+                return;
+            }
+
+            string itemId = sourceSlot.ContentType == InventorySlotContentType.Instance
+                ? sourceSlot.Instance.ItemId
+                : sourceSlot.Stack.ItemId;
+
+            int availableQuantity = sourceSlot.ContentType == InventorySlotContentType.Instance
+                ? 1
+                : Mathf.Max(0, sourceSlot.Stack.Quantity);
+
+            if (quantity > availableQuantity)
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=QuantityTooHigh slot={slotIndex} requested={quantity} available={availableQuantity} itemId={itemId} owner={OwnerClientId}");
+                SendWorldDropResult(false, itemId, 0, "Drop failed: quantity is no longer available.");
+                return;
+            }
+
+            if (!TryGetItemDef(itemId, out ItemDef authoredDef) || authoredDef == null)
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=MissingItemDef slot={slotIndex} itemId={itemId} owner={OwnerClientId}");
+                SendWorldDropResult(false, itemId, 0, "Drop failed: item definition missing.");
+                return;
+            }
+
+            if (!CanSpawnWorldDropForDef(authoredDef))
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=Undroppable slot={slotIndex} itemId={itemId} owner={OwnerClientId}");
+                SendWorldDropResult(false, itemId, 0, $"Drop failed: {GetDisplayName(authoredDef)} has no valid world pickup prefab.");
+                return;
+            }
+
+            int requestedQuantity = sourceSlot.ContentType == InventorySlotContentType.Instance ? 1 : quantity;
+            if (!TryExtractDropPayloadFromSlot(slotIndex, requestedQuantity, out ItemDef extractedDef, out int extractedQuantity, out bool droppedInstance, out ItemInstance extractedInstance, out ItemInstanceData extractedInstanceData))
+            {
+                Debug.LogWarning($"[InventoryDrop][SERVER] RejectDrop reason=ExtractFailed slot={slotIndex} requested={requestedQuantity} itemId={itemId} owner={OwnerClientId}");
+                SendWorldDropResult(false, itemId, 0, "Drop failed: item could not be removed.");
+                return;
+            }
+
+            if (!TrySpawnWorldDrop(extractedDef, extractedQuantity, droppedInstance, extractedInstance, extractedInstanceData, out _))
+            {
+                RestoreDroppedPayload(extractedDef, extractedQuantity, droppedInstance, extractedInstance, extractedInstanceData);
+                Debug.LogError($"[InventoryDrop][SERVER] Spawn failed after extraction. Restored itemId={extractedDef.ItemId} qty={extractedQuantity} owner={OwnerClientId}");
+                SendWorldDropResult(false, extractedDef.ItemId, 0, "Drop failed: could not spawn world pickup.");
+                return;
+            }
+
+            ForceSendSnapshotToOwner();
+            ServerValidateEquipmentReferencesAfterInventoryMutation();
+
+            string droppedLabel = BuildDroppedLabel(extractedDef, extractedQuantity);
+            Debug.Log($"[InventoryDrop][SERVER] DropAccepted owner={OwnerClientId} slot={slotIndex} itemId={extractedDef.ItemId} qty={extractedQuantity} instance={droppedInstance}");
+            SendWorldDropResult(true, extractedDef.ItemId, extractedQuantity, $"Dropped {droppedLabel}");
+        }
+
+        private bool CanSpawnWorldDropForDef(ItemDef def)
+        {
+            if (def == null || def.WorldDropPrefab == null)
+                return false;
+
+            GameObject prefab = def.WorldDropPrefab;
+            if (prefab.GetComponent<NetworkObject>() == null)
+                return false;
+
+            ResourceDrop drop = prefab.GetComponent<ResourceDrop>();
+            if (drop == null)
+                drop = prefab.GetComponentInChildren<ResourceDrop>(true);
+
+            return drop != null;
+        }
+
+        private bool TryExtractDropPayloadFromSlot(int slotIndex, int requestedQuantity, out ItemDef def, out int extractedQuantity, out bool droppedInstance, out ItemInstance instancePayload, out ItemInstanceData instanceDataPayload)
+        {
+            def = null;
+            extractedQuantity = 0;
+            droppedInstance = false;
+            instancePayload = default;
+            instanceDataPayload = default;
+
+            if (!IsServer || grid == null || !ServerIsValidSlotIndex(slotIndex) || requestedQuantity <= 0)
+                return false;
+
+            if (IsInventorySlotLockedByEquipment(slotIndex))
+                return false;
+
+            InventorySlot slot = grid.Slots[slotIndex];
+            if (slot.IsEmpty)
+                return false;
+
+            string itemId = slot.ContentType == InventorySlotContentType.Instance
+                ? slot.Instance.ItemId
+                : slot.Stack.ItemId;
+
+            if (!TryGetItemDef(itemId, out def) || def == null)
+                return false;
+
+            if (slot.ContentType == InventorySlotContentType.Instance)
+            {
+                if (requestedQuantity != 1)
+                    return false;
+
+                droppedInstance = true;
+                extractedQuantity = 1;
+                instancePayload = slot.Instance;
+                instanceDataPayload = slot.InstanceData;
+                grid.Slots[slotIndex] = MakeEmptySlot();
+                return true;
+            }
+
+            int availableQuantity = Mathf.Max(0, slot.Stack.Quantity);
+            if (requestedQuantity > availableQuantity)
+                return false;
+
+            droppedInstance = false;
+            extractedQuantity = requestedQuantity;
+
+            if (requestedQuantity == availableQuantity)
+            {
+                grid.Slots[slotIndex] = MakeEmptySlot();
+                return true;
+            }
+
+            slot.Stack.Quantity -= requestedQuantity;
+            if (slot.Stack.Quantity <= 0)
+                grid.Slots[slotIndex] = MakeEmptySlot();
+            else
+                grid.Slots[slotIndex] = slot;
+
+            return true;
+        }
+
+        private void RestoreDroppedPayload(ItemDef def, int quantity, bool droppedInstance, in ItemInstance instancePayload, in ItemInstanceData instanceDataPayload)
+        {
+            if (!IsServer || grid == null || def == null)
+                return;
+
+            if (droppedInstance)
+            {
+                if (!grid.TryAddInstance(instancePayload, instanceDataPayload))
+                    Debug.LogError($"[InventoryDrop][SERVER] Failed to restore dropped instance itemId={def.ItemId} owner={OwnerClientId}");
+                return;
+            }
+
+            int remainder = grid.Add(def.ItemId, quantity);
+            if (remainder > 0)
+                Debug.LogError($"[InventoryDrop][SERVER] Failed to fully restore dropped stack itemId={def.ItemId} qty={quantity} remainder={remainder} owner={OwnerClientId}");
+        }
+
+        private bool TrySpawnWorldDrop(ItemDef def, int quantity, bool droppedInstance, in ItemInstance instancePayload, in ItemInstanceData instanceDataPayload, out ResourceDrop spawnedDrop)
+        {
+            spawnedDrop = null;
+
+            if (!IsServer || def == null || def.WorldDropPrefab == null)
+                return false;
+
+            GameObject go = Instantiate(def.WorldDropPrefab, GetWorldDropSpawnPosition(), Quaternion.identity);
+            go.transform.SetParent(null, true);
+            SceneManager.MoveGameObjectToScene(go, gameObject.scene);
+
+            if (!go.TryGetComponent<NetworkObject>(out NetworkObject netObj) || netObj == null)
+            {
+                Debug.LogError($"[InventoryDrop][SERVER] Prefab missing NetworkObject itemId={def.ItemId} prefab='{def.WorldDropPrefab.name}'", this);
+                Destroy(go);
+                return false;
+            }
+
+            if (!go.TryGetComponent<ResourceDrop>(out spawnedDrop) || spawnedDrop == null)
+                spawnedDrop = go.GetComponentInChildren<ResourceDrop>(true);
+
+            if (spawnedDrop == null)
+            {
+                Debug.LogError($"[InventoryDrop][SERVER] Prefab missing ResourceDrop itemId={def.ItemId} prefab='{def.WorldDropPrefab.name}'", this);
+                Destroy(go);
+                return false;
+            }
+
+            if (droppedInstance)
+                spawnedDrop.ServerInitializeInstance(instancePayload, instanceDataPayload, null, def);
+            else
+                spawnedDrop.ServerInitialize(Mathf.Max(1, quantity), null, def);
+
+            netObj.Spawn(true);
+
+            if (worldDropLifetimeSeconds > 0f)
+                spawnedDrop.ServerScheduleAutoDespawn(worldDropLifetimeSeconds);
+
+            return true;
+        }
+
+        private Vector3 GetWorldDropSpawnPosition()
+        {
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.forward;
+
+            forward.Normalize();
+            return transform.position + (forward * Mathf.Max(0f, worldDropForwardOffset)) + (Vector3.up * Mathf.Max(0f, worldDropHeight));
+        }
+
+        private static string GetDisplayName(ItemDef def)
+        {
+            if (def == null)
+                return "Item";
+
+            return string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
+        }
+
+        private static string BuildDroppedLabel(ItemDef def, int quantity)
+        {
+            string name = GetDisplayName(def);
+            return quantity > 1 ? $"{name} x{quantity}" : name;
+        }
+
+        private void SendWorldDropResult(bool success, string itemId, int quantity, string message)
+        {
+            if (!IsServer)
+                return;
+
+            ClientRpcParams rpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { OwnerClientId } }
+            };
+
+            WorldDropResultClientRpc(success, itemId ?? string.Empty, quantity, message ?? string.Empty, rpcParams);
+        }
+
+        [ClientRpc]
+        private void WorldDropResultClientRpc(bool success, string itemId, int quantity, string message, ClientRpcParams rpcParams = default)
+        {
+            if (!IsOwner)
+                return;
+
+            Debug.Log($"[InventoryDrop][CLIENT] success={success} itemId={itemId} qty={quantity} message={message}");
+            OnWorldDropResult?.Invoke(new WorldDropResultEvent(success, itemId, quantity, message));
+        }
+
+        [ServerRpc(RequireOwnership = true)]
         public void RequestMoveSlotServerRpc(int fromIndex, int toIndex)
         {
             if (!IsServer || grid == null)
@@ -741,6 +1029,22 @@ namespace HuntersAndCollectors.Inventory
             Debug.Log($"[InventoryNet][CLIENT] Snapshot received. W={snapshot.W} H={snapshot.H} Slots={snapshot.Slots?.Length ?? 0} IsOwner={IsOwner} OwnerClientId={OwnerClientId}");
 
             OnSnapshotReceived?.Invoke(snapshot);
+        }
+
+        public readonly struct WorldDropResultEvent
+        {
+            public WorldDropResultEvent(bool success, string itemId, int quantity, string message)
+            {
+                Success = success;
+                ItemId = itemId;
+                Quantity = quantity;
+                Message = message;
+            }
+
+            public bool Success { get; }
+            public string ItemId { get; }
+            public int Quantity { get; }
+            public string Message { get; }
         }
 
         public int AddItemServer(string itemId, int quantity, int durability = -1, int bonusStrength = 0, int bonusDexterity = 0, int bonusIntelligence = 0, FixedString64Bytes craftedBy = default)
@@ -876,6 +1180,11 @@ namespace HuntersAndCollectors.Inventory
         }
     }
 }
+
+
+
+
+
 
 
 
