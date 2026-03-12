@@ -1,4 +1,4 @@
-using Unity.Netcode;
+using HuntersAndCollectors.CameraSystem;
 using UnityEngine;
 
 namespace HuntersAndCollectors.Players
@@ -6,22 +6,38 @@ namespace HuntersAndCollectors.Players
     /// <summary>
     /// LocalPlayerCameraBinder
     /// --------------------------------------------------------------------
-    /// First-person camera wiring for NGO:
-    /// - There should be ONE persistent camera in the game.
-    /// - When the local player's NetworkObject spawns, this camera is
-    ///   parented to the player's CameraMount.
-    /// - Only binds for the owning client.
+    /// Hooks the one persistent runtime camera up to the local owning player.
     ///
-    /// Attach this to the persistent runtime Camera (bootstrap camera).
+    /// Why this exists:
+    /// - NGO may spawn players later than the bootstrap camera.
+    /// - We only want the local owner to control a camera.
+    /// - Camera assignment is a presentation concern, not gameplay authority.
+    ///
+    /// Current behaviour:
+    /// - Listen for PlayerNetworkRoot.LocalOwnerSpawned.
+    /// - Resolve a good follow target on that player.
+    /// - If a ThirdPersonOrbitCamera exists on this same GameObject, assign the target to it.
+    /// - If not, fall back to the older first-person style parenting behaviour.
+    ///
+    /// Attach this to the one persistent runtime camera object.
     /// </summary>
     public sealed class LocalPlayerCameraBinder : MonoBehaviour
     {
-        [Tooltip("If your player prefab has a child transform named CameraMount, we'll attach to it.")]
+        [Tooltip("Preferred child transform used as the camera follow anchor. Example: CameraMount.")]
         [SerializeField] private string cameraMountName = "CameraMount";
+
+        [Tooltip("Optional fallback child transform if the preferred camera mount does not exist.")]
+        [SerializeField] private string fallbackMountName = "ViewOrigin";
+
+        private ThirdPersonOrbitCamera orbitCamera;
+
+        private void Awake()
+        {
+            orbitCamera = GetComponent<ThirdPersonOrbitCamera>();
+        }
 
         private void OnEnable()
         {
-            // Your event is the best hook because it fires exactly when the *local owner* is ready.
             PlayerNetworkRoot.LocalOwnerSpawned += HandleLocalOwnerSpawned;
         }
 
@@ -32,27 +48,53 @@ namespace HuntersAndCollectors.Players
 
         private void HandleLocalOwnerSpawned(PlayerNetworkRoot localOwner)
         {
-            // Find the CameraMount on the spawned local player.
-            Transform mount = localOwner.transform.Find(cameraMountName);
+            if (localOwner == null)
+                return;
 
-            if (mount == null)
+            Transform resolvedTarget = ResolveCameraTarget(localOwner.transform);
+
+            // Keep Camera.main usage stable for systems that raycast from the main camera.
+            gameObject.tag = "MainCamera";
+
+            if (orbitCamera != null)
             {
-                Debug.LogError($"[LocalPlayerCameraBinder] Could not find '{cameraMountName}' under {localOwner.name}. " +
-                               $"Create a child transform named '{cameraMountName}' on the player prefab.");
+                // Third-person path: keep the camera unparented and let the orbit script drive it.
+                transform.SetParent(null, worldPositionStays: true);
+                orbitCamera.SetFollowTarget(resolvedTarget);
+
+                Debug.Log($"[LocalPlayerCameraBinder] Assigned ThirdPersonOrbitCamera target '{resolvedTarget.name}' for local owner '{localOwner.name}'.");
                 return;
             }
 
-            // Parent the camera to the mount so it moves with the player.
-            transform.SetParent(mount, worldPositionStays: false);
-
-            // Snap local position/rotation to match mount exactly.
+            // Legacy fallback path: preserve the old behaviour if the orbit component is not present.
+            transform.SetParent(resolvedTarget, worldPositionStays: false);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
 
-            // Ensure this camera is tagged correctly if you rely on Camera.main.
-            gameObject.tag = "MainCamera";
+            Debug.Log($"[LocalPlayerCameraBinder] Orbit camera not found. Falling back to parenting camera to '{resolvedTarget.name}'.");
+        }
 
-            Debug.Log($"[LocalPlayerCameraBinder] Bound persistent camera to local player mount '{cameraMountName}'.");
+        private Transform ResolveCameraTarget(Transform playerRoot)
+        {
+            if (playerRoot == null)
+                return transform;
+
+            if (!string.IsNullOrWhiteSpace(cameraMountName))
+            {
+                Transform preferred = playerRoot.Find(cameraMountName);
+                if (preferred != null)
+                    return preferred;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallbackMountName))
+            {
+                Transform fallback = playerRoot.Find(fallbackMountName);
+                if (fallback != null)
+                    return fallback;
+            }
+
+            Debug.LogWarning($"[LocalPlayerCameraBinder] Could not find '{cameraMountName}' or '{fallbackMountName}' under {playerRoot.name}. Falling back to player root.");
+            return playerRoot;
         }
     }
 }
