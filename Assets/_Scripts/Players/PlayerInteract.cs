@@ -1,36 +1,47 @@
 using System;
 using HuntersAndCollectors.Graves;
 using HuntersAndCollectors.Harvesting;
-using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Storage;
-using HuntersAndCollectors.UI.Storage;
 using HuntersAndCollectors.Vendors;
 using HuntersAndCollectors.Vendors.UI;
+using HuntersAndCollectors.UI.Storage;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 
 namespace HuntersAndCollectors.Players
 {
     public sealed class PlayerInteract : NetworkBehaviour
     {
-        private PlayerInputActions input;
+        public enum FocusTargetType
+        {
+            None,
+            ResourceNode,
+            Vendor,
+            Chest,
+            Grave,
+            Drop
+        }
 
         [Header("UI")]
         [SerializeField] private VendorWindowUI vendorUI;
         [SerializeField] private ChestWindowUI chestUI;
 
         [Header("Camera")]
-        [Tooltip("Camera used for reticle raycasting. If null, will use Camera.main.")]
+        [Tooltip("Camera used for center-screen interaction targeting. If null, the script falls back to Camera.main.")]
         [SerializeField] private Camera playerCamera;
 
+        [Tooltip("Player-side origin used for reach checks. This should stay near the character, not on the camera.")]
+        [SerializeField] private Transform viewOrigin;
+
         [Header("Interact Settings")]
-        [Tooltip("Max distance the player can interact.")]
+        [Tooltip("Max distance the player can interact from their body/view origin.")]
         [SerializeField] private float interactRange = 2.5f;
 
-        [Tooltip("Only objects on these layers can be interacted with.")]
+        [Tooltip("How far the center-screen aim ray can search for a candidate target before local reach filtering is applied.")]
+        [SerializeField] private float aimProbeDistance = 12f;
+
+        [Tooltip("Only objects on these layers are preferred for interaction targeting.")]
         [SerializeField] private LayerMask interactableMask;
 
         [Header("Harvesting")]
@@ -38,24 +49,25 @@ namespace HuntersAndCollectors.Players
 
         /// <summary>Node currently in the player's crosshair (updated every frame on owner).</summary>
         public ResourceNodeNet CurrentNodeFocus => currentNodeFocus;
+        public VendorInteractable CurrentVendorFocus => currentVendorFocus;
+        public StorageNet CurrentChestFocus => currentChestFocus;
+        public GraveNet CurrentGraveFocus => currentGraveFocus;
+        public ResourceDrop CurrentDropFocus => currentDropFocus;
+        public FocusTargetType CurrentFocusType => currentFocusType;
+
+        public Camera InteractCamera => playerCamera;
+        public float InteractRange => interactRange;
+        public LayerMask InteractableMask => interactableMask;
 
         private ResourceNodeNet currentNodeFocus;
         private VendorInteractable currentVendorFocus;
         private StorageNet currentChestFocus;
         private GraveNet currentGraveFocus;
         private ResourceDrop currentDropFocus;
+        private FocusTargetType currentFocusType;
 
-        private bool primaryHeld;
+        private bool harvestHoldActive;
         private double nextPrimarySwingAttemptClientTime;
-
-        public VendorInteractable CurrentVendorFocus => currentVendorFocus;
-        public StorageNet CurrentChestFocus => currentChestFocus;
-        public GraveNet CurrentGraveFocus => currentGraveFocus;
-        public ResourceDrop CurrentDropFocus => currentDropFocus;
-
-        public Camera InteractCamera => playerCamera;
-        public float InteractRange => interactRange;
-        public LayerMask InteractableMask => interactableMask;
 
         public override void OnNetworkSpawn()
         {
@@ -75,37 +87,21 @@ namespace HuntersAndCollectors.Players
                     interactableMask = 1 << layer;
             }
 
-            if (playerCamera == null)
-                playerCamera = Camera.main;
-
-            if (playerCamera == null)
-                Debug.LogWarning("[PlayerInteract] No camera assigned and Camera.main not found.");
+            EnsurePlayerCamera();
+            EnsureViewOrigin();
 
             if (harvestingNet == null)
                 harvestingNet = GetComponent<HarvestingNet>();
 
             if (harvestingNet == null)
-                Debug.LogWarning("[PlayerInteract] HarvestingNet not found on player prefab.");
-
-            input = new PlayerInputActions();
-            input.Player.Interact.performed += OnInteractPerformed;
-            input.Player.Primary.started += OnPrimaryStarted;
-            input.Player.Primary.canceled += OnPrimaryCanceled;
-            input.Enable();
+                Debug.LogWarning("[PlayerInteract] HarvestingNet not found on player prefab.", this);
         }
 
         private void OnDisable()
         {
-            primaryHeld = false;
+            harvestHoldActive = false;
             nextPrimarySwingAttemptClientTime = 0d;
-
-            if (input != null)
-            {
-                input.Player.Interact.performed -= OnInteractPerformed;
-                input.Player.Primary.started -= OnPrimaryStarted;
-                input.Player.Primary.canceled -= OnPrimaryCanceled;
-                input.Disable();
-            }
+            ClearCurrentFocus();
         }
 
         private void Update()
@@ -113,73 +109,108 @@ namespace HuntersAndCollectors.Players
             if (!IsOwner)
                 return;
 
-            UpdateFocusNode();
-            UpdateHeldPrimarySwing();
+            RefreshFocus();
         }
 
-        private void OnInteractPerformed(InputAction.CallbackContext ctx)
+        /// <summary>
+        /// Refreshes the current interact focus from the active gameplay camera.
+        /// This is owner-only presentation state used by prompts and input routing.
+        /// </summary>
+        public void RefreshFocus()
         {
-            TryInteractTap();
-        }
+            ClearCurrentFocus();
 
-        private void OnPrimaryStarted(InputAction.CallbackContext ctx)
-        {
-            if (!ctx.started)
+            if (!TryGetReachableInteractHit(out RaycastHit hit))
                 return;
 
-            primaryHeld = true;
-
-            // Single-click still performs one immediate primary action.
-            bool swungAtNode = HandlePrimaryAction();
-            if (swungAtNode)
+            currentVendorFocus = ResolveVendorFromHit(hit);
+            if (currentVendorFocus != null)
             {
-                float interval = harvestingNet != null
-                    ? harvestingNet.GetOwnerExpectedSwingIntervalSeconds(currentNodeFocus)
-                    : 0.1f;
+                currentFocusType = FocusTargetType.Vendor;
+                return;
+            }
 
-                nextPrimarySwingAttemptClientTime = Time.timeAsDouble + Mathf.Max(0.01f, interval);
-            }
-            else
+            currentChestFocus = ResolveChestFromHit(hit);
+            if (currentChestFocus != null)
             {
-                nextPrimarySwingAttemptClientTime = Time.timeAsDouble;
+                currentFocusType = FocusTargetType.Chest;
+                return;
             }
+
+            currentGraveFocus = ResolveGraveFromHit(hit);
+            if (currentGraveFocus != null)
+            {
+                currentFocusType = FocusTargetType.Grave;
+                return;
+            }
+
+            currentDropFocus = hit.collider != null ? hit.collider.GetComponentInParent<ResourceDrop>() : null;
+            if (currentDropFocus != null)
+            {
+                currentFocusType = FocusTargetType.Drop;
+                return;
+            }
+
+            currentNodeFocus = hit.collider != null ? hit.collider.GetComponentInParent<ResourceNodeNet>() : null;
+            if (currentNodeFocus != null)
+                currentFocusType = FocusTargetType.ResourceNode;
         }
 
-        private void OnPrimaryCanceled(InputAction.CallbackContext ctx)
+        /// <summary>
+        /// Handles the initial left-click press for interaction-owned primary actions.
+        /// Returns true when interaction consumed the click so combat should not also fire.
+        /// </summary>
+        public bool BeginPrimaryInput()
         {
-            if (!ctx.canceled)
-                return;
-
-            primaryHeld = false;
+            harvestHoldActive = false;
             nextPrimarySwingAttemptClientTime = 0d;
+
+            RefreshFocus();
+
+            if (harvestingNet != null && currentDropFocus != null)
+            {
+                harvestingNet.RequestPickup(currentDropFocus);
+                return true;
+            }
+
+            if (harvestingNet != null && currentNodeFocus != null)
+            {
+                harvestingNet.RequestHitNode(currentNodeFocus);
+                float interval = harvestingNet.GetOwnerExpectedSwingIntervalSeconds(currentNodeFocus);
+                nextPrimarySwingAttemptClientTime = Time.timeAsDouble + Mathf.Max(0.01f, interval);
+                harvestHoldActive = true;
+                return true;
+            }
+
+            return false;
         }
 
-        private void UpdateHeldPrimarySwing()
+        /// <summary>
+        /// Continues hold-to-swing harvesting while left mouse is still held.
+        /// </summary>
+        public void TickHeldPrimaryInput()
         {
-            if (!primaryHeld)
+            if (!harvestHoldActive)
                 return;
 
             double now = Time.timeAsDouble;
             if (now < nextPrimarySwingAttemptClientTime)
                 return;
 
-            if (!CanProcessPrimaryGameplayInput())
+            RefreshFocus();
+
+            // If focus drifted away from the node, stop the repeated harvest route.
+            if (currentNodeFocus == null || currentVendorFocus != null || currentChestFocus != null || currentGraveFocus != null || currentDropFocus != null)
             {
-                nextPrimarySwingAttemptClientTime = now + 0.05d;
+                harvestHoldActive = false;
+                nextPrimarySwingAttemptClientTime = 0d;
                 return;
             }
 
-            if (playerCamera == null || harvestingNet == null)
+            if (harvestingNet == null)
             {
-                nextPrimarySwingAttemptClientTime = now + 0.05d;
-                return;
-            }
-
-            UpdateFocusNode();
-
-            if (currentVendorFocus != null || currentChestFocus != null || currentDropFocus != null || currentNodeFocus == null)
-            {
-                nextPrimarySwingAttemptClientTime = now + 0.05d;
+                harvestHoldActive = false;
+                nextPrimarySwingAttemptClientTime = 0d;
                 return;
             }
 
@@ -188,168 +219,162 @@ namespace HuntersAndCollectors.Players
             nextPrimarySwingAttemptClientTime = now + Mathf.Max(0.01f, interval);
         }
 
-        private bool HandlePrimaryAction()
+        public void EndPrimaryInput()
         {
-            if (!CanProcessPrimaryGameplayInput())
-                return false;
+            harvestHoldActive = false;
+            nextPrimarySwingAttemptClientTime = 0d;
+        }
 
-            if (playerCamera == null)
-                return false;
+        /// <summary>
+        /// Handles the interact key. This only requests actions; authority remains on the server.
+        /// </summary>
+        public bool TryInteractPressed()
+        {
+            RefreshFocus();
 
-            UpdateFocusNode();
-
-            if (harvestingNet != null && currentDropFocus != null)
+            if (currentVendorFocus != null)
             {
-                harvestingNet.RequestPickup(currentDropFocus);
-                return false;
+                if (vendorUI == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] No VendorWindowUI found in scene.", this);
+                    return false;
+                }
+
+                vendorUI.Open(currentVendorFocus);
+                return true;
             }
 
-            if (harvestingNet != null && currentNodeFocus != null)
+            if (currentChestFocus != null)
             {
-                harvestingNet.RequestHitNode(currentNodeFocus);
+                if (chestUI == null)
+                {
+                    Debug.LogWarning("[PlayerInteract] No ChestWindowUI found in scene.", this);
+                    return false;
+                }
+
+                chestUI.Open(currentChestFocus);
+                return true;
+            }
+
+            if (currentGraveFocus != null)
+            {
+                currentGraveFocus.RequestRecoverAllServerRpc();
+                return true;
+            }
+
+            if (currentDropFocus != null && harvestingNet != null)
+            {
+                harvestingNet.RequestPickup(currentDropFocus);
                 return true;
             }
 
             return false;
         }
 
-        private bool CanProcessPrimaryGameplayInput()
-        {
-            if (InputState.GameplayLocked)
-                return false;
-
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return false;
-
-            return true;
-        }
-
-        private void TryInteractTap()
-        {
-            if (playerCamera == null)
-                return;
-
-            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-
-            if (!TryGetBestInteractHit(ray, out RaycastHit hit))
-                return;
-
-            Debug.Log($"[Interact] Hit object={hit.transform.name}");
-            Debug.Log($"[Interact] Hit collider={hit.collider.name}");
-
-            bool vendorOnHit = hit.collider.GetComponent<VendorInteractable>() != null;
-            bool vendorInParent = hit.collider.GetComponentInParent<VendorInteractable>() != null;
-            Debug.Log($"[Interact] VendorNet on hit? {vendorOnHit}");
-            Debug.Log($"[Interact] VendorNet in parent? {vendorInParent}");
-
-            VendorInteractable vendor = ResolveVendorFromHit(hit);
-            if (vendor != null)
-            {
-                if (vendorUI == null)
-                {
-                    Debug.LogWarning("[PlayerInteract] No VendorWindowUI found in scene.");
-                    return;
-                }
-
-                Debug.Log($"[Interact] Opening vendor window for vendor id={vendor.name}");
-                vendorUI.Open(vendor);
-                return;
-            }
-
-            StorageNet chest = ResolveChestFromHit(hit);
-            if (chest != null)
-            {
-                if (chestUI == null)
-                {
-                    Debug.LogWarning("[PlayerInteract] No ChestWindowUI found in scene.");
-                    return;
-                }
-
-                chestUI.Open(chest);
-                return;
-            }
-
-            GraveNet grave = ResolveGraveFromHit(hit);
-            if (grave != null)
-            {
-                grave.RequestRecoverAllServerRpc();
-                return;
-            }
-
-            ResourceDrop pickup = hit.collider.GetComponentInParent<ResourceDrop>();
-            if (pickup != null)
-            {
-                if (harvestingNet == null)
-                    return;
-
-                harvestingNet.RequestPickup(pickup);
-            }
-        }
-
-        private void UpdateFocusNode()
-        {
-            currentNodeFocus = null;
-            currentVendorFocus = null;
-            currentChestFocus = null;
-            currentGraveFocus = null;
-            currentDropFocus = null;
-
-            if (playerCamera == null)
-                return;
-
-            Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-
-            if (!TryGetBestInteractHit(ray, out RaycastHit hit))
-                return;
-
-            currentVendorFocus = ResolveVendorFromHit(hit);
-            if (currentVendorFocus != null)
-                return;
-
-            currentChestFocus = ResolveChestFromHit(hit);
-            if (currentChestFocus != null)
-                return;
-
-            currentGraveFocus = ResolveGraveFromHit(hit);
-            if (currentGraveFocus != null)
-                return;
-
-            currentDropFocus = hit.collider.GetComponentInParent<ResourceDrop>();
-            if (currentDropFocus != null)
-                return;
-
-            currentNodeFocus = hit.collider.GetComponentInParent<ResourceNodeNet>();
-        }
-
         /// <summary>
-        /// Finds the closest usable interaction hit in range.
-        /// This avoids false negatives when the first collider hit is not the actual interactable component.
+        /// Shared prompt helper so UI always reflects the same focus decision used by input.
         /// </summary>
-        private bool TryGetBestInteractHit(Ray ray, out RaycastHit bestHit)
+        public bool TryGetPromptText(out string promptText)
+        {
+            promptText = string.Empty;
+
+            switch (currentFocusType)
+            {
+                case FocusTargetType.Vendor:
+                    promptText = "E: Open Vendor";
+                    return true;
+
+                case FocusTargetType.Chest:
+                    promptText = "E: Open Chest";
+                    return true;
+
+                case FocusTargetType.Grave:
+                    promptText = "E: Recover Grave";
+                    return true;
+
+                case FocusTargetType.Drop:
+                    promptText = "E: Pick Up";
+                    return true;
+
+                case FocusTargetType.ResourceNode:
+                    if (currentNodeFocus == null)
+                        return false;
+
+                    promptText = currentNodeFocus.ResourceType switch
+                    {
+                        ResourceType.Wood => "LMB: Chop Tree",
+                        ResourceType.Stone => "LMB: Mine Rock",
+                        ResourceType.Fiber => "LMB: Gather",
+                        _ => "LMB: Harvest"
+                    };
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void EnsurePlayerCamera()
+        {
+            if (playerCamera != null)
+                return;
+
+            playerCamera = Camera.main;
+            if (playerCamera != null)
+                Debug.Log("[PlayerInteract] Resolved Camera.main at runtime.", this);
+        }
+
+        private void EnsureViewOrigin()
+        {
+            if (viewOrigin != null)
+                return;
+
+            viewOrigin = transform.Find("ViewOrigin");
+            if (viewOrigin == null)
+                viewOrigin = transform;
+        }
+
+        private bool TryGetReachableInteractHit(out RaycastHit bestHit)
         {
             bestHit = default;
 
+            if (!TryBuildCenterScreenRay(out Ray aimRay))
+                return false;
+
+            float probeDistance = Mathf.Max(interactRange, aimProbeDistance);
             RaycastHit[] maskedHits = Physics.RaycastAll(
-                ray,
-                interactRange,
-                interactableMask,
+                aimRay,
+                probeDistance,
+                interactableMask.value != 0 ? interactableMask : Physics.DefaultRaycastLayers,
                 QueryTriggerInteraction.Collide);
 
             if (TryPickClosestUsableHit(maskedHits, out bestHit))
                 return true;
 
-            // Fallback for early setup where interactable layers may not yet be configured.
-            RaycastHit[] allHits = Physics.RaycastAll(
-                ray,
-                interactRange,
+            RaycastHit[] fallbackHits = Physics.RaycastAll(
+                aimRay,
+                probeDistance,
                 Physics.DefaultRaycastLayers,
                 QueryTriggerInteraction.Collide);
 
-            return TryPickClosestUsableHit(allHits, out bestHit);
+            return TryPickClosestUsableHit(fallbackHits, out bestHit);
+        }
+
+        private bool TryBuildCenterScreenRay(out Ray aimRay)
+        {
+            EnsurePlayerCamera();
+            aimRay = default;
+
+            if (playerCamera == null)
+                return false;
+
+            aimRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            return true;
         }
 
         /// <summary>
-        /// Chooses the nearest hit that has any currently supported interaction target.
+        /// Chooses the nearest target under the reticle that is also actually reachable by the player.
+        /// This keeps third-person camera distance from breaking short-range gameplay actions.
         /// </summary>
         private bool TryPickClosestUsableHit(RaycastHit[] hits, out RaycastHit bestHit)
         {
@@ -359,45 +384,68 @@ namespace HuntersAndCollectors.Players
                 return false;
 
             Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+            Vector3 interactionOrigin = ResolveInteractionOrigin();
 
             for (int i = 0; i < hits.Length; i++)
             {
                 RaycastHit hit = hits[i];
-                if (hit.collider == null)
+                if (!IsSupportedFocusHit(hit))
                     continue;
 
-                if (ResolveVendorFromHit(hit) != null)
-                {
-                    bestHit = hit;
-                    return true;
-                }
+                if (!IsHitWithinReach(hit, interactionOrigin))
+                    continue;
 
-                if (ResolveChestFromHit(hit) != null)
-                {
-                    bestHit = hit;
-                    return true;
-                }
-
-                if (ResolveGraveFromHit(hit) != null)
-                {
-                    bestHit = hit;
-                    return true;
-                }
-
-                if (hit.collider.GetComponentInParent<ResourceDrop>() != null)
-                {
-                    bestHit = hit;
-                    return true;
-                }
-
-                if (hit.collider.GetComponentInParent<ResourceNodeNet>() != null)
-                {
-                    bestHit = hit;
-                    return true;
-                }
+                bestHit = hit;
+                return true;
             }
 
             return false;
+        }
+
+        private bool IsSupportedFocusHit(RaycastHit hit)
+        {
+            if (hit.collider == null)
+                return false;
+
+            if (ResolveVendorFromHit(hit) != null)
+                return true;
+
+            if (ResolveChestFromHit(hit) != null)
+                return true;
+
+            if (ResolveGraveFromHit(hit) != null)
+                return true;
+
+            if (hit.collider.GetComponentInParent<ResourceDrop>() != null)
+                return true;
+
+            return hit.collider.GetComponentInParent<ResourceNodeNet>() != null;
+        }
+
+        private bool IsHitWithinReach(RaycastHit hit, Vector3 interactionOrigin)
+        {
+            if (hit.collider == null)
+                return false;
+
+            Vector3 closestPoint = hit.collider.ClosestPoint(interactionOrigin);
+            float distance = Vector3.Distance(interactionOrigin, closestPoint);
+            return distance <= Mathf.Max(0.01f, interactRange);
+        }
+
+        private Vector3 ResolveInteractionOrigin()
+        {
+            EnsureViewOrigin();
+            return viewOrigin != null ? viewOrigin.position : transform.position;
+        }
+
+        private void ClearCurrentFocus()
+        {
+            currentNodeFocus = null;
+            currentVendorFocus = null;
+            currentChestFocus = null;
+            currentGraveFocus = null;
+            currentDropFocus = null;
+            currentFocusType = FocusTargetType.None;
         }
 
         public static VendorInteractable ResolveVendorFromHit(RaycastHit hit)

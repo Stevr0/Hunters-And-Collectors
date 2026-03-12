@@ -3989,6 +3989,7 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -4127,6 +4128,39 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Players.LocalPlayerCameraBinder
   cameraMountName: CameraMount
+  fallbackMountName: ViewOrigin
+--- !u!114 &330585549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a95f9f2cbe09114daca64a102927105, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.CameraSystem.ThirdPersonOrbitCamera
+  followTarget: {fileID: 7343950372854504305, guid: 9df120c089f1bec4bbfa1dd1805753e6, type: 3}
+  lookHeightOffset: 1.4
+  followSmoothing: 0.02
+  yawSpeed: 1
+  pitchSpeed: 1
+  minPitch: -70
+  maxPitch: 70
+  defaultPitch: 12
+  rotationSmoothing: 0.05
+  defaultDistance: 4
+  minZoom: 1
+  maxZoom: 10
+  zoomSpeed: 20
+  zoomSmoothing: 0.06
+  collisionRadius: 0.2
+  collisionBuffer: 0.1
+  collisionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  drawDebugGizmos: 0
 --- !u!1 &331460707
 GameObject:
   m_ObjectHideFlags: 0

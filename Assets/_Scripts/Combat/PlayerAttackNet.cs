@@ -3,14 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using HuntersAndCollectors.Actors;
 using HuntersAndCollectors.Items;
-using HuntersAndCollectors.Input;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
 using HuntersAndCollectors.Stats;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 
 namespace HuntersAndCollectors.Combat
 {
@@ -94,8 +91,9 @@ namespace HuntersAndCollectors.Combat
         [Header("Server Ray Validation")]
         [SerializeField] private float originTolerance = 1.25f;
 
-        private PlayerInputActions input;
-
+        [Header("Client Aim")]
+        [Tooltip("How far the local center-screen ray can search for a target before the server applies melee range validation.")]
+        [SerializeField] private float clientAimProbeDistance = 12f;
         // Client-side pacing only (never authoritative).
         private bool primaryHeld;
         private double nextAttackAttemptClientTime;
@@ -158,105 +156,113 @@ namespace HuntersAndCollectors.Combat
                     hitMask = 1 << interactableLayer;
             }
 
-            if (playerCamera == null)
-                playerCamera = Camera.main;
-
-            if (playerCamera == null)
-                Debug.LogWarning("[Combat] PlayerAttackNet could not find a player camera.", this);
-
-            input = new PlayerInputActions();
-            input.Player.Primary.started += OnPrimaryStarted;
-            input.Player.Primary.canceled += OnPrimaryCanceled;
-            input.Enable();
+            EnsurePlayerCamera();
         }
 
         private void OnDisable()
         {
             primaryHeld = false;
             nextAttackAttemptClientTime = 0d;
-
-            if (input == null)
-                return;
-
-            input.Player.Primary.started -= OnPrimaryStarted;
-            input.Player.Primary.canceled -= OnPrimaryCanceled;
-            input.Disable();
-            input = null;
         }
 
-        private void Update()
+        /// <summary>
+        /// Handles the first left-click press when combat owns the current primary route.
+        /// </summary>
+        public bool BeginPrimaryInput()
+        {
+            if (!IsOwner || !IsClient)
+                return false;
+
+            primaryHeld = true;
+            bool sent = TryRequestAttackFromAim();
+            float interval = GetOwnerExpectedSwingIntervalSeconds();
+            nextAttackAttemptClientTime = Time.timeAsDouble + (sent ? Mathf.Max(0.01f, interval) : 0.05d);
+            return sent;
+        }
+
+        /// <summary>
+        /// Continues hold-to-repeat combat swings while the primary button is held.
+        /// </summary>
+        public void TickHeldPrimaryInput()
         {
             if (!IsOwner || !IsClient || !primaryHeld)
                 return;
-
-            if (!CanProcessPrimaryGameplayInput())
-            {
-                nextAttackAttemptClientTime = Time.timeAsDouble + 0.05d;
-                return;
-            }
 
             double now = Time.timeAsDouble;
             if (now < nextAttackAttemptClientTime)
                 return;
 
-            bool sent = TryRequestAttackFromRaycast();
+            bool sent = TryRequestAttackFromAim();
             float interval = GetOwnerExpectedSwingIntervalSeconds();
             nextAttackAttemptClientTime = now + (sent ? Mathf.Max(0.01f, interval) : 0.05d);
         }
 
-        private void OnPrimaryStarted(InputAction.CallbackContext ctx)
+        public void EndPrimaryInput()
         {
-            if (!IsOwner || !IsClient || !ctx.started)
-                return;
-
-            if (!CanProcessPrimaryGameplayInput())
-            {
-                primaryHeld = false;
-                nextAttackAttemptClientTime = 0d;
-                return;
-            }
-
-            primaryHeld = true;
-            bool sent = TryRequestAttackFromRaycast();
-            float interval = GetOwnerExpectedSwingIntervalSeconds();
-            nextAttackAttemptClientTime = Time.timeAsDouble + (sent ? Mathf.Max(0.01f, interval) : 0.05d);
-        }
-
-        private void OnPrimaryCanceled(InputAction.CallbackContext ctx)
-        {
-            if (!ctx.canceled)
-                return;
-
             primaryHeld = false;
             nextAttackAttemptClientTime = 0d;
         }
 
-        /// <summary>
-        /// CLIENT OWNER ONLY: send attack suggestion. The server decides actual hit.
-        /// We still raycast locally for a target hint, but this hint is non-authoritative.
-        /// </summary>
-        private bool TryRequestAttackFromRaycast()
+        private void EnsurePlayerCamera()
         {
+            if (playerCamera != null)
+                return;
+
+            playerCamera = Camera.main;
+            if (playerCamera == null)
+                return;
+
+            Debug.Log("[Combat] PlayerAttackNet resolved Camera.main at runtime.", this);
+        }
+
+        /// <summary>
+        /// CLIENT OWNER ONLY: build a third-person aim request.
+        ///
+        /// The reticle target is acquired from the camera center, but the origin sent to the server
+        /// stays on the player ViewOrigin so server melee validation still measures from the character.
+        /// </summary>
+        private bool TryRequestAttackFromAim()
+        {
+            if (!TryBuildOwnerAim(out Vector3 requestOrigin, out Vector3 requestDirection, out ulong suggestedTargetId))
+                return false;
+
+            // Always send attempt so accepted misses can still animate + consume cooldown.
+            RequestAttackServerRpc(suggestedTargetId, requestOrigin, requestDirection);
+            return true;
+        }
+
+        private bool TryBuildOwnerAim(out Vector3 requestOrigin, out Vector3 requestDirection, out ulong suggestedTargetId)
+        {
+            requestOrigin = Vector3.zero;
+            requestDirection = Vector3.forward;
+            suggestedTargetId = 0;
+
+            EnsurePlayerCamera();
+
             if (!IsOwner || !IsClient || playerCamera == null)
                 return false;
 
-            if (!CanProcessPrimaryGameplayInput())
-                return false;
+            requestOrigin = viewOrigin != null ? viewOrigin.position : transform.position;
 
-            Vector3 origin = playerCamera.transform.position;
-            Vector3 direction = playerCamera.transform.forward;
+            Ray aimRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            float probeDistance = Mathf.Max(attackRange, clientAimProbeDistance);
+            Vector3 aimPoint = aimRay.origin + (aimRay.direction * probeDistance);
 
-            ulong suggestedTargetId = 0;
-
-            if (Physics.Raycast(origin, direction, out RaycastHit hit, attackRange, hitMask, QueryTriggerInteraction.Ignore))
+            int rayMask = hitMask.value != 0 ? hitMask.value : Physics.DefaultRaycastLayers;
+            if (Physics.Raycast(aimRay, out RaycastHit hit, probeDistance, rayMask, QueryTriggerInteraction.Ignore))
             {
+                aimPoint = hit.point;
+
                 DamageableNet suggested = ResolveDamageableFromCollider(hit.collider, out _);
                 if (suggested != null && suggested.IsSpawned)
                     suggestedTargetId = suggested.NetworkObjectId;
             }
 
-            // Always send attempt so accepted misses can still animate + consume cooldown.
-            RequestAttackServerRpc(suggestedTargetId, origin, direction);
+            Vector3 directionFromPlayer = aimPoint - requestOrigin;
+            if (directionFromPlayer.sqrMagnitude < 0.0001f)
+                directionFromPlayer = viewOrigin != null ? viewOrigin.forward : transform.forward;
+
+            requestDirection = directionFromPlayer.normalized;
             return true;
         }
 
@@ -742,19 +748,6 @@ namespace HuntersAndCollectors.Combat
 
             return 1f / swingSpeed;
         }
-
-        private bool CanProcessPrimaryGameplayInput()
-        {
-            // Client-side input gate only. Server authority still validates hits/damage.
-            if (InputState.GameplayLocked)
-                return false;
-
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return false;
-
-            return true;
-        }
-
         private void LogAttackRejected(string reason)
         {
             Debug.Log($"[Combat] Attack rejected reason={reason}", this);
@@ -774,6 +767,13 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+
+
+
+
+
+
+
 
 
 

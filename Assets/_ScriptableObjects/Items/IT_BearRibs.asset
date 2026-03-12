@@ -14,45 +14,48 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_bearribs
   DisplayName: Bear Ribs
+  Category: 3
   Icon: {fileID: 21300000, guid: b81e209f025e80c46ad21c6640139d8e, type: 3}
   MaxStack: 99
-  Category: 3
-  visualPrefab: {fileID: 2427643295637099219, guid: 65cb2b9c57040194e918610699f44c84, type: 3}
-  equipLocalPosition: {x: 0, y: 0, z: 0}
-  equipLocalEuler: {x: 0, y: 0, z: 0}
-  equipLocalScale: {x: 1, y: 1, z: 1}
   Description: Tastes better cooked!
-  PropertiesText: 
+  PropertiesText: 'Food Health: +20
+
+    Food Stamina: +5
+
+    Health Regen: +2/s
+
+    Stamina
+    Regen: +1/s
+
+    Duration: 600s'
   BaseValue: 1
   Weight: 1
   Rarity: 1
   CraftTime: 1
-  BaseQuality: 1
-  MaxDurability: 0
   IsInstanceItem: 0
-  DamageMin: 0
-  DamageMax: 0
-  DefenceMin: 0
-  DefenceMax: 0
-  SwingSpeedMin: 0
-  SwingSpeedMax: 0
-  MovementSpeedMin: 0
-  MovementSpeedMax: 0
-  DurabilityMin: 0
-  DurabilityMax: 0
-  Damage: 0
-  Defence: 0
-  AttackBonus: 0
-  SwingSpeed: 1
-  MovementSpeed: 1
-  Strength: 0
-  Dexterity: 0
-  LegacyDexterity: 0
-  Intelligence: 0
+  visualPrefab: {fileID: 4243029077377111302, guid: ee00be5f99680744eb036bb23662850f, type: 3}
+  worldDropPrefab: {fileID: 4243029077377111302, guid: ee00be5f99680744eb036bb23662850f, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
   IsEquippable: 0
   EquipSlot: 0
   Handedness: 0
   ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 0.01
+  SwingSpeedMax: 0.01
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Strength: 0
+  Dexterity: 0
+  Intelligence: 0
   IsFood: 1
   FoodMaxHealthBonus: 20
   FoodMaxStaminaBonus: 5

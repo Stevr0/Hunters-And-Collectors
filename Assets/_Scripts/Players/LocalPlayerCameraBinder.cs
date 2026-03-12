@@ -34,6 +34,11 @@ namespace HuntersAndCollectors.Players
         private void Awake()
         {
             orbitCamera = GetComponent<ThirdPersonOrbitCamera>();
+
+            // Mark the persistent runtime camera as MainCamera immediately.
+            // This avoids a spawn-order race where owner gameplay scripts ask for
+            // Camera.main before the local owner bind event fires.
+            gameObject.tag = "MainCamera";
         }
 
         private void OnEnable()
@@ -98,3 +103,4 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
