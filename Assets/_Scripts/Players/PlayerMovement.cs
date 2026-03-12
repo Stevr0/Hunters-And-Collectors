@@ -73,6 +73,7 @@ namespace HuntersAndCollectors.Players
         private CharacterController controller;
         private SkillsNet skillsNet;
         private PlayerVitalsNet playerVitals;
+        private PlayerCarryNet playerCarry;
 
         // --- Client-side input state (owner only) ---
         private PlayerInputActions input;
@@ -108,6 +109,7 @@ namespace HuntersAndCollectors.Players
             controller = GetComponent<CharacterController>();
             skillsNet = GetComponent<SkillsNet>();
             playerVitals = GetComponent<PlayerVitalsNet>();
+            playerCarry = GetComponent<PlayerCarryNet>();
 
             // If user didn't assign animator, try to find it on children.
             if (animator == null)
@@ -149,6 +151,7 @@ namespace HuntersAndCollectors.Players
 
             if (IsServer)
             {
+                playerCarry = GetComponent<PlayerCarryNet>();
                 serverVerticalVelocity = -Mathf.Abs(groundedStickVelocity);
             }
         }
@@ -282,7 +285,9 @@ namespace HuntersAndCollectors.Players
 
             bool isTryingToMove = serverMoveInput.magnitude >= minMoveInputToCount;
             bool wantsSprint = serverSprintHeld && isTryingToMove;
-            bool canSprint = !wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0;
+            float encumbranceMultiplier = playerCarry != null ? Mathf.Clamp(playerCarry.CurrentMovementMultiplier, 0f, 1f) : 1f;
+            bool canMoveFromEncumbrance = encumbranceMultiplier > 0f;
+            bool canSprint = canMoveFromEncumbrance && (!wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0);
             bool isSprinting = wantsSprint && canSprint;
 
             if (isSprinting && skillsNet != null)
@@ -290,6 +295,8 @@ namespace HuntersAndCollectors.Players
                 int runningLevel = skillsNet.Get(SkillId.Running).Level;
                 speed = RunningSkillTuning.GetRunSpeed(walkSpeed, maxMoveSpeed, runningLevel);
             }
+
+            speed *= encumbranceMultiplier;
 
             // 4) Apply server-side vertical physics so we stay grounded on height transitions.
             bool wasGrounded = controller.isGrounded;
@@ -318,7 +325,7 @@ namespace HuntersAndCollectors.Players
             }
 
             // 6) Server-authoritative sprint stamina drain. If stamina runs out, next frame will force walk.
-            if (wantsSprint && playerVitals != null && sprintStaminaCostPerSecond > 0f)
+            if (wantsSprint && speed > 0f && playerVitals != null && sprintStaminaCostPerSecond > 0f)
             {
                 serverSprintStaminaSpendAccumulator += sprintStaminaCostPerSecond * Time.deltaTime;
                 while (serverSprintStaminaSpendAccumulator >= 1f)
@@ -346,7 +353,8 @@ namespace HuntersAndCollectors.Players
             // Only award XP while sprinting, moving, and having enough stamina to actually sprint.
             bool isTryingToMove = serverMoveInput.magnitude >= minMoveInputToCount;
             bool wantsSprint = serverSprintHeld && isTryingToMove;
-            bool canSprint = !wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0;
+            bool canMoveFromEncumbrance = playerCarry == null || playerCarry.CurrentMovementMultiplier > 0f;
+            bool canSprint = canMoveFromEncumbrance && (!wantsSprint || playerVitals == null || playerVitals.CurrentStamina > 0);
             bool isRunning = wantsSprint && canSprint;
 
             if (!isRunning)

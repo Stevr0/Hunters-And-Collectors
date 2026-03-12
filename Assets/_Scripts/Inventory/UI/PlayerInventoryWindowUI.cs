@@ -76,6 +76,7 @@ namespace HuntersAndCollectors.Inventory.UI
         private PlayerInventoryNet currentInventoryNet;
         private PlayerEquipmentNet currentEquipmentNet;
         private PlayerVitalsNet currentVitals;
+        private PlayerCarryNet currentCarry;
         private BuildPlacementController currentPlacementController;
 
         private readonly List<InventoryGridSlotUI> slotUIs = new();
@@ -130,6 +131,7 @@ namespace HuntersAndCollectors.Inventory.UI
             currentInventoryNet = null;
             currentEquipmentNet = null;
             currentVitals = null;
+            currentCarry = null;
             currentPlacementController = null;
 
             RestoreWindowFromPlacementMode();
@@ -411,6 +413,7 @@ namespace HuntersAndCollectors.Inventory.UI
 
                 currentInventoryNet = inv;
                 currentVitals = inv.GetComponent<PlayerVitalsNet>();
+                currentCarry = inv.GetComponent<PlayerCarryNet>();
                 currentEquipmentNet = inv.GetComponent<PlayerEquipmentNet>();
                 SubscribeToInventorySnapshots();
                 ForceNextRender();
@@ -451,6 +454,13 @@ namespace HuntersAndCollectors.Inventory.UI
             {
                 signature = (signature * 31) + currentEquipmentNet.GetReferenceInventorySlotIndex(EquipSlot.MainHand);
                 signature = (signature * 31) + currentEquipmentNet.GetReferenceInventorySlotIndex(EquipSlot.OffHand);
+            }
+            if (currentCarry != null)
+            {
+                signature = (signature * 31) + currentCarry.CurrentCarryWeight.GetHashCode();
+                signature = (signature * 31) + currentCarry.MaxCarryWeight.GetHashCode();
+                signature = (signature * 31) + (int)currentCarry.CurrentEncumbranceTier;
+                signature = (signature * 31) + currentCarry.CurrentMovementMultiplier.GetHashCode();
             }
             if (signature == lastRenderedSignature)
                 return;
@@ -553,6 +563,35 @@ namespace HuntersAndCollectors.Inventory.UI
                 uiSlot.SetEmpty();
                 uiSlot.gameObject.SetActive(IsSlotVisibleInCurrentPresentation(i));
             }
+
+            UpdateTitleText();
+        }
+
+        private void UpdateTitleText()
+        {
+            if (titleText == null)
+                return;
+
+            string value = "Inventory";
+            if (currentCarry != null)
+            {
+                value = $"Inventory\nWeight: {currentCarry.CurrentCarryWeight:0.0} / {currentCarry.MaxCarryWeight:0.0}";
+                if (currentCarry.CurrentEncumbranceTier != EncumbranceTier.Normal)
+                    value += $" ({FormatEncumbranceTier(currentCarry.CurrentEncumbranceTier)})";
+            }
+
+            titleText.text = value;
+        }
+
+        private static string FormatEncumbranceTier(EncumbranceTier tier)
+        {
+            return tier switch
+            {
+                EncumbranceTier.Heavy => "Heavy",
+                EncumbranceTier.VeryHeavy => "Very Heavy",
+                EncumbranceTier.Overloaded => "Overloaded",
+                _ => "Normal"
+            };
         }
 
         private bool IsSlotVisibleInCurrentPresentation(int slotIndex)
