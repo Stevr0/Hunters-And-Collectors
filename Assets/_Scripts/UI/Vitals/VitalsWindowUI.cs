@@ -30,6 +30,9 @@ namespace HuntersAndCollectors.UI
         [SerializeField] private Image manaFill;
         [SerializeField] private TMP_Text manaValueText;
 
+        [Header("Weight")]
+        [SerializeField] private TMP_Text weightText;
+
         [Header("Refresh")]
         [SerializeField, Min(0.05f)] private float pollIntervalSeconds = 0.25f;
 
@@ -37,6 +40,7 @@ namespace HuntersAndCollectors.UI
         private IStatsProvider boundStatsProvider;
         private HealthNet boundHealth;
         private PlayerVitalsNet boundVitals;
+        private PlayerCarryNet boundCarry;
 
         private float nextPollTime;
         private bool warnedMissingStatsProvider;
@@ -64,6 +68,7 @@ namespace HuntersAndCollectors.UI
             boundStatsProvider = null;
             boundHealth = null;
             boundVitals = null;
+            boundCarry = null;
             warnedMissingStatsProvider = false;
         }
 
@@ -80,6 +85,7 @@ namespace HuntersAndCollectors.UI
             boundStatsProvider = localPlayer.GetComponentInParent<IStatsProvider>();
             boundHealth = localPlayer.GetComponent<HealthNet>();
             boundVitals = localPlayer.GetComponent<PlayerVitalsNet>();
+            boundCarry = localPlayer.GetComponent<PlayerCarryNet>();
             warnedMissingStatsProvider = false;
         }
 
@@ -102,6 +108,7 @@ namespace HuntersAndCollectors.UI
                 RenderChannel(healthFill, healthValueText, 0f, 0f);
                 RenderChannel(staminaFill, staminaValueText, 0f, 0f);
                 RenderChannel(manaFill, manaValueText, 0f, 0f);
+                UpdateWeightDisplay();
                 return;
             }
 
@@ -116,6 +123,7 @@ namespace HuntersAndCollectors.UI
                 RenderChannel(healthFill, healthValueText, 0f, 0f);
                 RenderChannel(staminaFill, staminaValueText, 0f, 0f);
                 RenderChannel(manaFill, manaValueText, 0f, 0f);
+                UpdateWeightDisplay();
                 return;
             }
 
@@ -138,6 +146,43 @@ namespace HuntersAndCollectors.UI
             RenderChannel(healthFill, healthValueText, healthCurrent, healthMax);
             RenderChannel(staminaFill, staminaValueText, staminaCurrent, staminaMax);
             RenderChannel(manaFill, manaValueText, manaCurrent, manaMax);
+            UpdateWeightDisplay();
+        }
+
+        private void UpdateWeightDisplay()
+        {
+            if (weightText == null)
+                return;
+
+            if (boundCarry == null)
+            {
+                weightText.text = "Weight: 0.0 / 0.0";
+                weightText.color = Color.white;
+                return;
+            }
+
+            float current = boundCarry.CurrentCarryWeight;
+            float max = boundCarry.MaxCarryWeight;
+            weightText.text = $"Weight: {current:0.0} / {max:0.0}";
+
+            switch (boundCarry.CurrentEncumbranceTier)
+            {
+                case EncumbranceTier.Heavy:
+                    weightText.color = Color.yellow;
+                    break;
+
+                case EncumbranceTier.VeryHeavy:
+                    weightText.color = new Color(1f, 0.5f, 0f);
+                    break;
+
+                case EncumbranceTier.Overloaded:
+                    weightText.color = Color.red;
+                    break;
+
+                default:
+                    weightText.color = Color.white;
+                    break;
+            }
         }
 
         private static void RenderChannel(Image fill, TMP_Text text, float current, float max)
