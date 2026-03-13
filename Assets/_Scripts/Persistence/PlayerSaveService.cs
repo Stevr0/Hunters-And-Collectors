@@ -140,6 +140,7 @@ namespace HuntersAndCollectors.Persistence
             data.inventory = BuildInventorySave(playerRoot.Inventory);
             data.equipment = BuildEquipmentSave(playerRoot.Equipment);
             data.location = BuildLocationSave(playerRoot, playerKey);
+            data.progressionFlags = playerRoot.Progression != null ? playerRoot.Progression.ExportToSave() : new List<string>();
             return data;
         }
 
@@ -220,6 +221,9 @@ namespace HuntersAndCollectors.Persistence
             Vector3 position = playerRoot.transform.position;
             float yaw = playerRoot.transform.eulerAngles.y;
             location.hasSavedPosition = true;
+            location.sceneName = string.IsNullOrWhiteSpace(playerRoot.CurrentWorldSceneName)
+                ? (playerRoot.gameObject.scene.IsValid() ? playerRoot.gameObject.scene.name : string.Empty)
+                : playerRoot.CurrentWorldSceneName;
             location.position = new Vector3SaveData { x = position.x, y = position.y, z = position.z };
             location.rotationY = yaw;
 
@@ -257,6 +261,9 @@ namespace HuntersAndCollectors.Persistence
 
             if (data.knownItems == null)
                 data.knownItems = new List<KnownItemSaveData>();
+
+            if (data.progressionFlags == null)
+                data.progressionFlags = new List<string>();
 
             for (int i = data.knownItems.Count - 1; i >= 0; i--)
             {
@@ -367,6 +374,21 @@ namespace HuntersAndCollectors.Persistence
                 }
             }
 
+            for (int i = data.progressionFlags.Count - 1; i >= 0; i--)
+            {
+                string flagId = data.progressionFlags[i];
+                if (string.IsNullOrWhiteSpace(flagId))
+                {
+                    data.progressionFlags.RemoveAt(i);
+                    continue;
+                }
+
+                data.progressionFlags[i] = flagId.Trim();
+            }
+
+            var uniqueFlags = new HashSet<string>(data.progressionFlags, StringComparer.OrdinalIgnoreCase);
+            data.progressionFlags = new List<string>(uniqueFlags);
+
             ValidateAndSanitizeEquipment(data);
             ValidateAndSanitizeLocation(data, playerRoot);
             return true;
@@ -376,6 +398,10 @@ namespace HuntersAndCollectors.Persistence
         {
             if (data.location == null)
                 data.location = new PlayerLocationSaveData();
+
+            data.location.sceneName = string.IsNullOrWhiteSpace(data.location.sceneName)
+                ? string.Empty
+                : data.location.sceneName.Trim();
 
             if (!data.location.hasSavedPosition)
                 return;
@@ -520,11 +546,13 @@ namespace HuntersAndCollectors.Persistence
             playerRoot.KnownItems?.ServerLoadEntries(data.knownItems);
             playerRoot.Inventory?.ServerLoadGrid(data.inventory);
             playerRoot.Equipment?.ServerApplySaveData(data.equipment);
+            playerRoot.Progression?.LoadFromSave(data.progressionFlags);
 
             if (TryGetValidatedSavedPosition(data, out Vector3 savedPosition, out float savedYaw))
             {
                 Debug.Log($"[PlayerLoad] Loaded player position key={playerRoot.PlayerKey} pos=({savedPosition.x:F3},{savedPosition.y:F3},{savedPosition.z:F3})");
-                playerRoot.ServerSetLoadedWorldPosition(savedPosition, savedYaw);
+                playerRoot.ServerSetLoadedWorldPosition(savedPosition, savedYaw, data.location.sceneName);
+                playerRoot.ServerSetCurrentWorldScene(data.location.sceneName);
             }
             else
             {
@@ -651,5 +679,8 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
 
 

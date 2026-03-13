@@ -14,6 +14,7 @@ namespace HuntersAndCollectors.Persistence
         public InventoryGridSaveData inventory = new();
         public PlayerEquipmentSaveData equipment = new();
         public PlayerLocationSaveData location = new();
+        public List<string> progressionFlags = new();
     }
 
     [Serializable]
@@ -48,16 +49,9 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class InventorySlotSaveData
     {
-        // Versioned tagged union:
-        // - v1 data: id + q only (kind missing/empty => Stack)
-        // - v2 data: kind + stack/instance payload fields
-        public string kind = string.Empty; // "Stack" or "Instance"
-
-        // Stack payload / shared identity.
+        public string kind = string.Empty;
         public string id = string.Empty;
         public int q;
-
-        // Instance payload.
         public long instanceId;
         public float rolledDamage;
         public float rolledDefence;
@@ -65,8 +59,6 @@ namespace HuntersAndCollectors.Persistence
         public float rolledMovementSpeed;
         public int maxDurability;
         public int currentDurability;
-
-        // Legacy bridge metadata.
         public int bonusStrength;
         public int bonusDexterity;
         public int bonusIntelligence;
@@ -79,17 +71,9 @@ namespace HuntersAndCollectors.Persistence
         public int schemaVersion = 2;
         public string shardKey = string.Empty;
         public List<ShelterSaveData> shelters = new();
-
-        // Canonical runtime world structures list.
         public List<PlacedBuildingSaveData> placedBuildings = new();
-
-        // Server-authoritative placed storage inventories keyed by persistent placed-object id.
         public List<PlacedStorageChestSaveData> placedStorageChests = new();
-
-        // Server-authoritative player death graves persisted in shard save.
         public List<GraveSaveData> graves = new();
-
-        // Legacy v1/v2 field retained for backward compatibility with older saves.
         public List<BuildPieceSaveData> buildPieces = new();
     }
 
@@ -97,6 +81,7 @@ namespace HuntersAndCollectors.Persistence
     public sealed class PlayerLocationSaveData
     {
         public bool hasSavedPosition;
+        public string sceneName = string.Empty;
         public Vector3SaveData position = new();
         public float rotationY;
     }
@@ -104,7 +89,6 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class PlayerEquipmentSaveData
     {
-        // Move-equip armor slots (authoritative equipment storage).
         public EquipmentSlotSaveData helmet;
         public EquipmentSlotSaveData chest;
         public EquipmentSlotSaveData legs;
@@ -112,8 +96,6 @@ namespace HuntersAndCollectors.Persistence
         public EquipmentSlotSaveData gloves;
         public EquipmentSlotSaveData shoulders;
         public EquipmentSlotSaveData belt;
-
-        // Reference-equip hand slots (authoritative inventory index references).
         public int mainHandInventorySlotRef = -1;
         public int offHandInventorySlotRef = -1;
         public string mainHandExpectedItemId = string.Empty;
@@ -236,5 +218,3 @@ namespace HuntersAndCollectors.Persistence
         public string ParseStatus { get; }
     }
 }
-
-

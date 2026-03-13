@@ -391,12 +391,20 @@ namespace HuntersAndCollectors.Bootstrap
             Quaternion targetRotation;
             string spawnLabel;
 
-            if (playerRoot != null && playerRoot.ServerTryGetLoadedWorldPosition(out Vector3 savedPosition, out Quaternion savedRotation))
+            bool restoredSavedLocation = false;
+            if (playerRoot != null && playerRoot.ServerTryGetLoadedWorldState(out string savedSceneName, out Vector3 savedPosition, out Quaternion savedRotation))
             {
                 target = savedPosition;
                 targetRotation = savedRotation;
                 spawnLabel = "saved position";
-                Debug.Log($"[PlayerLoad] Applied saved position for key={playerRoot.PlayerKey}");
+                restoredSavedLocation = true;
+
+                if (!string.IsNullOrWhiteSpace(savedSceneName) && !string.Equals(savedSceneName, gameplaySceneName, System.StringComparison.Ordinal))
+                    yield return HuntersAndCollectors.World.AreaTransferService.EnsureInstance().ServerRestoreSavedLocation(playerRoot, savedSceneName, savedPosition, savedRotation);
+                else
+                    playerRoot.ServerSetCurrentWorldScene(gameplaySceneName);
+
+                Debug.Log($"[PlayerLoad] Applied saved position for key={playerRoot.PlayerKey} scene='{savedSceneName}'");
             }
             else
             {
@@ -412,6 +420,7 @@ namespace HuntersAndCollectors.Bootstrap
                 target = spawnPosition;
                 targetRotation = spawnRotation;
                 spawnLabel = spawnId;
+                playerRoot?.ServerSetCurrentWorldScene(gameplaySceneName);
             }
 
             Vector3 before = playerObj.transform.position;
@@ -454,6 +463,7 @@ namespace HuntersAndCollectors.Bootstrap
 
             Debug.Log($"[Respawn] Respawning player key={playerRoot.PlayerKey} at spawnId={spawnId}");
             TeleportPlayerToSpawn(playerObject, spawnPosition, spawnRotation, spawnId);
+            playerRoot.ServerSetCurrentWorldScene(gameplaySceneName);
             Debug.Log($"[Respawn] Teleported player key={playerRoot.PlayerKey} to pos=({spawnPosition.x:F3},{spawnPosition.y:F3},{spawnPosition.z:F3})");
             Debug.Log($"[Respawn] Teleport complete for surviving player object id={playerObject.NetworkObjectId}");
 
@@ -493,6 +503,13 @@ namespace HuntersAndCollectors.Bootstrap
 
             if (actorSpawner != null && actorSpawner.TryGetPlayerSpawnTransform(spawnId, out position, out rotation))
                 return true;
+
+            if (HuntersAndCollectors.World.SceneSpawnRegistry.TryGetSpawnPoint(gameplaySceneName, spawnId, out HuntersAndCollectors.World.SceneSpawnPoint worldSpawn))
+            {
+                position = worldSpawn.transform.position;
+                rotation = worldSpawn.transform.rotation;
+                return true;
+            }
 
             if (TryFindSpawnPointInScene(gameplaySceneName, spawnId, out var legacySpawn))
             {
@@ -614,6 +631,9 @@ namespace HuntersAndCollectors.Bootstrap
         }
     }
 }
+
+
+
 
 
 

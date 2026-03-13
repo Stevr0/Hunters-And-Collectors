@@ -6,6 +6,7 @@ using HuntersAndCollectors.Storage;
 using HuntersAndCollectors.Vendors;
 using HuntersAndCollectors.Vendors.UI;
 using HuntersAndCollectors.UI.Storage;
+using HuntersAndCollectors.World;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -20,7 +21,8 @@ namespace HuntersAndCollectors.Players
             Vendor,
             Chest,
             Grave,
-            Drop
+            Drop,
+            AreaTransfer
         }
 
         [Header("UI")]
@@ -47,12 +49,12 @@ namespace HuntersAndCollectors.Players
         [Header("Harvesting")]
         [SerializeField] private HarvestingNet harvestingNet;
 
-        /// <summary>Node currently in the player's crosshair (updated every frame on owner).</summary>
         public ResourceNodeNet CurrentNodeFocus => currentNodeFocus;
         public VendorInteractable CurrentVendorFocus => currentVendorFocus;
         public StorageNet CurrentChestFocus => currentChestFocus;
         public GraveNet CurrentGraveFocus => currentGraveFocus;
         public ResourceDrop CurrentDropFocus => currentDropFocus;
+        public AreaTransferInteractable CurrentAreaTransferFocus => currentAreaTransferFocus;
         public FocusTargetType CurrentFocusType => currentFocusType;
 
         public Camera InteractCamera => playerCamera;
@@ -64,6 +66,7 @@ namespace HuntersAndCollectors.Players
         private StorageNet currentChestFocus;
         private GraveNet currentGraveFocus;
         private ResourceDrop currentDropFocus;
+        private AreaTransferInteractable currentAreaTransferFocus;
         private FocusTargetType currentFocusType;
 
         private bool harvestHoldActive;
@@ -112,16 +115,19 @@ namespace HuntersAndCollectors.Players
             RefreshFocus();
         }
 
-        /// <summary>
-        /// Refreshes the current interact focus from the active gameplay camera.
-        /// This is owner-only presentation state used by prompts and input routing.
-        /// </summary>
         public void RefreshFocus()
         {
             ClearCurrentFocus();
 
             if (!TryGetReachableInteractHit(out RaycastHit hit))
                 return;
+
+            currentAreaTransferFocus = ResolveAreaTransferFromHit(hit);
+            if (currentAreaTransferFocus != null)
+            {
+                currentFocusType = FocusTargetType.AreaTransfer;
+                return;
+            }
 
             currentVendorFocus = ResolveVendorFromHit(hit);
             if (currentVendorFocus != null)
@@ -156,10 +162,6 @@ namespace HuntersAndCollectors.Players
                 currentFocusType = FocusTargetType.ResourceNode;
         }
 
-        /// <summary>
-        /// Handles the initial left-click press for interaction-owned primary actions.
-        /// Returns true when interaction consumed the click so combat should not also fire.
-        /// </summary>
         public bool BeginPrimaryInput()
         {
             harvestHoldActive = false;
@@ -185,9 +187,6 @@ namespace HuntersAndCollectors.Players
             return false;
         }
 
-        /// <summary>
-        /// Continues hold-to-swing harvesting while left mouse is still held.
-        /// </summary>
         public void TickHeldPrimaryInput()
         {
             if (!harvestHoldActive)
@@ -199,8 +198,7 @@ namespace HuntersAndCollectors.Players
 
             RefreshFocus();
 
-            // If focus drifted away from the node, stop the repeated harvest route.
-            if (currentNodeFocus == null || currentVendorFocus != null || currentChestFocus != null || currentGraveFocus != null || currentDropFocus != null)
+            if (currentNodeFocus == null || currentVendorFocus != null || currentChestFocus != null || currentGraveFocus != null || currentDropFocus != null || currentAreaTransferFocus != null)
             {
                 harvestHoldActive = false;
                 nextPrimarySwingAttemptClientTime = 0d;
@@ -225,12 +223,15 @@ namespace HuntersAndCollectors.Players
             nextPrimarySwingAttemptClientTime = 0d;
         }
 
-        /// <summary>
-        /// Handles the interact key. This only requests actions; authority remains on the server.
-        /// </summary>
         public bool TryInteractPressed()
         {
             RefreshFocus();
+
+            if (currentAreaTransferFocus != null)
+            {
+                currentAreaTransferFocus.RequestUseTransferServerRpc();
+                return true;
+            }
 
             if (currentVendorFocus != null)
             {
@@ -271,15 +272,18 @@ namespace HuntersAndCollectors.Players
             return false;
         }
 
-        /// <summary>
-        /// Shared prompt helper so UI always reflects the same focus decision used by input.
-        /// </summary>
         public bool TryGetPromptText(out string promptText)
         {
             promptText = string.Empty;
 
             switch (currentFocusType)
             {
+                case FocusTargetType.AreaTransfer:
+                    if (currentAreaTransferFocus == null)
+                        return false;
+                    promptText = currentAreaTransferFocus.BuildPromptText();
+                    return true;
+
                 case FocusTargetType.Vendor:
                     promptText = "E: Open Vendor";
                     return true;
@@ -372,10 +376,6 @@ namespace HuntersAndCollectors.Players
             return true;
         }
 
-        /// <summary>
-        /// Chooses the nearest target under the reticle that is also actually reachable by the player.
-        /// This keeps third-person camera distance from breaking short-range gameplay actions.
-        /// </summary>
         private bool TryPickClosestUsableHit(RaycastHit[] hits, out RaycastHit bestHit)
         {
             bestHit = default;
@@ -406,6 +406,9 @@ namespace HuntersAndCollectors.Players
         {
             if (hit.collider == null)
                 return false;
+
+            if (ResolveAreaTransferFromHit(hit) != null)
+                return true;
 
             if (ResolveVendorFromHit(hit) != null)
                 return true;
@@ -445,6 +448,7 @@ namespace HuntersAndCollectors.Players
             currentChestFocus = null;
             currentGraveFocus = null;
             currentDropFocus = null;
+            currentAreaTransferFocus = null;
             currentFocusType = FocusTargetType.None;
         }
 
@@ -463,10 +467,11 @@ namespace HuntersAndCollectors.Players
             return ResolveComponentFromHitHierarchy<GraveNet>(hit);
         }
 
-        /// <summary>
-        /// Resolves an interactable from a hit collider even when the interaction component lives on a
-        /// sibling branch under a larger placed prefab like VendorHouse.
-        /// </summary>
+        private static AreaTransferInteractable ResolveAreaTransferFromHit(RaycastHit hit)
+        {
+            return ResolveComponentFromHitHierarchy<AreaTransferInteractable>(hit);
+        }
+
         private static T ResolveComponentFromHitHierarchy<T>(RaycastHit hit) where T : Component
         {
             if (hit.collider == null)
@@ -497,3 +502,5 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
