@@ -17,6 +17,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SCN_Mirelands.unity
     guid: 9e1192fb6fb6d86468916dc910abecb1
+  - enabled: 1
+    path: Assets/Scenes/SCN_EarthCaves.unity
+    guid: f4ec10144b8416240891807be070993b
+  - enabled: 1
+    path: Assets/Scenes/SCN_Jungle.unity
+    guid: 26f5b85b0939c23419d5ba87403240cd
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: e6d6e40a4a650ed48885e309e8893361, type: 3}
   m_UseUCBPForAssetBundles: 0
