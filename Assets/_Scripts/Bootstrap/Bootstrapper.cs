@@ -45,6 +45,8 @@ namespace HuntersAndCollectors.Bootstrap
 
         public static Bootstrapper Instance { get; private set; }
 
+        public string GameplaySceneName => gameplaySceneName;
+
         public static bool TryRespawnPlayerAtDefaultSpawn(PlayerNetworkRoot playerRoot)
         {
             return Instance != null && Instance.ServerRespawnPlayerAtDefaultSpawn(playerRoot);
@@ -250,6 +252,8 @@ namespace HuntersAndCollectors.Bootstrap
 
         private void HandleGameplaySceneLoadedForServer(ulong? specificClientId)
         {
+            SetGameplaySceneActiveIfLoaded(gameplaySceneName);
+
             if (!shardInitialized)
             {
                 if (saveManager == null)
@@ -504,7 +508,7 @@ namespace HuntersAndCollectors.Bootstrap
             if (actorSpawner != null && actorSpawner.TryGetPlayerSpawnTransform(spawnId, out position, out rotation))
                 return true;
 
-            if (HuntersAndCollectors.World.SceneSpawnRegistry.TryGetSpawnPoint(gameplaySceneName, spawnId, out HuntersAndCollectors.World.SceneSpawnPoint worldSpawn))
+            if (HuntersAndCollectors.World.SceneSpawnRegistry.TryGetSpawnPoint(gameplaySceneName, spawnId, out SceneSpawnPoint worldSpawn))
             {
                 position = worldSpawn.transform.position;
                 rotation = worldSpawn.transform.rotation;
@@ -615,6 +619,80 @@ namespace HuntersAndCollectors.Bootstrap
             groundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics.DefaultRaycastLayers;
         }
 
+
+        private void SetGameplaySceneActiveIfLoaded(string sceneName)
+        {
+            if (string.IsNullOrWhiteSpace(sceneName))
+                return;
+
+            Scene gameplayScene = SceneManager.GetSceneByName(sceneName);
+            if (!gameplayScene.IsValid() || !gameplayScene.isLoaded)
+            {
+                Debug.LogWarning($"[Bootstrapper] Active scene change skipped because gameplay scene '{sceneName}' is not loaded yet.", this);
+                return;
+            }
+
+            if (SceneManager.GetActiveScene() == gameplayScene)
+                return;
+
+            if (SceneManager.SetActiveScene(gameplayScene))
+                Debug.Log($"[Bootstrapper] Active scene changed to gameplay scene '{sceneName}'.", this);
+            else
+                Debug.LogWarning($"[Bootstrapper] Failed to set active scene to gameplay scene '{sceneName}'.", this);
+        }
+
+        public static string ResolveDefaultGameplaySceneName()
+        {
+            return Instance != null ? Instance.GameplaySceneName : string.Empty;
+        }
+
+        public static bool MoveRuntimeGameplayObjectToScene(GameObject gameplayObject, string targetSceneName, string ownerSystemLabel)
+        {
+            if (gameplayObject == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(targetSceneName))
+            {
+                Debug.LogError($"[Bootstrapper] Runtime gameplay object '{gameplayObject.name}' could not be moved because targetSceneName was empty. owner='{ownerSystemLabel}'.", gameplayObject);
+                return false;
+            }
+
+            Scene targetScene = SceneManager.GetSceneByName(targetSceneName.Trim());
+            if (!targetScene.IsValid() || !targetScene.isLoaded)
+            {
+                Debug.LogError($"[Bootstrapper] Runtime gameplay object '{gameplayObject.name}' could not be moved because scene '{targetSceneName}' is not loaded. owner='{ownerSystemLabel}'.", gameplayObject);
+                return false;
+            }
+
+            string currentSceneName = gameplayObject.scene.IsValid() ? gameplayObject.scene.name : "<invalid>";
+            if (string.Equals(currentSceneName, targetScene.name, System.StringComparison.Ordinal))
+                return true;
+
+            if (string.Equals(currentSceneName, "SCN_Bootstrap", System.StringComparison.Ordinal))
+                Debug.LogWarning($"[Bootstrapper] Gameplay object '{gameplayObject.name}' was instantiated into SCN_Bootstrap by '{ownerSystemLabel}'. Moving it to '{targetScene.name}'.", gameplayObject);
+
+            SceneManager.MoveGameObjectToScene(gameplayObject, targetScene);
+            Debug.Log($"[Bootstrapper] Runtime gameplay object '{gameplayObject.name}' moved from '{currentSceneName}' to '{targetScene.name}' by '{ownerSystemLabel}'.", gameplayObject);
+            return true;
+        }
+        private void MovePlayerObjectToGameplayScene(NetworkObject playerObject, string sceneName)
+        {
+            if (playerObject == null || string.IsNullOrWhiteSpace(sceneName))
+                return;
+
+            Scene destinationScene = SceneManager.GetSceneByName(sceneName);
+            if (!destinationScene.IsValid() || !destinationScene.isLoaded)
+            {
+                Debug.LogWarning($"[Bootstrapper] Scene membership update skipped because scene '{sceneName}' is not loaded yet.", playerObject);
+                return;
+            }
+
+            if (playerObject.gameObject.scene == destinationScene)
+                return;
+
+            SceneManager.MoveGameObjectToScene(playerObject.gameObject, destinationScene);
+            Debug.Log($"[Bootstrapper] Player scene membership changed to '{sceneName}' for PlayerObjectId={playerObject.NetworkObjectId}.", playerObject);
+        }
         private static void TeleportPlayerToSpawn(NetworkObject playerObject, Vector3 position, Quaternion rotation, string spawnLabel)
         {
             Transform playerTransform = playerObject.transform;
@@ -631,6 +709,10 @@ namespace HuntersAndCollectors.Bootstrap
         }
     }
 }
+
+
+
+
 
 
 

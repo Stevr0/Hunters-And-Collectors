@@ -1,4 +1,5 @@
 using System.Collections;
+using HuntersAndCollectors.Bootstrap;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -97,6 +98,12 @@ namespace HuntersAndCollectors.Items
             Quaternion rot = spawnAtThisTransform ? transform.rotation : Quaternion.identity;
 
             var instance = Instantiate(pickupPrefab, pos, rot);
+            Debug.Log($"[PickupSpawnerNet][SERVER] Instantiated pickup '{instance.name}' in scene '{instance.gameObject.scene.name}'.", instance);
+            if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(instance.gameObject, gameObject.scene.name, "PickupSpawnerNet"))
+            {
+                Destroy(instance.gameObject);
+                return;
+            }
 
             // ResourceDrop may be on root OR children.
             var drop = instance.GetComponentInChildren<ResourceDrop>(true);
@@ -167,3 +174,4 @@ namespace HuntersAndCollectors.Items
 #endif
     }
 }
+

@@ -164,6 +164,7 @@ namespace HuntersAndCollectors.Graves
             {
                 persistentId = persistentId,
                 ownerPlayerKey = ownerPlayerKey,
+                sceneName = gameObject.scene.IsValid() ? gameObject.scene.name : string.Empty,
                 position = new Vector3SaveData { x = transform.position.x, y = transform.position.y, z = transform.position.z },
                 rotation = new QuaternionSaveData { x = transform.rotation.x, y = transform.rotation.y, z = transform.rotation.z, w = transform.rotation.w },
                 inventory = new InventoryGridSaveData
@@ -437,3 +438,4 @@ namespace HuntersAndCollectors.Graves
         }
     }
 }
+

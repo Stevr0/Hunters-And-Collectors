@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HuntersAndCollectors.Bootstrap;
 using HuntersAndCollectors.Building;
 using HuntersAndCollectors.Graves;
 using HuntersAndCollectors.Inventory;
@@ -142,6 +143,7 @@ namespace HuntersAndCollectors.Persistence
                 {
                     persistentId = piece.PersistentId ?? string.Empty,
                     buildPieceId = piece.SourceItemId ?? string.Empty,
+                    sceneName = piece.gameObject.scene.IsValid() ? piece.gameObject.scene.name : Bootstrapper.ResolveDefaultGameplaySceneName(),
                     position = ToVector3Save(piece.transform.position),
                     rotation = ToQuaternionSave(piece.transform.rotation),
                     scale = ToVector3Save(piece.transform.localScale),
@@ -305,16 +307,36 @@ namespace HuntersAndCollectors.Persistence
                 scale.y = Mathf.Clamp(Mathf.Abs(scale.y), 0.01f, 100f);
                 scale.z = Mathf.Clamp(Mathf.Abs(scale.z), 0.01f, 100f);
 
+                string targetSceneName = ResolveRuntimeSceneName(saved.sceneName, saved.persistentId, saved.buildPieceId, "placed building");
+                if (string.IsNullOrWhiteSpace(targetSceneName))
+                    continue;
+
                 NetworkObject spawnedNetworkObject = UnityEngine.Object.Instantiate(itemDef.PlaceablePrefab, pos, rot);
                 if (spawnedNetworkObject == null)
                     continue;
 
                 spawnedNetworkObject.transform.localScale = scale;
+                Debug.Log($"[PlacedBuildRestore] Instantiated prefab='{spawnedNetworkObject.name}' persistentId='{saved.persistentId}' in scene '{spawnedNetworkObject.gameObject.scene.name}'. Target scene='{targetSceneName}'.", spawnedNetworkObject);
+                if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(spawnedNetworkObject.gameObject, targetSceneName, "ShardSaveService.RestorePlacedBuildings"))
+                {
+                    UnityEngine.Object.Destroy(spawnedNetworkObject.gameObject);
+                    continue;
+                }
+
+                if (HuntersAndCollectors.Building.NetworkObjectHierarchySpawner.HasNestedNetworkObjects(spawnedNetworkObject, out string nestedChildName))
+                {
+                    Debug.LogError($"[PlacedBuildRestore] Skipping restore for persistentId='{saved.persistentId}' because prefab '{spawnedNetworkObject.name}' contains nested NetworkObject '{nestedChildName}'.", spawnedNetworkObject);
+                    UnityEngine.Object.Destroy(spawnedNetworkObject.gameObject);
+                    continue;
+                }
+
+                spawnedNetworkObject.Spawn(destroyWithScene: true);
+                Debug.Log($"[PlacedBuildRestore] Spawned NetworkObject id={spawnedNetworkObject.NetworkObjectId} in scene '{spawnedNetworkObject.gameObject.scene.name}'.", spawnedNetworkObject);
 
                 PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
                 if (placed != null)
                 {
-                    Debug.Log($"[PlacedBuildRestore] PreSpawn assign persistentId={saved.persistentId} prefab={itemDef.ItemId}");
+                    placed.ServerSetOwnerPlayerId(saved.ownerPlayerId);
                     placed.ServerInitializeFromSave(
                         saved.persistentId,
                         itemDef,
@@ -322,9 +344,6 @@ namespace HuntersAndCollectors.Persistence
                         saved.maxHealth,
                         saved.ownerPlayerId);
                 }
-
-                spawnedNetworkObject.Spawn(destroyWithScene: true);
-                HuntersAndCollectors.Building.NetworkObjectHierarchySpawner.SpawnChildNetworkObjects(spawnedNetworkObject);
             }
         }
 
@@ -400,11 +419,22 @@ namespace HuntersAndCollectors.Persistence
                 if (saved == null || string.IsNullOrWhiteSpace(saved.persistentId))
                     continue;
 
+                string targetSceneName = ResolveRuntimeSceneName(saved.sceneName, saved.persistentId, saved.ownerPlayerKey, "grave");
+                if (string.IsNullOrWhiteSpace(targetSceneName))
+                    continue;
+
                 Vector3 position = ToVector3(saved.position);
                 Quaternion rotation = ToQuaternion(saved.rotation);
                 GraveNet grave = UnityEngine.Object.Instantiate(gravePrefab, position, rotation);
                 if (grave == null)
                     continue;
+
+                Debug.Log($"[GraveLoad] Instantiated grave '{grave.name}' id='{saved.persistentId}' in scene '{grave.gameObject.scene.name}'. Target scene='{targetSceneName}'.", grave);
+                if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(grave.gameObject, targetSceneName, "ShardSaveService.RestoreGraves"))
+                {
+                    UnityEngine.Object.Destroy(grave.gameObject);
+                    continue;
+                }
 
                 grave.ServerApplySaveData(saved);
                 NetworkObject networkObject = grave.GetComponent<NetworkObject>();
@@ -415,7 +445,7 @@ namespace HuntersAndCollectors.Persistence
                 }
 
                 networkObject.Spawn(destroyWithScene: true);
-                Debug.Log($"[GraveLoad] Restored grave id={grave.PersistentId} nonEmptySlots={grave.CountNonEmptySlots()}");
+                Debug.Log($"[GraveLoad] Restored grave id={grave.PersistentId} scene='{grave.gameObject.scene.name}' nonEmptySlots={grave.CountNonEmptySlots()}");
             }
         }
 
@@ -436,6 +466,28 @@ namespace HuntersAndCollectors.Persistence
             }
         }
 
+        private static string ResolveRuntimeSceneName(string savedSceneName, string persistentId, string debugId, string objectType)
+        {
+            string targetSceneName = string.IsNullOrWhiteSpace(savedSceneName)
+                ? Bootstrapper.ResolveDefaultGameplaySceneName()
+                : savedSceneName.Trim();
+
+            if (string.IsNullOrWhiteSpace(targetSceneName))
+            {
+                Debug.LogError($"[ShardSaveService] Could not restore {objectType} '{debugId}' persistentId='{persistentId}' because no target gameplay scene was resolved.");
+                return string.Empty;
+            }
+
+            UnityEngine.SceneManagement.Scene targetScene = UnityEngine.SceneManagement.SceneManager.GetSceneByName(targetSceneName);
+            if (!targetScene.IsValid() || !targetScene.isLoaded)
+            {
+                Debug.LogError($"[ShardSaveService] Could not restore {objectType} '{debugId}' persistentId='{persistentId}' because scene '{targetSceneName}' is not loaded.");
+                return string.Empty;
+            }
+
+            return targetSceneName;
+        }
+
         private static List<PlacedBuildingSaveData> ConvertLegacyBuildPieces(List<BuildPieceSaveData> legacy)
         {
             var converted = new List<PlacedBuildingSaveData>(legacy.Count);
@@ -449,6 +501,7 @@ namespace HuntersAndCollectors.Persistence
                 {
                     persistentId = string.Empty,
                     buildPieceId = row.id,
+                    sceneName = Bootstrapper.ResolveDefaultGameplaySceneName(),
                     position = row.pos ?? new Vector3SaveData(),
                     rotation = ToQuaternionSave(Quaternion.Euler(0f, row.rotY, 0f)),
                     scale = new Vector3SaveData { x = 1f, y = 1f, z = 1f },
@@ -875,6 +928,10 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
+
 
 
 

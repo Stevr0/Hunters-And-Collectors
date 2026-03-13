@@ -48,7 +48,18 @@ namespace HuntersAndCollectors.Persistence
             }
 
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+
+            // SaveManager must live on a root object if it is going to survive scene loads.
+            // Unity ignores DontDestroyOnLoad on child objects and emits a warning, so we
+            // enforce that rule explicitly instead of silently relying on fragile hierarchy setup.
+            if (transform.parent != null)
+            {
+                Debug.LogError($"[SaveManager] '{name}' is not on a root GameObject. DontDestroyOnLoad was skipped. Move SaveManager onto a root services object such as BootstrapServices.", this);
+            }
+            else
+            {
+                DontDestroyOnLoad(gameObject);
+            }
 
             if (itemDatabase == null)
             {
@@ -234,6 +245,14 @@ namespace HuntersAndCollectors.Persistence
             GraveNet spawnedGrave = Instantiate(gravePrefab, groundedGravePosition, Quaternion.identity);
             if (spawnedGrave == null)
                 return false;
+
+            string targetSceneName = playerRoot.gameObject.scene.IsValid() ? playerRoot.gameObject.scene.name : playerRoot.CurrentWorldSceneName;
+            Debug.Log($"[SaveManager] Instantiated grave '{spawnedGrave.name}' in scene '{spawnedGrave.gameObject.scene.name}'. Target scene='{targetSceneName}'.", spawnedGrave);
+            if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(spawnedGrave.gameObject, targetSceneName, "SaveManager.CreateGrave"))
+            {
+                Destroy(spawnedGrave.gameObject);
+                return false;
+            }
 
             Vector3 finalGraveSpawnPosition = AdjustSpawnedGraveToGround(spawnedGrave, groundedGravePosition);
             Debug.Log($"[Grave] Final grave spawn position=({finalGraveSpawnPosition.x:F3},{finalGraveSpawnPosition.y:F3},{finalGraveSpawnPosition.z:F3})");
@@ -506,6 +525,9 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
 
 
 

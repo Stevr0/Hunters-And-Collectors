@@ -71,6 +71,8 @@ namespace HuntersAndCollectors.Players
 
         private bool harvestHoldActive;
         private double nextPrimarySwingAttemptClientTime;
+        private double nextCrossSceneInteractionLogTime;
+        private PlayerNetworkRoot playerRoot;
 
         public override void OnNetworkSpawn()
         {
@@ -79,6 +81,8 @@ namespace HuntersAndCollectors.Players
                 enabled = false;
                 return;
             }
+
+            playerRoot = GetComponent<PlayerNetworkRoot>();
 
             vendorUI = FindObjectOfType<VendorWindowUI>(true);
             chestUI = FindObjectOfType<ChestWindowUI>(true);
@@ -228,10 +232,7 @@ namespace HuntersAndCollectors.Players
             RefreshFocus();
 
             if (currentAreaTransferFocus != null)
-            {
-                currentAreaTransferFocus.RequestUseTransferServerRpc();
-                return true;
-            }
+                return TryUseAreaTransfer(currentAreaTransferFocus);
 
             if (currentVendorFocus != null)
             {
@@ -272,6 +273,57 @@ namespace HuntersAndCollectors.Players
             return false;
         }
 
+
+        private bool TryUseAreaTransfer(AreaTransferInteractable areaTransfer)
+        {
+            if (areaTransfer == null)
+                return false;
+
+            AreaTransferDef transferDef = areaTransfer.TransferDef;
+            if (transferDef == null)
+            {
+                Debug.LogWarning($"[PlayerInteract] Area transfer focus '{areaTransfer.name}' is missing AreaTransferDef.", areaTransfer);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(transferDef.TransferId))
+            {
+                Debug.LogWarning($"[PlayerInteract] Area transfer focus '{areaTransfer.name}' is missing TransferId.", areaTransfer);
+                return false;
+            }
+
+            string sourceSceneName = areaTransfer.gameObject.scene.IsValid()
+                ? areaTransfer.gameObject.scene.name
+                : string.Empty;
+
+            Debug.Log($"[PlayerInteract] Interact detected on AreaTransfer '{transferDef.TransferId}' in scene '{sourceSceneName}'.", areaTransfer);
+            RequestAreaTransferUseServerRpc(transferDef.TransferId.Trim(), sourceSceneName);
+            return true;
+        }
+
+        [ServerRpc]
+        private void RequestAreaTransferUseServerRpc(string transferId, string sourceSceneName, ServerRpcParams rpcParams = default)
+        {
+            if (!IsServer)
+                return;
+
+            if (rpcParams.Receive.SenderClientId != OwnerClientId)
+            {
+                Debug.LogWarning(
+                    $"[PlayerInteract] Rejected area transfer request because senderClientId={rpcParams.Receive.SenderClientId} does not own player clientId={OwnerClientId}.",
+                    this);
+                return;
+            }
+
+            PlayerNetworkRoot playerRoot = GetComponent<PlayerNetworkRoot>();
+            if (playerRoot == null)
+            {
+                Debug.LogWarning("[PlayerInteract] Area transfer request rejected because PlayerNetworkRoot is missing.", this);
+                return;
+            }
+
+            AreaTransferService.EnsureInstance().ServerRequestTransferById(playerRoot, transferId, sourceSceneName);
+        }
         public bool TryGetPromptText(out string promptText)
         {
             promptText = string.Empty;
@@ -392,6 +444,9 @@ namespace HuntersAndCollectors.Players
                 if (!IsSupportedFocusHit(hit))
                     continue;
 
+                if (!IsHitInOwnerActiveScene(hit))
+                    continue;
+
                 if (!IsHitWithinReach(hit, interactionOrigin))
                     continue;
 
@@ -435,6 +490,37 @@ namespace HuntersAndCollectors.Players
             return distance <= Mathf.Max(0.01f, interactRange);
         }
 
+
+        private bool IsHitInOwnerActiveScene(RaycastHit hit)
+        {
+            if (hit.collider == null)
+                return false;
+
+            string targetSceneName = hit.collider.gameObject.scene.name;
+            string activeSceneName = ResolveOwnerActiveSceneName();
+
+            if (string.IsNullOrWhiteSpace(activeSceneName) || string.Equals(targetSceneName, activeSceneName, StringComparison.Ordinal))
+                return true;
+
+            if (Time.unscaledTimeAsDouble >= nextCrossSceneInteractionLogTime)
+            {
+                nextCrossSceneInteractionLogTime = Time.unscaledTimeAsDouble + 1d;
+                Debug.Log($"[PlayerInteract] Interaction denied because target scene '{targetSceneName}' does not match active scene '{activeSceneName}'.", this);
+            }
+
+            return false;
+        }
+
+        private string ResolveOwnerActiveSceneName()
+        {
+            if (playerRoot == null)
+                playerRoot = GetComponent<PlayerNetworkRoot>();
+
+            if (playerRoot != null && !string.IsNullOrWhiteSpace(playerRoot.CurrentWorldSceneName))
+                return playerRoot.CurrentWorldSceneName;
+
+            return gameObject.scene.IsValid() ? gameObject.scene.name : string.Empty;
+        }
         private Vector3 ResolveInteractionOrigin()
         {
             EnsureViewOrigin();
@@ -502,5 +588,7 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
 
 

@@ -5321,7 +5321,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 616279238}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
 --- !u!114 &410087042
 MonoBehaviour:
@@ -7836,6 +7836,7 @@ GameObject:
   - component: {fileID: 616279238}
   - component: {fileID: 616279237}
   - component: {fileID: 616279239}
+  - component: {fileID: 616279240}
   m_Layer: 0
   m_Name: Bootstrapper
   m_TagString: Untagged
@@ -7859,7 +7860,7 @@ MonoBehaviour:
   autoStartHostForLegacy: 0
   defaultPlayerKey: Player 1
   defaultShardKey: Shard_Default
-  saveManager: {fileID: 1243289155}
+  saveManager: {fileID: 0}
   spawnId: HeartStone
   snapPlayerToGround: 1
   groundMask:
@@ -7883,9 +7884,8 @@ Transform:
   m_Children:
   - {fileID: 330585546}
   - {fileID: 501258599}
-  - {fileID: 1243289154}
-  - {fileID: 1039115478}
   - {fileID: 545439742}
+  - {fileID: 410087041}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &616279239
@@ -7900,6 +7900,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f388527969374c478d9338e04877292, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Bootstrap.SceneSpawnResolver
+--- !u!114 &616279240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616279236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cac8be357640a1847983d394b3a01ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Persistence.SaveManager
+  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
+  autosaveIntervalSeconds: 60
+  gravePrefab: {fileID: 6581655919298570312, guid: ff2885f2507947042b1b8641ce190bbe, type: 3}
+  graveGroundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  graveGroundRayStartHeight: 2
+  graveGroundRayDistance: 16
+  graveGroundOffset: 0.05
 --- !u!1 &630549263
 GameObject:
   m_ObjectHideFlags: 0
@@ -11830,37 +11851,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 300, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1039115477
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1039115478}
-  m_Layer: 0
-  m_Name: SessionSelectionState
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1039115478
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1039115477}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 616279238}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1067340343
 GameObject:
   m_ObjectHideFlags: 0
@@ -14557,59 +14547,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc32bcda2f604ca428ed6112c31630fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.UI.IngredientSlotUI
---- !u!1 &1243289153
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1243289154}
-  - component: {fileID: 1243289155}
-  m_Layer: 0
-  m_Name: SaveManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1243289154
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1243289153}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 616279238}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1243289155
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1243289153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cac8be357640a1847983d394b3a01ae3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Persistence.SaveManager
-  itemDatabase: {fileID: 11400000, guid: 39eb60ccfc8d12d46bf15396953cf2e0, type: 2}
-  autosaveIntervalSeconds: 60
-  gravePrefab: {fileID: 6581655919298570312, guid: ff2885f2507947042b1b8641ce190bbe, type: 3}
-  graveGroundMask:
-    serializedVersion: 2
-    m_Bits: 0
-  graveGroundRayStartHeight: 2
-  graveGroundRayDistance: 16
-  graveGroundOffset: 0.05
 --- !u!1 &1243542658
 GameObject:
   m_ObjectHideFlags: 0
@@ -31836,6 +31773,5 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 736914473}
-  - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 616279238}

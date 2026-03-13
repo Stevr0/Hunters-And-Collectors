@@ -1,5 +1,7 @@
+using HuntersAndCollectors.Bootstrap;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Players;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -327,6 +329,7 @@ namespace HuntersAndCollectors.Building
             Vector3 spawnPos = worldPos + itemDef.PlacementOffset;
             float finalRotY = itemDef.AllowYawRotation ? rotY : 0f;
             Quaternion spawnRot = Quaternion.Euler(0f, finalRotY, 0f);
+            string targetSceneName = ResolveOwnerGameplaySceneName();
 
             NetworkObject spawnedNetworkObject = Instantiate(itemDef.PlaceablePrefab, spawnPos, spawnRot);
             if (spawnedNetworkObject == null)
@@ -335,17 +338,43 @@ namespace HuntersAndCollectors.Building
                 return false;
             }
 
+            Debug.Log($"[BuildingNet][SERVER] Instantiated gameplay object '{spawnedNetworkObject.name}' in scene '{spawnedNetworkObject.gameObject.scene.name}'. Target scene='{targetSceneName}'.", spawnedNetworkObject);
+            if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(spawnedNetworkObject.gameObject, targetSceneName, "BuildingNet.PlaceStructure"))
+            {
+                Destroy(spawnedNetworkObject.gameObject);
+                return false;
+            }
+
+            if (NetworkObjectHierarchySpawner.HasNestedNetworkObjects(spawnedNetworkObject, out string nestedChildName))
+            {
+                Debug.LogError($"[BuildingNet][SERVER] Placement denied because prefab '{spawnedNetworkObject.name}' contains nested NetworkObject '{nestedChildName}'.", spawnedNetworkObject);
+                Destroy(spawnedNetworkObject.gameObject);
+                return false;
+            }
+
+            spawnedNetworkObject.Spawn(destroyWithScene: true);
+            Debug.Log($"[BuildingNet][SERVER] Spawned NetworkObject id={spawnedNetworkObject.NetworkObjectId} in scene '{spawnedNetworkObject.gameObject.scene.name}'.", spawnedNetworkObject);
+
             PlacedBuildPiece placed = spawnedNetworkObject.GetComponent<PlacedBuildPiece>();
             if (placed != null)
             {
-                placed.ServerInitializeFromItem(itemDef);
                 placed.ServerSetOwnerPlayerId(OwnerClientId);
+                placed.ServerInitializeFromItem(itemDef);
             }
 
-            // World structures are server-owned authoritative objects.
-            spawnedNetworkObject.Spawn(destroyWithScene: true);
-            NetworkObjectHierarchySpawner.SpawnChildNetworkObjects(spawnedNetworkObject);
             return true;
+        }
+
+        private string ResolveOwnerGameplaySceneName()
+        {
+            PlayerNetworkRoot playerRoot = GetComponent<PlayerNetworkRoot>();
+            if (playerRoot != null && !string.IsNullOrWhiteSpace(playerRoot.CurrentWorldSceneName))
+                return playerRoot.CurrentWorldSceneName;
+
+            if (gameObject.scene.IsValid() && !string.IsNullOrWhiteSpace(gameObject.scene.name))
+                return gameObject.scene.name;
+
+            return Bootstrapper.ResolveDefaultGameplaySceneName();
         }
 
 #if UNITY_EDITOR
@@ -364,30 +393,31 @@ namespace HuntersAndCollectors.Building
     }
 
     /// <summary>
-    /// Helper for placed structures that contain child NetworkObjects, such as VendorHouse.
-    /// The root placed build still spawns first, then any authored child NetworkObjects are brought online.
+    /// Runtime-spawned NGO prefabs must not contain child NetworkObjects.
+    /// This helper validates that rule so callers can fail clearly.
     /// </summary>
     public static class NetworkObjectHierarchySpawner
     {
-        public static void SpawnChildNetworkObjects(NetworkObject root)
+        public static bool HasNestedNetworkObjects(NetworkObject root, out string nestedChildName)
         {
-            if (root == null)
-                return;
+            nestedChildName = string.Empty;
 
-            NetworkManager networkManager = NetworkManager.Singleton;
-            if (networkManager == null || !networkManager.IsServer)
-                return;
+            if (root == null)
+                return false;
 
             NetworkObject[] childNetworkObjects = root.GetComponentsInChildren<NetworkObject>(true);
             for (int i = 0; i < childNetworkObjects.Length; i++)
             {
                 NetworkObject child = childNetworkObjects[i];
-                if (child == null || child == root || child.IsSpawned)
+                if (child == null || child == root)
                     continue;
 
-                child.Spawn(destroyWithScene: true);
-                Debug.Log($"[VendorPlacement] Spawned child NetworkObject name={child.name} root={root.name}", child);
+                nestedChildName = child.name;
+                return true;
             }
+
+            return false;
         }
     }
 }
+

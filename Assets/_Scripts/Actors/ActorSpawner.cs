@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using HuntersAndCollectors.Bootstrap;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -252,6 +253,17 @@ namespace HuntersAndCollectors.Actors
             if (instance == null)
             {
                 Debug.LogWarning("[ActorSpawner] Failed to instantiate actor prefab.", this);
+                return null;
+            }
+
+            string targetSceneName = gameObject.scene.IsValid() ? gameObject.scene.name : string.Empty;
+            if (string.Equals(targetSceneName, "SCN_Bootstrap", StringComparison.Ordinal))
+                targetSceneName = Bootstrapper.ResolveDefaultGameplaySceneName();
+
+            Debug.Log($"[ActorSpawner] Instantiated actor prefab '{instance.name}' in scene '{instance.gameObject.scene.name}'. Target scene='{targetSceneName}'.", instance);
+            if (!Bootstrapper.MoveRuntimeGameplayObjectToScene(instance.gameObject, targetSceneName, "ActorSpawner"))
+            {
+                Destroy(instance.gameObject);
                 return null;
             }
 
@@ -794,6 +806,7 @@ namespace HuntersAndCollectors.Actors
         }
     }
 }
+
 
 
 

@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22222222222222222222222222222222, type: 3}
   m_Name: TR_BeastCavernsToMirelands
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.World.AreaTransferDef
-  TransferId: 
-  DisplayName: 
-  SourceSceneName: 
-  TargetSceneName: 
-  TargetSpawnPointId: 
+  TransferId: FromBeastCaverns_Mirelands
+  DisplayName: FromBeastCaverns_Mirelands
+  SourceSceneName: SCN_BeastCaverns
+  TargetSceneName: SCN_Mirelands
+  TargetSpawnPointId: FromBeastCaverns_Mirelands
   RequirementType: 0
   RequiredItemId: 
   RequiredFlagId: 
   ConsumeRequiredItemOnUse: 0
   UnlockFlagOnSuccess: 0
   FlagToUnlockOnSuccess: 
-  SuccessMessage: 
-  LockedMessage: 
+  SuccessMessage: Entering Village...
+  LockedMessage: The passage is sealed.

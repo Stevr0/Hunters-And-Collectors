@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22222222222222222222222222222222, type: 3}
   m_Name: TR_BeastCavernsToVillage
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.World.AreaTransferDef
-  TransferId: TR_BeastCavernsToVillage
-  DisplayName: VillageEntrance
+  TransferId: FromBeastCaverns_Village
+  DisplayName: FromBeastCaverns_Village
   SourceSceneName: SCN_BeastCaverns
   TargetSceneName: SCN_Village
-  TargetSpawnPointId: SP_FromBeastCaverns_Village
+  TargetSpawnPointId: FromBeastCaverns_Village
   RequirementType: 0
   RequiredItemId: 
   RequiredFlagId: 

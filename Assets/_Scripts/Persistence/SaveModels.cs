@@ -127,6 +127,7 @@ namespace HuntersAndCollectors.Persistence
     {
         public string vendorId = string.Empty;
         public string ownerPlayerKey = string.Empty;
+        public string sceneName = string.Empty;
         public int treasuryCoins;
         public List<KnownItemSaveData> basePrices = new();
         public InventoryGridSaveData chest = new();
@@ -145,6 +146,7 @@ namespace HuntersAndCollectors.Persistence
     {
         public string persistentId = string.Empty;
         public string buildPieceId = string.Empty;
+        public string sceneName = string.Empty;
         public Vector3SaveData position = new();
         public QuaternionSaveData rotation = new();
         public Vector3SaveData scale = new() { x = 1f, y = 1f, z = 1f };
@@ -158,6 +160,7 @@ namespace HuntersAndCollectors.Persistence
     {
         public string persistentId = string.Empty;
         public string buildPieceId = string.Empty;
+        public string sceneName = string.Empty;
         public Vector3SaveData position = new();
         public QuaternionSaveData rotation = new();
         public InventoryGridSaveData chest = new();
@@ -168,6 +171,7 @@ namespace HuntersAndCollectors.Persistence
     {
         public string persistentId = string.Empty;
         public string ownerPlayerKey = string.Empty;
+        public string sceneName = string.Empty;
         public Vector3SaveData position = new();
         public QuaternionSaveData rotation = new();
         public InventoryGridSaveData inventory = new();
@@ -218,3 +222,5 @@ namespace HuntersAndCollectors.Persistence
         public string ParseStatus { get; }
     }
 }
+
+

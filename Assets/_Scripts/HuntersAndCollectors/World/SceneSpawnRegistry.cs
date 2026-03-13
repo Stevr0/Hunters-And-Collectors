@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HuntersAndCollectors.Bootstrap;
 using UnityEngine;
 
 namespace HuntersAndCollectors.World
@@ -7,6 +8,9 @@ namespace HuntersAndCollectors.World
     /// <summary>
     /// Runtime registry for non-networked scene spawn markers.
     /// Spawn points self-register as scenes load and unload.
+    ///
+    /// This registry intentionally uses the unified Bootstrap.SceneSpawnPoint type so there is only one
+    /// authored spawn-marker component to place in scenes.
     /// </summary>
     public static class SceneSpawnRegistry
     {
