@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_WildHare
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_WildHare
+  displayName: Wild Hare
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 2e5cfe5b1180a5d48b8eaf2592bb7adb, type: 3}
+  description: First-pass authored enemy for SCN_Village.
+  category: 6
+  factionId: 3
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 1
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 17
+  baseStamina: 16
+  baseMana: 4
+  baseHealthRegenPerSecond: 0.15
+  baseStaminaRegenPerSecond: 0.45
+  baseManaRegenPerSecond: 0.38
+  attackBonus: 0
+  defenceBonus: 0
+  baseDamageMin: 1
+  baseDamageMax: 2
+  attackRange: 1.4
+  attackIntervalSeconds: 1.05
+  aggroRange: 7
+  leashRange: 15
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 1.94
+  runSpeed: 3.89
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 8
+  size: 0
+  collisionRadius: 0.3
+  height: 1.1
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: 0dd7cb3ad7fc49ddb29e9b38d2f7a5c5, type: 2}
+  defaultBehaviourMode: 0
+  lootTable: {fileID: 11400000, guid: 19b0e4bfd5a24ab095399b9bb0bc8501, type: 2}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 8
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 1
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 8
+  baseDexterity: 8
+  baseIntelligence: 2
+  baseMoveSpeedMult: 1.08
+  baseDamage: 1.2
+  baseDefence: 0.25
+  baseSwingSpeed: 0.95
+  startingSkills: []

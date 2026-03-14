@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22222222222222222222222222222222, type: 3}
+  m_Name: TR_FromTombs_Village
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.World.AreaTransferDef
+  TransferId: TR_FromTombs_Village
+  DisplayName: TombstoVillage
+  SourceSceneName: SCN_Tombs
+  TargetSceneName: SCN_Village
+  TargetSpawnPointId: FromTombs_Village
+  RequirementType: 0
+  RequiredItemId: 
+  RequiredFlagId: 
+  ConsumeRequiredItemOnUse: 0
+  UnlockFlagOnSuccess: 0
+  FlagToUnlockOnSuccess: 
+  SuccessMessage: You enter dark, dank Caves...
+  LockedMessage: The passage is sealed.

@@ -12,16 +12,68 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
   m_Name: ACT_Rabbit
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
-  ActorId: Rabbit
-  DisplayName: Rabbit
-  DefaultFactionId: 3
-  DefaultPvpEnabled: 0
-  BaseStrength: 2
-  BaseDexterity: 2
-  BaseIntelligence: 2
-  BaseMoveSpeedMult: 1
-  BaseDamage: 1
-  BaseDefence: 0
-  BaseSwingSpeed: 0.5
-  AiDef: {fileID: 11400000, guid: 4f8f0f48faab0234e98198d9fc3fd4df, type: 2}
-  StartingSkills: []
+  actorId: Rabbit
+  displayName: Rabbit
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 2e5cfe5b1180a5d48b8eaf2592bb7adb, type: 3}
+  description: 
+  category: 1
+  factionId: 3
+  defaultPvpEnabled: 0
+  isHostile: 0
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 100
+  baseStamina: 50
+  baseMana: 0
+  baseHealthRegenPerSecond: 0
+  baseStaminaRegenPerSecond: 0
+  baseManaRegenPerSecond: 0
+  attackBonus: 0
+  defenceBonus: 0
+  baseDamageMin: 1
+  baseDamageMax: 3
+  attackRange: 1.75
+  attackIntervalSeconds: 1.2
+  aggroRange: 8
+  leashRange: 18
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 2
+  runSpeed: 4
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 8
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: 4f8f0f48faab0234e98198d9fc3fd4df, type: 2}
+  defaultBehaviourMode: 1
+  lootTable: {fileID: 0}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 0
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 1
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 2
+  baseDexterity: 2
+  baseIntelligence: 2
+  baseMoveSpeedMult: 1
+  baseDamage: 1
+  baseDefence: 0
+  baseSwingSpeed: 0.5
+  startingSkills: []

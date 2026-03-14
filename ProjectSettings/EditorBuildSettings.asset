@@ -23,6 +23,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SCN_Jungle.unity
     guid: 26f5b85b0939c23419d5ba87403240cd
+  - enabled: 1
+    path: Assets/Scenes/SCN_Tombs.unity
+    guid: f032964e517ecff488c040998c526563
+  - enabled: 1
+    path: Assets/Scenes/SCN_LostLands.unity
+    guid: 316132f59339f3d43942e6f2eea0d18b
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: e6d6e40a4a650ed48885e309e8893361, type: 3}
   m_UseUCBPForAssetBundles: 0

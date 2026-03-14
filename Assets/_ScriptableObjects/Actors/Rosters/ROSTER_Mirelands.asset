@@ -1,0 +1,338 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c536a4d2e4fdcb7c9ef46e1f2aa10, type: 3}
+  m_Name: ROSTER_Mirelands
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.SceneEnemyRosterDef
+  sceneName: SCN_Mirelands
+  areaId: AREA_Mirelands
+  recommendedTierMin: 3
+  recommendedTierMax: 3
+  entries:
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: b95b756e88514ba7a6bfd13c7a65c9f8, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: b95b756e88514ba7a6bfd13c7a65c9f8, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: b95b756e88514ba7a6bfd13c7a65c9f8, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 3e434ca9966c48c9813d86cac8a358f0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 3e434ca9966c48c9813d86cac8a358f0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 3e434ca9966c48c9813d86cac8a358f0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 25b7a4d18b614d54863d7a5eb7eb0964, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 25b7a4d18b614d54863d7a5eb7eb0964, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 25b7a4d18b614d54863d7a5eb7eb0964, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 546cc60092824d84a0d4ef237c12ed06, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 546cc60092824d84a0d4ef237c12ed06, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 546cc60092824d84a0d4ef237c12ed06, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 40b82878010f4be6b399fdcfc6edf692, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 40b82878010f4be6b399fdcfc6edf692, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 40b82878010f4be6b399fdcfc6edf692, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: f1a52667d2b843fd9034f684254f09a4, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: f1a52667d2b843fd9034f684254f09a4, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: f1a52667d2b843fd9034f684254f09a4, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 753b8886978249f5b93a93364592cb81, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 753b8886978249f5b93a93364592cb81, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 753b8886978249f5b93a93364592cb81, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 57bfe85f07774a13b2789e681495b031, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 57bfe85f07774a13b2789e681495b031, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 57bfe85f07774a13b2789e681495b031, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 0b82daed6c8b47beb614391ab434c531, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 0b82daed6c8b47beb614391ab434c531, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Undead
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 0b82daed6c8b47beb614391ab434c531, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Mirelands_Boss
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 24e1a6b0e6a84f1fa21405c75a631876, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: Mirelands_Boss
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 24e1a6b0e6a84f1fa21405c75a631876, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HuntersAndCollectors.Items;
 using Unity.Netcode;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace HuntersAndCollectors.Actors
         [Tooltip("Optional explicit override. When left empty, the component will fall back to ActorDef.LootTable.")]
         [SerializeField] private ActorLootTableDef lootTable;
 
-        [Tooltip("Optional reference for future loot-id based flows. Not required for ItemDef-based entries.")]
+        [Tooltip("Optional item database used to resolve the shared coin item for actor coin drops.")]
         [SerializeField] private ItemDatabase itemDatabase;
 
         [Header("References")]
@@ -55,6 +56,8 @@ namespace HuntersAndCollectors.Actors
         [Tooltip("Extra vertical nudge after spawn to reduce collider penetration.")]
         [SerializeField] private float extraUpOffsetIfIntersecting = 0.15f;
 
+        private readonly List<ActorLootTableDef.ResolvedLootDrop> rolledDrops = new(16);
+
         private void Awake()
         {
             if (actorDefBinder == null)
@@ -63,41 +66,25 @@ namespace HuntersAndCollectors.Actors
 
         public void ServerDropLoot()
         {
-            if (!IsServer)
-                return;
-
-            if (!IsSpawned)
+            if (!IsServer || !IsSpawned)
                 return;
 
             ActorLootTableDef resolvedLootTable = ResolveLootTable();
-            if (resolvedLootTable == null)
-                return;
+            ActorDef actorDef = ResolveActorDef();
+            rolledDrops.Clear();
+
+            if (resolvedLootTable != null)
+                resolvedLootTable.RollLoot(rolledDrops);
 
             Debug.Log($"[ActorLoot][SERVER] Actor died, rolling loot actor='{name}' netId={NetworkObjectId}", this);
 
-            var entries = resolvedLootTable.Entries;
-            if (entries == null || entries.Count == 0)
-                return;
+            for (int i = 0; i < rolledDrops.Count; i++)
+                SpawnLootEntry(rolledDrops[i].item, rolledDrops[i].quantity);
 
-            for (int i = 0; i < entries.Count; i++)
-            {
-                var entry = entries[i];
-                if (entry == null)
-                    continue;
-
-                if (entry.item == null)
-                    continue;
-
-                float chance = Mathf.Clamp01(entry.dropChance01);
-                if (UnityEngine.Random.value > chance)
-                    continue;
-
-                int min = Mathf.Max(1, entry.minQuantity);
-                int max = Mathf.Max(min, entry.maxQuantity);
-                int quantity = UnityEngine.Random.Range(min, max + 1);
-
-                SpawnLootEntry(entry.item, quantity);
-            }
+            if (resolvedLootTable != null && resolvedLootTable.TryRollCoins(out ItemDef coinItem, out int tableCoinQuantity))
+                SpawnLootEntry(coinItem, tableCoinQuantity);
+            else if (TryResolveActorCoinDrop(actorDef, out ItemDef actorCoinItem, out int actorCoinQuantity))
+                SpawnLootEntry(actorCoinItem, actorCoinQuantity);
         }
 
         private ActorLootTableDef ResolveLootTable()
@@ -113,9 +100,41 @@ namespace HuntersAndCollectors.Actors
                 : null;
         }
 
+        private ActorDef ResolveActorDef()
+        {
+            if (actorDefBinder == null)
+                actorDefBinder = GetComponent<ActorDefBinder>();
+
+            return actorDefBinder != null ? actorDefBinder.ActorDef : null;
+        }
+
+        private bool TryResolveActorCoinDrop(ActorDef actorDef, out ItemDef coinItem, out int quantity)
+        {
+            coinItem = null;
+            quantity = 0;
+
+            if (actorDef == null)
+                return false;
+
+            if (actorDef.CoinDropMax <= 0)
+                return false;
+
+            quantity = Random.Range(Mathf.Max(0, actorDef.CoinDropMin), Mathf.Max(Mathf.Max(0, actorDef.CoinDropMin), actorDef.CoinDropMax) + 1);
+            if (quantity <= 0)
+                return false;
+
+            if (itemDatabase != null)
+            {
+                if (!itemDatabase.TryGet("IT_Coin", out coinItem) || coinItem == null)
+                    itemDatabase.TryGet("it_coin", out coinItem);
+            }
+
+            return coinItem != null;
+        }
+
         private void SpawnLootEntry(ItemDef item, int quantity)
         {
-            if (item == null)
+            if (item == null || quantity <= 0)
                 return;
 
             GameObject prefab = item.WorldDropPrefab;
@@ -125,7 +144,7 @@ namespace HuntersAndCollectors.Actors
                 return;
             }
 
-            Vector2 scatter2D = UnityEngine.Random.insideUnitCircle * scatterRadius;
+            Vector2 scatter2D = Random.insideUnitCircle * scatterRadius;
             Vector3 xzOffset = new Vector3(scatter2D.x, 0f, scatter2D.y);
 
             Vector3 actorPos = transform.position;
@@ -142,14 +161,14 @@ namespace HuntersAndCollectors.Actors
             go.transform.SetParent(null, true);
             SceneManager.MoveGameObjectToScene(go, gameObject.scene);
 
-            if (!go.TryGetComponent<NetworkObject>(out var netObj) || netObj == null)
+            if (!go.TryGetComponent<NetworkObject>(out NetworkObject netObj) || netObj == null)
             {
                 Debug.LogError($"[ActorLoot][SERVER] Prefab missing NetworkObject prefab='{prefab.name}' itemId='{item.ItemId}'", this);
                 Destroy(go);
                 return;
             }
 
-            if (!go.TryGetComponent<ResourceDrop>(out var drop) || drop == null)
+            if (!go.TryGetComponent<ResourceDrop>(out ResourceDrop drop) || drop == null)
                 drop = go.GetComponentInChildren<ResourceDrop>(true);
 
             if (drop == null)
@@ -184,7 +203,7 @@ namespace HuntersAndCollectors.Actors
                 go.transform.position += Vector3.up * minLift;
             }
 
-            drop.ServerInitialize(Mathf.Max(1, quantity), null);
+            drop.ServerInitialize(quantity, null, item);
             netObj.Spawn(true);
 
             Rigidbody rb = go.GetComponentInChildren<Rigidbody>();
@@ -192,12 +211,12 @@ namespace HuntersAndCollectors.Actors
             {
                 Vector3 horizontal = new Vector3(scatter2D.x, 0f, scatter2D.y);
                 if (horizontal.sqrMagnitude < 0.0001f)
-                    horizontal = UnityEngine.Random.insideUnitSphere;
+                    horizontal = Random.insideUnitSphere;
 
                 horizontal.y = 0f;
                 horizontal.Normalize();
 
-                float side = UnityEngine.Random.Range(randomForce * 0.5f, randomForce);
+                float side = Random.Range(randomForce * 0.5f, randomForce);
                 float up = randomForce * 0.35f;
                 rb.AddForce(horizontal * side + Vector3.up * up, ForceMode.Impulse);
             }
@@ -205,7 +224,7 @@ namespace HuntersAndCollectors.Actors
             if (lifetimeSeconds > 0f)
                 drop.ServerScheduleAutoDespawn(lifetimeSeconds);
 
-            Debug.Log($"[ActorLoot][SERVER] Loot spawned itemId='{item.ItemId}' qty={Mathf.Max(1, quantity)} actor='{name}' netId={netObj.NetworkObjectId}", this);
+            Debug.Log($"[ActorLoot][SERVER] Loot spawned itemId='{item.ItemId}' qty={quantity} actor='{name}' netId={netObj.NetworkObjectId}", this);
         }
 
 #if UNITY_EDITOR
@@ -225,4 +244,3 @@ namespace HuntersAndCollectors.Actors
 #endif
     }
 }
-

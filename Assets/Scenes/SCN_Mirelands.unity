@@ -1188,6 +1188,7 @@ MonoBehaviour:
   playerActorPrefab: {fileID: 3632684436402908213, guid: 9df120c089f1bec4bbfa1dd1805753e6, type: 3}
   dummyActorPrefab: {fileID: 0}
   npcActorPrefab: {fileID: 0}
+  defaultSceneRoster: {fileID: 11400000, guid: 6460598b0fc044a0be6f6a822ff3014e, type: 2}
   spawnPoints: []
   snapToGround: 1
   groundMask:
@@ -1892,7 +1893,8 @@ GameObject:
   - component: {fileID: 1778282061}
   - component: {fileID: 1778282060}
   - component: {fileID: 1778282059}
-  m_Layer: 0
+  - component: {fileID: 1778282062}
+  m_Layer: 7
   m_Name: Mirelands_Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1975,6 +1977,38 @@ Transform:
   - {fileID: 5018786151907692030}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1778282062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1778282058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 0
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: 6d61d460498ca6a4ea388ce5ce6e7d6f, type: 2}
+  m_BuildHeightMesh: 0
 --- !u!1001 &1784127154
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2365,7 +2399,7 @@ GameObject:
   - component: {fileID: 7706374530255611928}
   - component: {fileID: 2627713963017469407}
   - component: {fileID: 6012756729461772589}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: UnderwaterPlane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2432,7 +2466,7 @@ GameObject:
   - component: {fileID: 5018786151907692030}
   - component: {fileID: 5018786151907692031}
   - component: {fileID: 5018786151907692028}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: FantasyValley_Water_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2524,7 +2558,7 @@ GameObject:
   - component: {fileID: 9053507972631594187}
   - component: {fileID: 7651196514054367471}
   - component: {fileID: 1205481740212845660}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: WaterPostProcessing
   m_TagString: Untagged
   m_Icon: {fileID: 0}

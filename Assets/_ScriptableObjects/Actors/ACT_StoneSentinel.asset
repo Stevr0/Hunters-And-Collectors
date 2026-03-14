@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_StoneSentinel
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_StoneSentinel
+  displayName: Stone Sentinel
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: a54c833fd5467a64cac9b4688f1ac42d, type: 3}
+  description: First-pass authored enemy for SCN_Tombs.
+  category: 1
+  factionId: 14
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 1
+  baseHealth: 191
+  baseStamina: 114
+  baseMana: 48
+  baseHealthRegenPerSecond: 0.75
+  baseStaminaRegenPerSecond: 0.85
+  baseManaRegenPerSecond: 0.7
+  attackBonus: 5
+  defenceBonus: 4
+  baseDamageMin: 9
+  baseDamageMax: 18
+  attackRange: 2
+  attackIntervalSeconds: 1.39
+  aggroRange: 15
+  leashRange: 30
+  primaryDamageType: 0
+  physicalResistance: 10
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 1.56
+  runSpeed: 3.13
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 16
+  size: 2
+  collisionRadius: 0.65
+  height: 2.2
+  interactionRadius: 2.4
+  aiProfile: {fileID: 11400000, guid: b915002666d540c78956b71f86a9b5b9, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: f3f0e27fc93f48a99b876d8169d7f774, type: 2}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 60
+  xpSkillId: 
+  spawnCost: 2
+  difficultyTier: 5
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 96
+  baseDexterity: 57
+  baseIntelligence: 24
+  baseMoveSpeedMult: 0.92
+  baseDamage: 13.44
+  baseDefence: 5.88
+  baseSwingSpeed: 0.72
+  startingSkills: []

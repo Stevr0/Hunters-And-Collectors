@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_AncientBeast
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_AncientBeast
+  displayName: Ancient Beast
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: a54c833fd5467a64cac9b4688f1ac42d, type: 3}
+  description: First-pass authored enemy for SCN_BeastCaverns.
+  category: 5
+  factionId: 10
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 1
+  countsAsCivilized: 0
+  bossFlag: 1
+  eliteFlag: 1
+  baseHealth: 146
+  baseStamina: 110
+  baseMana: 88
+  baseHealthRegenPerSecond: 0.65
+  baseStaminaRegenPerSecond: 0.65
+  baseManaRegenPerSecond: 0.54
+  attackBonus: 3
+  defenceBonus: 2
+  baseDamageMin: 7
+  baseDamageMax: 15
+  attackRange: 2
+  attackIntervalSeconds: 1.22
+  aggroRange: 15
+  leashRange: 30
+  primaryDamageType: 0
+  physicalResistance: 10
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 10
+  walkSpeed: 1.8
+  runSpeed: 3.61
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 12
+  size: 2
+  collisionRadius: 0.65
+  height: 2.2
+  interactionRadius: 2.4
+  aiProfile: {fileID: 11400000, guid: 6477bfdb866f43ee9519b8a0267d5ec9, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: 0774b320dcf44be48a3509b07892e18f, type: 2}
+  coinDropMin: 6
+  coinDropMax: 12
+  xpReward: 72
+  xpSkillId: 
+  spawnCost: 4
+  difficultyTier: 3
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 73
+  baseDexterity: 55
+  baseIntelligence: 44
+  baseMoveSpeedMult: 0.95
+  baseDamage: 11
+  baseDefence: 4.36
+  baseSwingSpeed: 0.82
+  startingSkills: []

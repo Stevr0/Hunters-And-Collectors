@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9ee9a4b74e74009b90e0891ffc9b135, type: 3}
+  m_Name: AI_T5_Apex
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorAIDef
+  IdleMode: 0
+  DecisionIntervalSeconds: 0.12
+  AggroRange: 14
+  LoseTargetRange: 20
+  RequireLineOfSight: 1
+  TargetMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  OcclusionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  AttackRange: 2.6
+  AttackRangeHysteresis: 0.4
+  FlatAttackBonus: 0
+  AttackIntervalOverrideSeconds: 0
+  MoveSpeedMultiplier: 0.95
+  LeashRange: 28
+  ReturnHomeDistance: 0.8
+  PatrolRadius: 7
+  PatrolPauseSeconds: 0.7
+  PatrolArrivalDistance: 0.8
+  RetreatHealth01: 0.08
+  RetreatDistance: 8
+  RetreatDurationSeconds: 2.2

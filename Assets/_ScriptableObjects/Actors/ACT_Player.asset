@@ -12,19 +12,71 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
   m_Name: ACT_Player
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
-  ActorId: Player
-  DisplayName: Player
-  DefaultFactionId: 1
-  DefaultPvpEnabled: 0
-  BaseStrength: 10
-  BaseDexterity: 10
-  BaseIntelligence: 10
-  BaseMoveSpeedMult: 1
-  BaseDamage: 0
-  BaseDefence: 0
-  BaseSwingSpeed: 0.5
-  AiDef: {fileID: 0}
-  StartingSkills:
+  actorId: Player
+  displayName: Player
+  icon: {fileID: 21300000, guid: ba7b3ed94bec5c64ab4ee22be5e0f9fa, type: 3}
+  prefab: {fileID: 4492703975310421043, guid: 9df120c089f1bec4bbfa1dd1805753e6, type: 3}
+  description: 
+  category: 0
+  factionId: 1
+  defaultPvpEnabled: 0
+  isHostile: 0
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 1
+  countsAsWildlife: 0
+  countsAsCivilized: 1
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 10
+  baseStamina: 10
+  baseMana: 10
+  baseHealthRegenPerSecond: 0.2
+  baseStaminaRegenPerSecond: 0.4
+  baseManaRegenPerSecond: 0.4
+  attackBonus: 0
+  defenceBonus: 0
+  baseDamageMin: 1
+  baseDamageMax: 5
+  attackRange: 1.75
+  attackIntervalSeconds: 1.2
+  aggroRange: 10
+  leashRange: 100
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 2
+  runSpeed: 4
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 8
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 0}
+  defaultBehaviourMode: 1
+  lootTable: {fileID: 0}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 0
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 1
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 10
+  baseDexterity: 10
+  baseIntelligence: 10
+  baseMoveSpeedMult: 1
+  baseDamage: 0
+  baseDefence: 0
+  baseSwingSpeed: 0.5
+  startingSkills:
   - SkillId: EquipmentCrafting
     Level: 10
   - SkillId: ToolCrafting

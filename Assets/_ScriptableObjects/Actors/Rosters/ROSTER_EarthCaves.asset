@@ -1,0 +1,272 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c536a4d2e4fdcb7c9ef46e1f2aa10, type: 3}
+  m_Name: ROSTER_EarthCaves
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.SceneEnemyRosterDef
+  sceneName: SCN_EarthCaves
+  areaId: AREA_EarthCaves
+  recommendedTierMin: 4
+  recommendedTierMax: 4
+  entries:
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: fb6f9ad53ad24be985a5008dc2a69ac0, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: fb6f9ad53ad24be985a5008dc2a69ac0, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: fb6f9ad53ad24be985a5008dc2a69ac0, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 305a1aaff2144a3eab41c2d98304e04f, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 305a1aaff2144a3eab41c2d98304e04f, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 305a1aaff2144a3eab41c2d98304e04f, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 01c3e618872141eeb73a19e3bd8733cf, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 01c3e618872141eeb73a19e3bd8733cf, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 01c3e618872141eeb73a19e3bd8733cf, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e32d1a8f3e474b74afdb0ccb063436d6, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e32d1a8f3e474b74afdb0ccb063436d6, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: e32d1a8f3e474b74afdb0ccb063436d6, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 7c2825c1812545fda0ead4e73c8d7673, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 7c2825c1812545fda0ead4e73c8d7673, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Denizens
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 7c2825c1812545fda0ead4e73c8d7673, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 51147419351a4bb3954ea3a7035778b6, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Dwarves
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 51147419351a4bb3954ea3a7035778b6, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: EarthCaves_Dwarves
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 51147419351a4bb3954ea3a7035778b6, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: c3c412aaf52741feab7d758be9667ba0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Dwarves
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: c3c412aaf52741feab7d758be9667ba0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Dwarves
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: c3c412aaf52741feab7d758be9667ba0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: EarthCaves_Boss
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: cd7a8c03f85c4dfca247143d002d91f3, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: EarthCaves_Boss
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: cd7a8c03f85c4dfca247143d002d91f3, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1

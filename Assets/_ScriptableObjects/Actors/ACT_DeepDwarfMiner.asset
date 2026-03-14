@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_DeepDwarfMiner
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_DeepDwarfMiner
+  displayName: Deep Dwarf Miner
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  description: First-pass authored enemy for SCN_EarthCaves.
+  category: 2
+  factionId: 12
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 1
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 94
+  baseStamina: 66
+  baseMana: 32
+  baseHealthRegenPerSecond: 0.6
+  baseStaminaRegenPerSecond: 0.75
+  baseManaRegenPerSecond: 0.62
+  attackBonus: 3
+  defenceBonus: 2
+  baseDamageMin: 5
+  baseDamageMax: 10
+  attackRange: 2
+  attackIntervalSeconds: 1.18
+  aggroRange: 14
+  leashRange: 26
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 2
+  runSpeed: 4
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 14
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: d1b112f0201c48c5bf52e1ba756f6d9d, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: 446fc3d27d9f42399bd4fc630a25b16e, type: 2}
+  coinDropMin: 4
+  coinDropMax: 8
+  xpReward: 32
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 4
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 47
+  baseDexterity: 33
+  baseIntelligence: 16
+  baseMoveSpeedMult: 1
+  baseDamage: 7.2
+  baseDefence: 3.2
+  baseSwingSpeed: 0.85
+  startingSkills: []

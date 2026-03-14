@@ -63,6 +63,10 @@ namespace HuntersAndCollectors.Actors
         [SerializeField] private NetworkObject dummyActorPrefab;
         [SerializeField] private NetworkObject npcActorPrefab;
 
+        [Header("Rosters")]
+        [Tooltip("Optional scene-level enemy roster. Spawn zones and spawn points can inherit this automatically.")]
+        [SerializeField] private SceneEnemyRosterDef defaultSceneRoster;
+
         [Header("Spawn Points")]
         [Tooltip("Optional authored cache. If empty, ActorSpawnPoint components are discovered at runtime.")]
         [SerializeField] private List<ActorSpawnPoint> spawnPoints = new();
@@ -89,12 +93,14 @@ namespace HuntersAndCollectors.Actors
         [SerializeField] private bool spawnConfiguredActorsOnServerStart = true;
         [SerializeField] private List<StartupSpawnEntry> startupSpawns = new();
 
-        private readonly HashSet<string> _loggedMissingSpawnPointIds = new();
-        private readonly HashSet<string> _loggedFallbackTypeWarnings = new();
-        private readonly Dictionary<string, int> _aliveByRespawnPoint = new();
+        private readonly HashSet<string> loggedMissingSpawnPointIds = new();
+        private readonly HashSet<string> loggedFallbackTypeWarnings = new();
+        private readonly Dictionary<string, int> aliveByRespawnPoint = new();
 
-        private bool _startupSpawnsExecuted;
-        private bool _loggedGroundRayMiss;
+        private bool startupSpawnsExecuted;
+        private bool loggedGroundRayMiss;
+
+        public SceneEnemyRosterDef DefaultSceneRoster => defaultSceneRoster;
 
         private void Awake()
         {
@@ -115,12 +121,12 @@ namespace HuntersAndCollectors.Actors
 
         public void ServerSpawnConfiguredActorsOnce()
         {
-            if (_startupSpawnsExecuted)
+            if (startupSpawnsExecuted)
                 return;
 
             if (!spawnConfiguredActorsOnServerStart)
             {
-                _startupSpawnsExecuted = true;
+                startupSpawnsExecuted = true;
                 return;
             }
 
@@ -129,7 +135,7 @@ namespace HuntersAndCollectors.Actors
 
             if (startupSpawns == null || startupSpawns.Count == 0)
             {
-                _startupSpawnsExecuted = true;
+                startupSpawnsExecuted = true;
                 return;
             }
 
@@ -150,7 +156,7 @@ namespace HuntersAndCollectors.Actors
                 }
             }
 
-            _startupSpawnsExecuted = true;
+            startupSpawnsExecuted = true;
         }
 
         public NetworkObject ServerSpawnPlayerActor(ulong ownerClientId, ActorDef actorDef, string spawnPointId = "")
@@ -186,6 +192,9 @@ namespace HuntersAndCollectors.Actors
                 out ActorSpawnPoint spawnPoint);
 
             ActorDef resolvedDef = actorDef != null ? actorDef : pointDefaultDef;
+            if (resolvedDef == null && spawnPoint != null)
+                resolvedDef = spawnPoint.ResolveActorDef(defaultSceneRoster, logWarnings: true);
+
             NetworkObject prefab = ResolvePrefabForActor(resolvedDef, npcActorPrefab);
             NetworkObject spawned = ServerSpawnActor(prefab, resolvedDef, position, rotation, null);
             RegisterRespawnTracker(spawned, spawnPoint, resolvedDef, prefab, null);
@@ -213,10 +222,6 @@ namespace HuntersAndCollectors.Actors
             return spawned;
         }
 
-        /// <summary>
-        /// Generic spawn entry when caller only has an ActorDef.
-        /// Prefab is resolved from bindings first, then optional fallback prefab.
-        /// </summary>
         public NetworkObject ServerSpawnActorByDef(ActorDef actorDef, string spawnPointId = "", NetworkObject fallbackPrefab = null, ulong? ownerClientId = null)
         {
             ResolveSpawnTransform(
@@ -230,6 +235,9 @@ namespace HuntersAndCollectors.Actors
                 out ActorSpawnPoint spawnPoint);
 
             ActorDef resolvedDef = actorDef != null ? actorDef : pointDefaultDef;
+            if (resolvedDef == null && spawnPoint != null)
+                resolvedDef = spawnPoint.ResolveActorDef(defaultSceneRoster, logWarnings: true);
+
             NetworkObject prefab = ResolvePrefabForActor(resolvedDef, fallbackPrefab);
             NetworkObject spawned = ServerSpawnActor(prefab, resolvedDef, position, rotation, ownerClientId);
             RegisterRespawnTracker(spawned, spawnPoint, resolvedDef, prefab, ownerClientId);
@@ -270,9 +278,6 @@ namespace HuntersAndCollectors.Actors
             ActorDefBinder binder = instance.GetComponent<ActorDefBinder>();
             if (binder != null)
             {
-                // Supports both patterns:
-                // - Prefab already has authored ActorDef
-                // - Runtime ActorDef override supplied by spawn request
                 if (actorDef != null)
                     binder.SetActorDefRuntime(actorDef);
             }
@@ -322,6 +327,9 @@ namespace HuntersAndCollectors.Actors
                 out ActorSpawnPoint spawnPoint);
 
             ActorDef resolvedDef = request.ActorDef != null ? request.ActorDef : pointDefaultDef;
+            if (resolvedDef == null && spawnPoint != null)
+                resolvedDef = spawnPoint.ResolveActorDef(defaultSceneRoster, logWarnings: true);
+
             if (requestPrefab == null)
                 requestPrefab = ResolvePrefabForActor(resolvedDef, null);
 
@@ -336,10 +344,6 @@ namespace HuntersAndCollectors.Actors
             return spawned;
         }
 
-        /// <summary>
-        /// Used by existing player bootstrap flow: keeps spawn-point selection unified while
-        /// preserving NGO default player-object creation.
-        /// </summary>
         public bool TryGetPlayerSpawnTransform(string spawnPointId, out Vector3 position, out Quaternion rotation)
         {
             return TryGetSpawnTransformByType(spawnPointId, p => p != null && p.IsPlayerSpawn, "player", out position, out rotation);
@@ -372,10 +376,6 @@ namespace HuntersAndCollectors.Actors
                 out _,
                 out ActorSpawnPoint resolvedSpawnPoint);
 
-            // IMPORTANT:
-            // Return false when we had to use the spawner-transform fallback.
-            // That allows higher-level systems (Bootstrapper) to try alternate spawn sources
-            // like SceneSpawnPoint instead of silently accepting (0,0,0)-style fallback results.
             return resolvedSpawnPoint != null;
         }
 
@@ -395,7 +395,7 @@ namespace HuntersAndCollectors.Actors
             {
                 if (!TryFindSpawnPoint(spawnPointId, out spawnPoint))
                 {
-                    if (_loggedMissingSpawnPointIds.Add(spawnPointId))
+                    if (loggedMissingSpawnPointIds.Add(spawnPointId))
                         Debug.LogWarning($"[ActorSpawner] Spawn point '{spawnPointId}' not found, using fallback position.", this);
                 }
             }
@@ -413,14 +413,13 @@ namespace HuntersAndCollectors.Actors
                 return;
             }
 
-            // Final fallback keeps spawning functional even with incomplete scene setup.
             position = transform.position;
             rotation = transform.rotation;
             pointLabel = "<fallback>";
             defaultActorDef = null;
             resolvedSpawnPoint = null;
 
-            if (_loggedFallbackTypeWarnings.Add(actorTypeLabel ?? "actor"))
+            if (loggedFallbackTypeWarnings.Add(actorTypeLabel ?? "actor"))
                 Debug.LogWarning($"[ActorSpawner] No {actorTypeLabel} spawn point found, using spawner transform fallback.", this);
         }
 
@@ -429,7 +428,6 @@ namespace HuntersAndCollectors.Actors
             if (spawned == null || spawnPoint == null || !spawnPoint.EnableRespawn)
                 return;
 
-            // Player-owned objects are usually handled by connection/session flow, not point auto-respawn.
             if (ownerClientId.HasValue)
                 return;
 
@@ -442,7 +440,6 @@ namespace HuntersAndCollectors.Actors
 
         private IEnumerator CoMonitorRespawn(NetworkObject trackedObject, ActorSpawnPoint spawnPoint, string pointKey, ActorDef actorDef, NetworkObject fallbackPrefab)
         {
-            // Wait until object is destroyed/despawned.
             while (trackedObject != null && trackedObject.IsSpawned)
                 yield return null;
 
@@ -460,7 +457,6 @@ namespace HuntersAndCollectors.Actors
                 int alive = GetAlive(pointKey);
                 if (alive < spawnPoint.MaxAliveFromPoint)
                 {
-                    // Spawn through same point id so all placement/grounding rules stay consistent.
                     ServerSpawnActorByDef(actorDef, spawnPoint.SpawnPointId, fallbackPrefab, null);
                     yield break;
                 }
@@ -489,7 +485,7 @@ namespace HuntersAndCollectors.Actors
             if (current >= Mathf.Max(1, maxAlive))
                 return false;
 
-            _aliveByRespawnPoint[key] = current + 1;
+            aliveByRespawnPoint[key] = current + 1;
             return true;
         }
 
@@ -498,7 +494,7 @@ namespace HuntersAndCollectors.Actors
             if (string.IsNullOrWhiteSpace(key))
                 return 0;
 
-            return _aliveByRespawnPoint.TryGetValue(key, out int value) ? Mathf.Max(0, value) : 0;
+            return aliveByRespawnPoint.TryGetValue(key, out int value) ? Mathf.Max(0, value) : 0;
         }
 
         private void DecrementAlive(string key)
@@ -509,11 +505,11 @@ namespace HuntersAndCollectors.Actors
             int current = GetAlive(key);
             if (current <= 1)
             {
-                _aliveByRespawnPoint.Remove(key);
+                aliveByRespawnPoint.Remove(key);
                 return;
             }
 
-            _aliveByRespawnPoint[key] = current - 1;
+            aliveByRespawnPoint[key] = current - 1;
         }
 
         private bool IsServerReadyForSpawn()
@@ -531,9 +527,9 @@ namespace HuntersAndCollectors.Actors
 
             if (!TrySampleGround(desiredPosition, out RaycastHit groundHit))
             {
-                if (!_loggedGroundRayMiss)
+                if (!loggedGroundRayMiss)
                 {
-                    _loggedGroundRayMiss = true;
+                    loggedGroundRayMiss = true;
                     Debug.LogWarning("[ActorSpawner] Ground snap missed ground mask. Using requested spawn position.", this);
                 }
 
@@ -669,16 +665,12 @@ namespace HuntersAndCollectors.Actors
 
         private NetworkObject ResolvePrefabForActor(ActorDef actorDef, NetworkObject fallbackPrefab)
         {
-            // ActorDef now supports an optional direct prefab reference. Use it first when present so
-            // authored content can be more self-contained, while still keeping the older binding list
-            // as a safe fallback for existing scenes/assets.
             if (actorDef != null && actorDef.Prefab != null && actorDef.Prefab.TryGetComponent(out NetworkObject prefabFromDef))
                 return prefabFromDef;
 
             if (actorDef == null || actorPrefabBindings == null || actorPrefabBindings.Count == 0)
                 return fallbackPrefab;
 
-            // Prefer direct ScriptableObject reference match.
             for (int i = 0; i < actorPrefabBindings.Count; i++)
             {
                 ActorPrefabBinding binding = actorPrefabBindings[i];
@@ -689,7 +681,6 @@ namespace HuntersAndCollectors.Actors
                     return binding.Prefab;
             }
 
-            // Fallback to ActorId match to support duplicated/variant def assets.
             if (!string.IsNullOrWhiteSpace(actorDef.ActorId))
             {
                 for (int i = 0; i < actorPrefabBindings.Count; i++)
@@ -711,7 +702,6 @@ namespace HuntersAndCollectors.Actors
             if (instance == null || actorDef == null || actorDef.AiDef == null)
                 return;
 
-            // AI logic is server-authoritative and local-only. It does not need to be a NetworkBehaviour.
             ActorAIController ai = instance.GetComponent<ActorAIController>();
             if (ai == null)
                 ai = instance.gameObject.AddComponent<ActorAIController>();
@@ -806,15 +796,4 @@ namespace HuntersAndCollectors.Actors
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 

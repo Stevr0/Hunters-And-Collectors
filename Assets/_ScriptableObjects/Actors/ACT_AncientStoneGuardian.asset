@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_AncientStoneGuardian
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_AncientStoneGuardian
+  displayName: Ancient Stone Guardian
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: a54c833fd5467a64cac9b4688f1ac42d, type: 3}
+  description: First-pass authored enemy for SCN_EarthCaves.
+  category: 5
+  factionId: 12
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 0
+  bossFlag: 1
+  eliteFlag: 1
+  baseHealth: 226
+  baseStamina: 170
+  baseMana: 136
+  baseHealthRegenPerSecond: 0.8
+  baseStaminaRegenPerSecond: 0.75
+  baseManaRegenPerSecond: 0.62
+  attackBonus: 4
+  defenceBonus: 3
+  baseDamageMin: 10
+  baseDamageMax: 20
+  attackRange: 2
+  attackIntervalSeconds: 1.22
+  aggroRange: 16
+  leashRange: 32
+  primaryDamageType: 4
+  physicalResistance: 10
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 10
+  walkSpeed: 1.8
+  runSpeed: 3.61
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 14
+  size: 2
+  collisionRadius: 0.65
+  height: 2.2
+  interactionRadius: 2.4
+  aiProfile: {fileID: 11400000, guid: 6477bfdb866f43ee9519b8a0267d5ec9, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: 02c415be403643898d02b5070d87b434, type: 2}
+  coinDropMin: 8
+  coinDropMax: 16
+  xpReward: 96
+  xpSkillId: 
+  spawnCost: 4
+  difficultyTier: 4
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 113
+  baseDexterity: 85
+  baseIntelligence: 68
+  baseMoveSpeedMult: 0.95
+  baseDamage: 15.22
+  baseDefence: 6.34
+  baseSwingSpeed: 0.82
+  startingSkills: []

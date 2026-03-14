@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_GiantSerpent
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_GiantSerpent
+  displayName: Giant Serpent
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: a54c833fd5467a64cac9b4688f1ac42d, type: 3}
+  description: First-pass authored enemy for SCN_Jungle.
+  category: 1
+  factionId: 13
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 1
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 1
+  baseHealth: 101
+  baseStamina: 80
+  baseMana: 26
+  baseHealthRegenPerSecond: 0.6
+  baseStaminaRegenPerSecond: 0.75
+  baseManaRegenPerSecond: 0.62
+  attackBonus: 4
+  defenceBonus: 3
+  baseDamageMin: 5
+  baseDamageMax: 12
+  attackRange: 2
+  attackIntervalSeconds: 1.11
+  aggroRange: 13
+  leashRange: 25
+  primaryDamageType: 3
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 15
+  arcaneResistance: 0
+  walkSpeed: 2.31
+  runSpeed: 4.62
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 14
+  size: 2
+  collisionRadius: 0.65
+  height: 2.2
+  interactionRadius: 2.4
+  aiProfile: {fileID: 11400000, guid: d1b112f0201c48c5bf52e1ba756f6d9d, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: d48069a9d75241d3b24720d18df1afd1, type: 2}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 48
+  xpSkillId: 
+  spawnCost: 2
+  difficultyTier: 4
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 50
+  baseDexterity: 40
+  baseIntelligence: 13
+  baseMoveSpeedMult: 1.1
+  baseDamage: 8.47
+  baseDefence: 3.23
+  baseSwingSpeed: 0.9
+  startingSkills: []

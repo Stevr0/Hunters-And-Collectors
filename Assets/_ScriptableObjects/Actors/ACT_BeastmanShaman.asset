@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_BeastmanShaman
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_BeastmanShaman
+  displayName: Beastman Shaman
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  description: First-pass authored enemy for SCN_BeastCaverns.
+  category: 2
+  factionId: 10
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 1
+  bossFlag: 0
+  eliteFlag: 1
+  baseHealth: 62
+  baseStamina: 34
+  baseMana: 52
+  baseHealthRegenPerSecond: 0.45
+  baseStaminaRegenPerSecond: 0.65
+  baseManaRegenPerSecond: 0.54
+  attackBonus: 3
+  defenceBonus: 2
+  baseDamageMin: 3
+  baseDamageMax: 8
+  attackRange: 2.3
+  attackIntervalSeconds: 1.25
+  aggroRange: 14
+  leashRange: 25
+  primaryDamageType: 3
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 10
+  walkSpeed: 1.82
+  runSpeed: 3.65
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 12
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: f75a4d9915dd4a06a6f656bd4e48cf68, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: e332829cddf24d59885730d12c921ca8, type: 2}
+  coinDropMin: 3
+  coinDropMax: 6
+  xpReward: 36
+  xpSkillId: 
+  spawnCost: 2
+  difficultyTier: 3
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 31
+  baseDexterity: 17
+  baseIntelligence: 26
+  baseMoveSpeedMult: 0.96
+  baseDamage: 5.53
+  baseDefence: 2.22
+  baseSwingSpeed: 0.8
+  startingSkills: []

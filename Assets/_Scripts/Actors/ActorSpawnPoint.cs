@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -25,6 +26,14 @@ namespace HuntersAndCollectors.Actors
         [Header("Optional Defaults")]
         [SerializeField] private ActorDef defaultActorDef;
 
+        [Header("Optional Roster")]
+        [SerializeField] private SceneEnemyRosterDef rosterOverride;
+        [SerializeField] private string rosterTagOverride = string.Empty;
+        [SerializeField] private bool useSceneRoster = true;
+        [SerializeField] private bool includeEliteEntries = true;
+        [SerializeField] private bool includeBossEntries = true;
+        [SerializeField] private bool useNightEntries;
+
         [Header("Respawn")]
         [Tooltip("If enabled, ActorSpawner can automatically respawn actors that were spawned from this point.")]
         [SerializeField] private bool enableRespawn;
@@ -35,6 +44,8 @@ namespace HuntersAndCollectors.Actors
 
         [Header("Editor")]
         [SerializeField] private bool drawGizmo = true;
+
+        private readonly List<SpawnEntry> rosterMatches = new(16);
 
         public string SpawnPointId => spawnPointId;
         public bool IsPlayerSpawn => isPlayerSpawn;
@@ -47,11 +58,76 @@ namespace HuntersAndCollectors.Actors
         public int MaxAliveFromPoint => Mathf.Max(1, maxAliveFromPoint);
 
         public bool DrawGizmo => drawGizmo;
+        public SceneEnemyRosterDef RosterOverride => rosterOverride;
+        public bool UseSceneRoster => useSceneRoster;
+
+        public ActorDef ResolveActorDef(SceneEnemyRosterDef sceneRoster, bool logWarnings = false)
+        {
+            SceneEnemyRosterDef roster = ResolveRoster(sceneRoster);
+            if (roster == null)
+                return defaultActorDef;
+
+            rosterMatches.Clear();
+            roster.AppendMatches(
+                rosterMatches,
+                ResolveRosterTag(),
+                RosterSpawnUsage.SpawnPoint,
+                includeEliteEntries,
+                includeBossEntries,
+                useNightEntries);
+
+            if (rosterMatches.Count == 0)
+            {
+                if (defaultActorDef == null && logWarnings)
+                    Debug.LogWarning($"[ActorSpawnPoint] No roster match and no default ActorDef configured for point '{spawnPointId}'.", this);
+
+                return defaultActorDef;
+            }
+
+            float totalWeight = 0f;
+            for (int i = 0; i < rosterMatches.Count; i++)
+                totalWeight += Mathf.Max(0f, rosterMatches[i].weight);
+
+            if (totalWeight <= 0f)
+                return defaultActorDef;
+
+            float choice = Random.value * totalWeight;
+            float cursor = 0f;
+            for (int i = 0; i < rosterMatches.Count; i++)
+            {
+                SpawnEntry entry = rosterMatches[i];
+                cursor += Mathf.Max(0f, entry.weight);
+                if (choice <= cursor)
+                    return entry.actorDef != null ? entry.actorDef : defaultActorDef;
+            }
+
+            SpawnEntry last = rosterMatches[rosterMatches.Count - 1];
+            return last.actorDef != null ? last.actorDef : defaultActorDef;
+        }
+
+        private SceneEnemyRosterDef ResolveRoster(SceneEnemyRosterDef sceneRoster)
+        {
+            if (rosterOverride != null)
+                return rosterOverride;
+
+            if (!useSceneRoster)
+                return null;
+
+            return sceneRoster;
+        }
+
+        private string ResolveRosterTag()
+        {
+            return string.IsNullOrWhiteSpace(rosterTagOverride)
+                ? spawnPointId
+                : rosterTagOverride.Trim();
+        }
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
             spawnPointId = spawnPointId == null ? string.Empty : spawnPointId.Trim();
+            rosterTagOverride = rosterTagOverride == null ? string.Empty : rosterTagOverride.Trim();
             respawnDelaySeconds = Mathf.Max(0f, respawnDelaySeconds);
             maxAliveFromPoint = Mathf.Max(1, maxAliveFromPoint);
         }

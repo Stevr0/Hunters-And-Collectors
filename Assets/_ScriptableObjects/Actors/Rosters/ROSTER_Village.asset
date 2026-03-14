@@ -1,0 +1,338 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c536a4d2e4fdcb7c9ef46e1f2aa10, type: 3}
+  m_Name: ROSTER_Village
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.SceneEnemyRosterDef
+  sceneName: SCN_Village
+  areaId: AREA_Village
+  recommendedTierMin: 1
+  recommendedTierMax: 2
+  entries:
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 41d12f918a924b2a8dfe1b2eefeab8e8, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 41d12f918a924b2a8dfe1b2eefeab8e8, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 41d12f918a924b2a8dfe1b2eefeab8e8, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 5c947ae3970b45e3b94442305c407ae6, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 5c947ae3970b45e3b94442305c407ae6, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 5c947ae3970b45e3b94442305c407ae6, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 8eec606ed611482f8fddabed9f1b90a0, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 8eec606ed611482f8fddabed9f1b90a0, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 8eec606ed611482f8fddabed9f1b90a0, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: b090793a41d8472bb143de8f7c3c4bae, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: b090793a41d8472bb143de8f7c3c4bae, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: b090793a41d8472bb143de8f7c3c4bae, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: f87ce819031243aa92850a0fa63b59ff, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: f87ce819031243aa92850a0fa63b59ff, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: f87ce819031243aa92850a0fa63b59ff, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: cf14eb8fc5b64afd81506eecef31004e, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: cf14eb8fc5b64afd81506eecef31004e, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Wildlife
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: cf14eb8fc5b64afd81506eecef31004e, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 9f4fbc3647d041be8ce02e54d10c5a57, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Bandits
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 9f4fbc3647d041be8ce02e54d10c5a57, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Bandits
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 9f4fbc3647d041be8ce02e54d10c5a57, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: ab1486bbea344607b929e451897542d9, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Bandits
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: ab1486bbea344607b929e451897542d9, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Village_Bandits
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: ab1486bbea344607b929e451897542d9, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 49700485e13f4b11b1238359df704994, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Village_Elite
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 49700485e13f4b11b1238359df704994, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Village_Elite
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 49700485e13f4b11b1238359df704994, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Village_Boss
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 9b09070a69c34130af8f3eb58340ca52, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: Village_Boss
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 9b09070a69c34130af8f3eb58340ca52, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1

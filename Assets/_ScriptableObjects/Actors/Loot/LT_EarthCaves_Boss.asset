@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
+  m_Name: LT_EarthCaves_Boss
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
+  entries: []
+  guaranteedDrops:
+  - item: {fileID: 11400000, guid: , type: 2}
+    minQuantity: T
+    maxQuantity: _
+    dropChance01: C
+  - item: {fileID: 11400000, guid: , type: 2}
+    minQuantity: 
+    maxQuantity: 
+    dropChance01: 
+  - item: {fileID: 11400000, guid: , type: 2}
+    minQuantity: 
+    maxQuantity: 
+    dropChance01: 
+  - item: {fileID: 11400000, guid: , type: 2}
+    minQuantity: 
+    maxQuantity: 
+    dropChance01: 
+  - item: {fileID: 11400000, guid: , type: 2}
+    minQuantity: 
+    maxQuantity: 
+    dropChance01: 
+  weightedDrops:
+  - item: {fileID: 11400000, guid: 5c860f3d6b8c4feaa061c5dd7dcbdf73, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.45
+    weight: 2
+  - item: {fileID: 11400000, guid: ae1ad622fa984f0cbddc956d7275319e, type: 2}
+    minQuantity: 1
+    maxQuantity: 2
+    dropChance01: 0.35
+    weight: 1
+  weightedRollsMin: 2
+  weightedRollsMax: 2
+  coinDrop:
+  coinItem: {fileID: 11400000, guid: 095eb913c03dfd24399b0efe270d8c65, type: 2}
+  minQuantity: 1
+  maxQuantity: 6
+  dropChance01: 0.75

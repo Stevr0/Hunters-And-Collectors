@@ -119,6 +119,8 @@ namespace HuntersAndCollectors.Actors
         [SerializeField] private bool canInteract = false;
         [SerializeField] private bool countsAsWildlife = false;
         [SerializeField] private bool countsAsCivilized = false;
+        [SerializeField] private bool bossFlag = false;
+        [SerializeField] private bool eliteFlag = false;
 
         [Header("Base Vitals")]
         [Min(1)]
@@ -247,6 +249,10 @@ namespace HuntersAndCollectors.Actors
         public bool CanInteract => canInteract;
         public bool CountsAsWildlife => countsAsWildlife;
         public bool CountsAsCivilized => countsAsCivilized;
+        public bool BossFlag => bossFlag;
+        public bool EliteFlag => eliteFlag;
+        public bool IsBossVariant => bossFlag;
+        public bool IsEliteVariant => eliteFlag;
 
         public int BaseHealth => baseHealth;
         public int BaseStamina => baseStamina;
@@ -263,6 +269,7 @@ namespace HuntersAndCollectors.Actors
         public float AttackIntervalSeconds => attackIntervalSeconds;
         public float AggroRange => aggroRange;
         public float LeashRange => leashRange;
+        public float HomeRadius => leashRange;
         public DamageType PrimaryDamageType => primaryDamageType;
 
         public int PhysicalResistance => physicalResistance;
@@ -273,6 +280,7 @@ namespace HuntersAndCollectors.Actors
 
         public float WalkSpeed => walkSpeed;
         public float RunSpeed => runSpeed;
+        public float MoveSpeed => runSpeed;
         public float RotationSpeed => rotationSpeed;
         public bool CanRoam => canRoam;
         public float RoamRadius => roamRadius;
@@ -381,5 +389,3 @@ namespace HuntersAndCollectors.Actors
 #endif
     }
 }
-
-

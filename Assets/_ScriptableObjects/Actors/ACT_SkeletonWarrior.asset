@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_SkeletonWarrior
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_SkeletonWarrior
+  displayName: Skeleton Warrior
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 72a57e3d78faa72428adb74348363bca, type: 3}
+  description: First-pass authored enemy for SCN_Tombs.
+  category: 2
+  factionId: 14
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 0
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 132
+  baseStamina: 92
+  baseMana: 46
+  baseHealthRegenPerSecond: 0.75
+  baseStaminaRegenPerSecond: 0.85
+  baseManaRegenPerSecond: 0.7
+  attackBonus: 4
+  defenceBonus: 3
+  baseDamageMin: 7
+  baseDamageMax: 13
+  attackRange: 2
+  attackIntervalSeconds: 1.18
+  aggroRange: 15
+  leashRange: 28
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 2
+  runSpeed: 4
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 16
+  size: 1
+  collisionRadius: 0.4
+  height: 1.8
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: b915002666d540c78956b71f86a9b5b9, type: 2}
+  defaultBehaviourMode: 2
+  lootTable: {fileID: 11400000, guid: 546a50cbc65e41eda673e7213960402c, type: 2}
+  coinDropMin: 5
+  coinDropMax: 10
+  xpReward: 40
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 5
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 66
+  baseDexterity: 46
+  baseIntelligence: 23
+  baseMoveSpeedMult: 1
+  baseDamage: 10
+  baseDefence: 4.2
+  baseSwingSpeed: 0.85
+  startingSkills: []

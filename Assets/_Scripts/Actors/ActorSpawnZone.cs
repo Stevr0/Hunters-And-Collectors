@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HuntersAndCollectors.Combat;
 using Unity.Netcode;
 using UnityEngine;
@@ -44,6 +45,14 @@ namespace HuntersAndCollectors.Actors
         [SerializeField] private int targetAliveCount = 3;
         [SerializeField] private SpawnEntry[] spawnTable;
 
+        [Header("Optional Roster")]
+        [SerializeField] private SceneEnemyRosterDef rosterOverride;
+        [SerializeField] private string rosterTagOverride = string.Empty;
+        [SerializeField] private bool useSceneRoster = true;
+        [SerializeField] private bool includeEliteEntries = true;
+        [SerializeField] private bool includeBossEntries = false;
+        [SerializeField] private bool useNightEntries;
+
         [Header("Spawn Area")]
         [Min(0f)]
         [SerializeField] private float spawnScatterRadius = 5f;
@@ -65,18 +74,18 @@ namespace HuntersAndCollectors.Actors
         [SerializeField] private bool drawGizmos = true;
         [SerializeField] private bool verboseLogs = false;
 
-        // Server-only runtime state. This list is reused to avoid per-tick allocations.
-        private readonly System.Collections.Generic.List<NetworkObject> _spawnedActors = new(16);
+        private readonly List<NetworkObject> spawnedActors = new(16);
+        private readonly List<SpawnEntry> resolvedSpawnEntries = new(32);
 
-        private ActorSpawner _actorSpawner;
-        private bool _runtimeInitialized;
-        private bool _zoneActive;
-        private bool _initialPopulationReachedTarget;
-        private float _nextServerTickTime;
-        private float _nextRespawnAllowedTime;
-        private int _lastKnownAliveCount;
-        private bool _loggedMissingSpawner;
-        private bool _loggedInvalidTable;
+        private ActorSpawner actorSpawner;
+        private bool runtimeInitialized;
+        private bool zoneActive;
+        private bool initialPopulationReachedTarget;
+        private float nextServerTickTime;
+        private float nextRespawnAllowedTime;
+        private int lastKnownAliveCount;
+        private bool loggedMissingSpawner;
+        private bool loggedInvalidTable;
 
         public string ZoneId => zoneId;
 
@@ -92,18 +101,16 @@ namespace HuntersAndCollectors.Actors
 
         private void Update()
         {
-            // This component exists in scene data on all peers, but only the server is allowed
-            // to drive spawn decisions or mutate world state.
             if (!IsServerReady())
                 return;
 
-            if (!_runtimeInitialized && !TryInitializeRuntimeState())
+            if (!runtimeInitialized && !TryInitializeRuntimeState())
                 return;
 
-            if (Time.time < _nextServerTickTime)
+            if (Time.time < nextServerTickTime)
                 return;
 
-            _nextServerTickTime = Time.time + DefaultServerTickInterval;
+            nextServerTickTime = Time.time + DefaultServerTickInterval;
             ServerTick();
         }
 
@@ -111,6 +118,7 @@ namespace HuntersAndCollectors.Actors
         private void OnValidate()
         {
             zoneId = zoneId == null ? string.Empty : zoneId.Trim();
+            rosterTagOverride = rosterTagOverride == null ? string.Empty : rosterTagOverride.Trim();
             activationRadius = Mathf.Max(MinimumRadius, activationRadius);
             targetAliveCount = Mathf.Max(1, targetAliveCount);
             spawnScatterRadius = Mathf.Max(0f, spawnScatterRadius);
@@ -121,29 +129,25 @@ namespace HuntersAndCollectors.Actors
         }
 #endif
 
-        /// <summary>
-        /// Main authoritative zone tick.
-        /// This is intentionally coarse-grained so we do not spend per-frame work on every zone.
-        /// </summary>
         private void ServerTick()
         {
             int aliveCount = PruneTrackedActorsAndCountAlive();
             bool playerNearby = IsAnyLivingPlayerWithinActivationRadius();
 
-            if (playerNearby != _zoneActive)
+            if (playerNearby != zoneActive)
             {
-                _zoneActive = playerNearby;
+                zoneActive = playerNearby;
 
                 if (verboseLogs)
                 {
-                    string state = _zoneActive ? "activated" : "deactivated";
+                    string state = zoneActive ? "activated" : "deactivated";
                     Debug.Log($"[ActorSpawnZone] Zone '{GetZoneLabel()}' {state}.", this);
                 }
             }
 
-            if (!_zoneActive)
+            if (!zoneActive)
             {
-                _lastKnownAliveCount = aliveCount;
+                lastKnownAliveCount = aliveCount;
                 return;
             }
 
@@ -151,29 +155,29 @@ namespace HuntersAndCollectors.Actors
 
             if (!ShouldAttemptSpawn(aliveCount))
             {
-                _lastKnownAliveCount = aliveCount;
+                lastKnownAliveCount = aliveCount;
                 return;
             }
 
-            if (!HasAnyEligibleSpawnEntries())
+            if (!TryBuildResolvedSpawnEntries())
             {
-                if (!_loggedInvalidTable)
+                if (!loggedInvalidTable)
                 {
-                    _loggedInvalidTable = true;
+                    loggedInvalidTable = true;
                     Debug.LogWarning($"[ActorSpawnZone] Zone '{GetZoneLabel()}' has no valid spawn entries. Spawn skipped.", this);
                 }
 
-                _lastKnownAliveCount = aliveCount;
+                lastKnownAliveCount = aliveCount;
                 return;
             }
 
-            _loggedInvalidTable = false;
+            loggedInvalidTable = false;
 
-            int spawnedThisCycle = SpawnUntilTarget(aliveCount, out bool exhaustedAttempts);
+            SpawnUntilTarget(aliveCount, out bool exhaustedAttempts);
             int finalAliveCount = PruneTrackedActorsAndCountAlive();
 
             if (finalAliveCount >= targetAliveCount)
-                _initialPopulationReachedTarget = true;
+                initialPopulationReachedTarget = true;
 
             if (exhaustedAttempts && finalAliveCount < targetAliveCount)
             {
@@ -182,39 +186,40 @@ namespace HuntersAndCollectors.Actors
                     this);
             }
 
-            _lastKnownAliveCount = finalAliveCount;
+            lastKnownAliveCount = finalAliveCount;
         }
 
         private bool TryInitializeRuntimeState()
         {
-            if (_runtimeInitialized)
+            if (runtimeInitialized)
                 return true;
 
             if (!IsServerReady())
                 return false;
 
-            if (_actorSpawner == null)
-                _actorSpawner = FindFirstObjectByType<ActorSpawner>();
+            if (actorSpawner == null)
+                actorSpawner = FindFirstObjectByType<ActorSpawner>();
 
-            if (_actorSpawner == null)
+            if (actorSpawner == null)
             {
-                if (!_loggedMissingSpawner)
+                if (!loggedMissingSpawner)
                 {
-                    _loggedMissingSpawner = true;
+                    loggedMissingSpawner = true;
                     Debug.LogWarning($"[ActorSpawnZone] Zone '{GetZoneLabel()}' is waiting for an ActorSpawner in the scene.", this);
                 }
 
                 return false;
             }
 
-            _loggedMissingSpawner = false;
-            _spawnedActors.Clear();
-            _zoneActive = false;
-            _initialPopulationReachedTarget = false;
-            _nextServerTickTime = 0f;
-            _nextRespawnAllowedTime = 0f;
-            _lastKnownAliveCount = 0;
-            _runtimeInitialized = true;
+            loggedMissingSpawner = false;
+            spawnedActors.Clear();
+            resolvedSpawnEntries.Clear();
+            zoneActive = false;
+            initialPopulationReachedTarget = false;
+            nextServerTickTime = 0f;
+            nextRespawnAllowedTime = 0f;
+            lastKnownAliveCount = 0;
+            runtimeInitialized = true;
             return true;
         }
 
@@ -224,20 +229,16 @@ namespace HuntersAndCollectors.Actors
             return manager != null && manager.IsListening && manager.IsServer;
         }
 
-        /// <summary>
-        /// Removes destroyed/despawned references and returns the current alive count for the zone.
-        /// This is the first-pass authoritative bookkeeping path for actor death/despawn.
-        /// </summary>
         private int PruneTrackedActorsAndCountAlive()
         {
-            for (int i = _spawnedActors.Count - 1; i >= 0; i--)
+            for (int i = spawnedActors.Count - 1; i >= 0; i--)
             {
-                NetworkObject tracked = _spawnedActors[i];
+                NetworkObject tracked = spawnedActors[i];
                 if (!IsTrackedActorAlive(tracked))
-                    _spawnedActors.RemoveAt(i);
+                    spawnedActors.RemoveAt(i);
             }
 
-            return _spawnedActors.Count;
+            return spawnedActors.Count;
         }
 
         private static bool IsTrackedActorAlive(NetworkObject tracked)
@@ -267,7 +268,7 @@ namespace HuntersAndCollectors.Actors
 
             float radiusSq = activationRadius * activationRadius;
 
-            foreach (var kvp in manager.ConnectedClients)
+            foreach (KeyValuePair<ulong, NetworkClient> kvp in manager.ConnectedClients)
             {
                 NetworkClient client = kvp.Value;
                 if (client == null)
@@ -295,15 +296,13 @@ namespace HuntersAndCollectors.Actors
             if (!enableRespawn)
                 return;
 
-            // Initial fill should happen immediately. The respawn timer only matters after the
-            // zone has already reached its desired alive population at least once.
-            if (!_initialPopulationReachedTarget)
+            if (!initialPopulationReachedTarget)
                 return;
 
-            if (aliveCount >= _lastKnownAliveCount)
+            if (aliveCount >= lastKnownAliveCount)
                 return;
 
-            _nextRespawnAllowedTime = Time.time + respawnDelaySeconds;
+            nextRespawnAllowedTime = Time.time + respawnDelaySeconds;
 
             if (verboseLogs)
             {
@@ -318,34 +317,45 @@ namespace HuntersAndCollectors.Actors
             if (aliveCount >= targetAliveCount)
                 return false;
 
-            // Respawn-disabled zones are allowed to keep trying until they first reach their
-            // intended population, but they do not refill after that point.
             if (!enableRespawn)
-                return !_initialPopulationReachedTarget;
+                return !initialPopulationReachedTarget;
 
-            // Respawn-enabled zones immediately build their initial population, then respect the
-            // respawn timer for later refills after losses.
-            if (!_initialPopulationReachedTarget)
+            if (!initialPopulationReachedTarget)
                 return true;
 
-            if (Time.time < _nextRespawnAllowedTime)
+            if (Time.time < nextRespawnAllowedTime)
                 return false;
 
             return true;
         }
 
-        private bool HasAnyEligibleSpawnEntries()
+        private bool TryBuildResolvedSpawnEntries()
         {
-            if (spawnTable == null || spawnTable.Length == 0)
-                return false;
+            resolvedSpawnEntries.Clear();
 
-            for (int i = 0; i < spawnTable.Length; i++)
+            SceneEnemyRosterDef roster = ResolveRoster();
+            if (roster != null)
             {
-                if (IsSpawnEntryEligible(spawnTable[i]))
-                    return true;
+                roster.AppendMatches(
+                    resolvedSpawnEntries,
+                    ResolveRosterTag(),
+                    RosterSpawnUsage.Zone,
+                    includeEliteEntries,
+                    includeBossEntries,
+                    useNightEntries);
             }
 
-            return false;
+            if (resolvedSpawnEntries.Count == 0 && spawnTable != null && spawnTable.Length > 0)
+            {
+                for (int i = 0; i < spawnTable.Length; i++)
+                {
+                    SpawnEntry entry = spawnTable[i];
+                    if (IsSpawnEntryEligible(entry))
+                        resolvedSpawnEntries.Add(entry);
+                }
+            }
+
+            return resolvedSpawnEntries.Count > 0;
         }
 
         private int SpawnUntilTarget(int startingAliveCount, out bool exhaustedAttempts)
@@ -362,59 +372,60 @@ namespace HuntersAndCollectors.Actors
                 if (!TrySelectSpawnEntry(out SpawnEntry selectedEntry))
                     break;
 
-                if (!TryFindSpawnPosition(out Vector3 spawnPosition))
-                    continue;
-
-                ActorSpawnRequest request = new ActorSpawnRequest
+                int groupSize = selectedEntry.ResolveGroupSize();
+                for (int groupIndex = 0; groupIndex < groupSize && aliveCount < targetAliveCount; groupIndex++)
                 {
-                    ActorDef = selectedEntry.actorDef,
-                    Position = spawnPosition,
-                    Rotation = transform.rotation,
-                    UseExplicitTransform = true,
-                    HasOwner = false,
-                    OwnerClientId = default,
-                    Prefab = null,
-                    SpawnPointId = string.Empty
-                };
+                    if (!TryFindSpawnPosition(out Vector3 spawnPosition))
+                        continue;
 
-                NetworkObject spawnedObject = _actorSpawner.ServerSpawnActor(request);
-                if (spawnedObject == null)
-                    continue;
+                    ActorSpawnRequest request = new ActorSpawnRequest
+                    {
+                        ActorDef = selectedEntry.actorDef,
+                        Position = spawnPosition,
+                        Rotation = transform.rotation,
+                        UseExplicitTransform = true,
+                        HasOwner = false,
+                        OwnerClientId = default,
+                        Prefab = null,
+                        SpawnPointId = string.Empty
+                    };
 
-                _spawnedActors.Add(spawnedObject);
-                aliveCount++;
-                spawned++;
+                    NetworkObject spawnedObject = actorSpawner.ServerSpawnActor(request);
+                    if (spawnedObject == null)
+                        continue;
 
-                string actorLabel = selectedEntry.actorDef != null && !string.IsNullOrWhiteSpace(selectedEntry.actorDef.DisplayName)
-                    ? selectedEntry.actorDef.DisplayName
-                    : selectedEntry.actorDef != null ? selectedEntry.actorDef.name : spawnedObject.name;
+                    spawnedActors.Add(spawnedObject);
+                    aliveCount++;
+                    spawned++;
 
-                Debug.Log(
-                    $"[ActorSpawnZone] Zone '{GetZoneLabel()}' spawned '{actorLabel}' at ({spawnPosition.x:0.##}, {spawnPosition.y:0.##}, {spawnPosition.z:0.##}).",
-                    this);
+                    string actorLabel = selectedEntry.actorDef != null && !string.IsNullOrWhiteSpace(selectedEntry.actorDef.DisplayName)
+                        ? selectedEntry.actorDef.DisplayName
+                        : selectedEntry.actorDef != null ? selectedEntry.actorDef.name : spawnedObject.name;
+
+                    Debug.Log(
+                        $"[ActorSpawnZone] Zone '{GetZoneLabel()}' spawned '{actorLabel}' at ({spawnPosition.x:0.##}, {spawnPosition.y:0.##}, {spawnPosition.z:0.##}).",
+                        this);
+                }
             }
 
             exhaustedAttempts = attempts >= maxSpawnAttemptsPerCycle && aliveCount < targetAliveCount;
             return spawned;
         }
 
-        /// <summary>
-        /// Weighted random selection using relative weights, not percentage chances.
-        /// </summary>
         private bool TrySelectSpawnEntry(out SpawnEntry selected)
         {
             selected = default;
 
-            if (spawnTable == null || spawnTable.Length == 0)
+            if (resolvedSpawnEntries.Count == 0)
                 return false;
 
             float totalWeight = 0f;
-            for (int i = 0; i < spawnTable.Length; i++)
+            for (int i = 0; i < resolvedSpawnEntries.Count; i++)
             {
-                if (!IsSpawnEntryEligible(spawnTable[i]))
+                if (!IsSpawnEntryEligible(resolvedSpawnEntries[i]))
                     continue;
 
-                totalWeight += spawnTable[i].weight;
+                totalWeight += resolvedSpawnEntries[i].weight;
             }
 
             if (totalWeight <= 0f)
@@ -423,9 +434,9 @@ namespace HuntersAndCollectors.Actors
             float choice = Random.value * totalWeight;
             float cursor = 0f;
 
-            for (int i = 0; i < spawnTable.Length; i++)
+            for (int i = 0; i < resolvedSpawnEntries.Count; i++)
             {
-                SpawnEntry entry = spawnTable[i];
+                SpawnEntry entry = resolvedSpawnEntries[i];
                 if (!IsSpawnEntryEligible(entry))
                     continue;
 
@@ -437,23 +448,21 @@ namespace HuntersAndCollectors.Actors
                 }
             }
 
-            // Floating point accumulation can land very slightly past the end, so use the last
-            // eligible row as a stable fallback instead of failing the cycle.
-            for (int i = spawnTable.Length - 1; i >= 0; i--)
+            for (int i = resolvedSpawnEntries.Count - 1; i >= 0; i--)
             {
-                if (!spawnTable[i].IsEligible)
+                if (!resolvedSpawnEntries[i].IsEligible)
                     continue;
 
-                selected = spawnTable[i];
+                selected = resolvedSpawnEntries[i];
                 return true;
             }
 
             return false;
         }
 
-        private static bool IsSpawnEntryEligible(SpawnEntry entry)
+        private bool IsSpawnEntryEligible(SpawnEntry entry)
         {
-            return entry.IsEligible && entry.actorDef.AllowZoneSpawning;
+            return entry.IsEligible && entry.actorDef.AllowZoneSpawning && entry.AllowsTimeOfDay(useNightEntries);
         }
 
         private bool TryFindSpawnPosition(out Vector3 spawnPosition)
@@ -496,9 +505,9 @@ namespace HuntersAndCollectors.Actors
                 return true;
 
             float minDistanceSq = minSpawnSeparation * minSpawnSeparation;
-            for (int i = 0; i < _spawnedActors.Count; i++)
+            for (int i = 0; i < spawnedActors.Count; i++)
             {
-                NetworkObject tracked = _spawnedActors[i];
+                NetworkObject tracked = spawnedActors[i];
                 if (!IsTrackedActorAlive(tracked))
                     continue;
 
@@ -509,6 +518,24 @@ namespace HuntersAndCollectors.Actors
             }
 
             return true;
+        }
+
+        private SceneEnemyRosterDef ResolveRoster()
+        {
+            if (rosterOverride != null)
+                return rosterOverride;
+
+            if (!useSceneRoster || actorSpawner == null)
+                return null;
+
+            return actorSpawner.DefaultSceneRoster;
+        }
+
+        private string ResolveRosterTag()
+        {
+            return string.IsNullOrWhiteSpace(rosterTagOverride)
+                ? zoneId
+                : rosterTagOverride.Trim();
         }
 
         private void EnsureGroundMaskInitialized()
@@ -569,5 +596,3 @@ namespace HuntersAndCollectors.Actors
 #endif
     }
 }
-
-

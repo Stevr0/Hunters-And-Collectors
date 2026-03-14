@@ -1,0 +1,294 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c536a4d2e4fdcb7c9ef46e1f2aa10, type: 3}
+  m_Name: ROSTER_Jungle
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.SceneEnemyRosterDef
+  sceneName: SCN_Jungle
+  areaId: AREA_Jungle
+  recommendedTierMin: 4
+  recommendedTierMax: 4
+  entries:
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e4694d49c65e4c3186ddb4aabfa9115c, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e4694d49c65e4c3186ddb4aabfa9115c, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: e4694d49c65e4c3186ddb4aabfa9115c, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 1c4517a2a99b421cb21acf2eec764d13, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 1c4517a2a99b421cb21acf2eec764d13, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 1c4517a2a99b421cb21acf2eec764d13, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 42123a6db96a453fa1617b3955f7c1ff, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 42123a6db96a453fa1617b3955f7c1ff, type: 2}
+      weight: 4
+      minGroupSize: 2
+      maxGroupSize: 4
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 42123a6db96a453fa1617b3955f7c1ff, type: 2}
+      weight: 4
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e81be0e65f4d4416a22cfb719329fa68, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: e81be0e65f4d4416a22cfb719329fa68, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: e81be0e65f4d4416a22cfb719329fa68, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 6f60bbfa48da4b4da359869f908030d0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 6f60bbfa48da4b4da359869f908030d0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 6f60bbfa48da4b4da359869f908030d0, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 0
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 503bfad050614d9cb39d774bf9451d58, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 503bfad050614d9cb39d774bf9451d58, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Jungle_Tribe
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 503bfad050614d9cb39d774bf9451d58, type: 2}
+      weight: 2
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: 
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 89d4fbc3305f4df2bdaa54af8b8bbae1, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: 89d4fbc3305f4df2bdaa54af8b8bbae1, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 2
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Jungle_Beasts
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: 89d4fbc3305f4df2bdaa54af8b8bbae1, type: 2}
+      weight: 3
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 0
+  - spawnTag: Jungle_Boss
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: f39fb9b18055488c9def43abc6b6e5f4, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: Jungle_Boss
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: f39fb9b18055488c9def43abc6b6e5f4, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: Jungle_Boss
+    usage: 1
+    spawn:
+      actorDef: {fileID: 11400000, guid: ba6cce0a44d24adab84d4b05385f212d, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1
+  - spawnTag: Jungle_Boss
+    usage: 2
+    spawn:
+      actorDef: {fileID: 11400000, guid: ba6cce0a44d24adab84d4b05385f212d, type: 2}
+      weight: 1
+      minGroupSize: 1
+      maxGroupSize: 1
+      allowDaytime: 1
+      allowNighttime: 1
+      isElite: 1
+      isBoss: 1

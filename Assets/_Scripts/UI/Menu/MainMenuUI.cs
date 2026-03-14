@@ -63,15 +63,47 @@ namespace HuntersAndCollectors.UI.Menu
         {
             IReadOnlyList<SaveFileInfo> playerSaves = SaveDiscoveryService.DiscoverPlayerSaves();
             IReadOnlyList<SaveFileInfo> shardSaves = SaveDiscoveryService.DiscoverShardSaves();
+
             if (playerSaves.Count == 0 || shardSaves.Count == 0)
                 return;
 
             SessionSelectionState.SelectedPlayerKey = playerSaves[0].Key;
             SessionSelectionState.SelectedShardKey = shardSaves[0].Key;
 
-            Bootstrapper bootstrapper = Bootstrapper.Instance != null ? Bootstrapper.Instance : FindFirstObjectByType<Bootstrapper>();
+            // Hide the main menu before starting the session.
+            // This matches the Start Game flow and prevents the menu
+            // from remaining visible if the UI object persists.
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(false);
+            }
+            else
+            {
+                // Fallback in case the panel reference was not assigned.
+                gameObject.SetActive(false);
+            }
+
+            Bootstrapper bootstrapper = Bootstrapper.Instance != null
+                ? Bootstrapper.Instance
+                : FindFirstObjectByType<Bootstrapper>();
+
             if (bootstrapper != null)
-                bootstrapper.StartGameSession(SessionSelectionState.SelectedPlayerKey, SessionSelectionState.SelectedShardKey);
+            {
+                bootstrapper.StartGameSession(
+                    SessionSelectionState.SelectedPlayerKey,
+                    SessionSelectionState.SelectedShardKey);
+            }
+            else
+            {
+                Debug.LogWarning("[MainMenuUI] Could not find Bootstrapper. Re-showing menu.");
+
+                // If session start fails because no bootstrapper was found,
+                // bring the menu back so the player is not left with no UI.
+                if (mainMenuPanel != null)
+                    mainMenuPanel.SetActive(true);
+                else
+                    gameObject.SetActive(true);
+            }
         }
 
         public void OnStartGamePressed()

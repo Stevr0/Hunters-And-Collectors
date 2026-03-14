@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e590a08ee047e1959d5b0e679f947b, type: 3}
+  m_Name: ACT_CaveBat
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorDef
+  actorId: ACT_CaveBat
+  displayName: Cave Bat
+  icon: {fileID: 0}
+  prefab: {fileID: 6889116378619088114, guid: 2e5cfe5b1180a5d48b8eaf2592bb7adb, type: 3}
+  description: First-pass authored enemy for SCN_BeastCaverns.
+  category: 1
+  factionId: 10
+  defaultPvpEnabled: 0
+  isHostile: 1
+  canBeTargeted: 1
+  canBeDamaged: 1
+  canInteract: 0
+  countsAsWildlife: 1
+  countsAsCivilized: 0
+  bossFlag: 0
+  eliteFlag: 0
+  baseHealth: 31
+  baseStamina: 28
+  baseMana: 8
+  baseHealthRegenPerSecond: 0.3
+  baseStaminaRegenPerSecond: 0.55
+  baseManaRegenPerSecond: 0.46
+  attackBonus: 1
+  defenceBonus: 0
+  baseDamageMin: 1
+  baseDamageMax: 4
+  attackRange: 1.4
+  attackIntervalSeconds: 1.05
+  aggroRange: 8
+  leashRange: 17
+  primaryDamageType: 0
+  physicalResistance: 0
+  fireResistance: 0
+  frostResistance: 0
+  poisonResistance: 0
+  arcaneResistance: 0
+  walkSpeed: 1.94
+  runSpeed: 3.89
+  rotationSpeed: 540
+  canRoam: 1
+  roamRadius: 10
+  size: 0
+  collisionRadius: 0.3
+  height: 1.1
+  interactionRadius: 2
+  aiProfile: {fileID: 11400000, guid: c22df5ce78fb4289928cbc86bed9cff1, type: 2}
+  defaultBehaviourMode: 0
+  lootTable: {fileID: 11400000, guid: 0cffe1533873404da4dfb671b27c6d83, type: 2}
+  coinDropMin: 0
+  coinDropMax: 0
+  xpReward: 16
+  xpSkillId: 
+  spawnCost: 1
+  difficultyTier: 2
+  allowZoneSpawning: 1
+  uniqueActor: 0
+  globalAliveLimit: 0
+  baseStrength: 16
+  baseDexterity: 14
+  baseIntelligence: 4
+  baseMoveSpeedMult: 1.08
+  baseDamage: 2.4
+  baseDefence: 0.62
+  baseSwingSpeed: 0.95
+  startingSkills: []
