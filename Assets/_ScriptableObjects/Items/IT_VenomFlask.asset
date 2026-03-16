@@ -15,15 +15,33 @@ MonoBehaviour:
   ItemId: IT_VenomFlask
   DisplayName: Venom Flask
   Category: 3
-  Icon: {fileID: 21300000, guid: f6926d0f42f7acf4e8272843cb3abc46, type: 3}
+  Icon: {fileID: 21300000, guid: 854eb8e0b19522544b89a6f9f024021e, type: 3}
   MaxStack: 20
   Description: A harsh alchemical draught brewed from venom and marsh reeds.
-  PropertiesText: 
+  PropertiesText: 'Food Health: +6
+
+    Food Stamina: +16
+
+    Health Regen: +0.5/s
+
+    Stamina
+    Regen: +2/s
+
+    Duration: 360s'
   BaseValue: 14
   Weight: 0.5
   Rarity: 2
   CraftTime: 4
   IsInstanceItem: 0
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
   visualPrefab: {fileID: 953913445220319471, guid: 8769c51edc2f64f4080f5b8a7c2db5b3, type: 3}
   worldDropPrefab: {fileID: 953913445220319471, guid: 8769c51edc2f64f4080f5b8a7c2db5b3, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -44,6 +62,10 @@ MonoBehaviour:
   MovementSpeedMax: 1
   DurabilityMin: 0
   DurabilityMax: 0
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 0
   Dexterity: 0
   Intelligence: 0

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HuntersAndCollectors.Crafting;
 using HuntersAndCollectors.Inventory;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.UI;
@@ -68,6 +69,7 @@ namespace HuntersAndCollectors.Crafting.UI
         // Owner-only references (set when local player spawns)
         private PlayerInventoryNet _inventoryNet;
         private CraftingNet _craftingNet;
+        private KnownItemsNet _knownItemsNet;
 
         private readonly List<RecipeListItemUI> _spawnedRecipeItems = new();
         private bool _bound;
@@ -105,12 +107,18 @@ namespace HuntersAndCollectors.Crafting.UI
             // If inventory snapshot changes, refresh craft availability while open
             if (_inventoryNet != null)
                 _inventoryNet.OnSnapshotChanged += OnInventorySnapshotChanged;
+
+            if (_knownItemsNet != null)
+                _knownItemsNet.Entries.OnListChanged += OnKnownItemsChanged;
         }
 
         private void OnDisable()
         {
             if (_inventoryNet != null)
                 _inventoryNet.OnSnapshotChanged -= OnInventorySnapshotChanged;
+
+            if (_knownItemsNet != null)
+                _knownItemsNet.Entries.OnListChanged -= OnKnownItemsChanged;
 
             InputState.UnlockGameplay();
         }
@@ -124,15 +132,22 @@ namespace HuntersAndCollectors.Crafting.UI
 
             _inventoryNet = playerNetObj.GetComponent<PlayerInventoryNet>();
             _craftingNet = playerNetObj.GetComponent<CraftingNet>();
+            _knownItemsNet = playerNetObj.GetComponent<KnownItemsNet>();
 
             // Mark binding state immediately so nested refresh/availability checks do not
             // re-enter EnsureBoundToLocalPlayer and recursively rebuild recipe UI.
-            _bound = _inventoryNet != null && _craftingNet != null;
+            _bound = _inventoryNet != null && _craftingNet != null && _knownItemsNet != null;
 
             if (_inventoryNet != null)
             {
                 _inventoryNet.OnSnapshotChanged -= OnInventorySnapshotChanged;
                 _inventoryNet.OnSnapshotChanged += OnInventorySnapshotChanged;
+            }
+
+            if (_knownItemsNet != null)
+            {
+                _knownItemsNet.Entries.OnListChanged -= OnKnownItemsChanged;
+                _knownItemsNet.Entries.OnListChanged += OnKnownItemsChanged;
             }
 
             // Build initial UI
@@ -194,6 +209,7 @@ namespace HuntersAndCollectors.Crafting.UI
                 var r = all[i];
                 if (r == null) continue;
                 if (r.Category != _activeCategory) continue;
+                if (!CraftingRecipeUnlockUtility.IsUnlocked(r, _knownItemsNet)) continue;
 
                 var item = Instantiate(recipeListItemPrefab, recipeListRoot);
                 item.Bind(r, () =>
@@ -238,6 +254,7 @@ namespace HuntersAndCollectors.Crafting.UI
                 var r = all[i];
                 if (r == null) continue;
                 if (r.Category != _activeCategory) continue;
+                if (!CraftingRecipeUnlockUtility.IsUnlocked(r, _knownItemsNet)) continue;
 
                 _selectedRecipe = r;
                 break;
@@ -493,6 +510,12 @@ namespace HuntersAndCollectors.Crafting.UI
                 RefreshDetailsPanel();
         }
 
+        private void OnKnownItemsChanged(Unity.Netcode.NetworkListEvent<KnownItemEntry> _)
+        {
+            if (IsOpen)
+                RefreshWindowForCurrentBindings();
+        }
+
         private void EnsureBoundToLocalPlayer()
         {
             if (_bound) return;
@@ -509,7 +532,8 @@ namespace HuntersAndCollectors.Crafting.UI
                 var craftingNet = netObj.GetComponent<CraftingNet>();
                 var inv = netObj.GetComponent<PlayerInventoryNet>();
 
-                if (craftingNet != null && inv != null)
+                var knownItems = netObj.GetComponent<KnownItemsNet>();
+                if (craftingNet != null && inv != null && knownItems != null)
                 {
                     // Set _bound before binding to prevent re-entrant EnsureBound calls
                     // during SelectCategory -> RefreshDetailsPanel availability evaluation.

@@ -15,15 +15,35 @@ MonoBehaviour:
   ItemId: IT_DragonboneRelic
   DisplayName: Dragonbone Relic
   Category: 2
-  Icon: {fileID: 21300000, guid: 5cf93782a34f2494a8bb93ca57d33904, type: 3}
+  Icon: {fileID: 21300000, guid: 78c08e6bac232f54fbd8a8fe8594d756, type: 3}
   MaxStack: 1
   Description: A relic carved from frozen bone and scale, prized by late-game traders.
-  PropertiesText: 
+  PropertiesText: 'Defence: 0.25 - 0.8
+
+    Swing Speed: 1 - 1
+
+    Move Speed:
+    1 - 1.02
+
+    Durability: 40 - 75
+
+    Strength: +1
+
+    Intelligence: +4'
   BaseValue: 40
   Weight: 0.4
   Rarity: 4
   CraftTime: 8
   IsInstanceItem: 1
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
   visualPrefab: {fileID: 0}
   worldDropPrefab: {fileID: 2147834026543980358, guid: 8f0f5cff7620c7740aee864ad631e8b3, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -44,6 +64,10 @@ MonoBehaviour:
   MovementSpeedMax: 1.02
   DurabilityMin: 40
   DurabilityMax: 75
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 1
   Dexterity: 0
   Intelligence: 4

@@ -14,45 +14,66 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
   ItemId: it_fiberchest
   DisplayName: Fiber Chest
+  Category: 2
   Icon: {fileID: 21300000, guid: fc8542cdc3ac66d46901a4eca96d7870, type: 3}
   MaxStack: 1
-  Category: 2
-  visualPrefab: {fileID: 0}
-  equipLocalPosition: {x: 0, y: 0, z: 0}
-  equipLocalEuler: {x: 0, y: 0, z: 0}
-  equipLocalScale: {x: 1, y: 1, z: 1}
   Description: A basic chest piece
-  PropertiesText: 
+  PropertiesText: 'Defence: 0.1 - 2
+
+    Swing Speed: 0.01 - 0.01
+
+    Move Speed:
+    0 - 0
+
+    Durability: 5 - 50
+
+    Strength: +1
+
+    Dexterity: +1
+
+    Intelligence:
+    +1'
   BaseValue: 5
   Weight: 2
   Rarity: 0
   CraftTime: 5
-  BaseQuality: 1
-  MaxDurability: 100
   IsInstanceItem: 1
-  DamageMin: 0
-  DamageMax: 0
-  DefenceMin: 0.1
-  DefenceMax: 2
-  SwingSpeedMin: 0
-  SwingSpeedMax: 0
-  MovementSpeedMin: 0
-  MovementSpeedMax: 0
-  DurabilityMin: 5
-  DurabilityMax: 50
-  Damage: 0
-  Defence: 0.1
-  AttackBonus: 0
-  SwingSpeed: 0.01
-  MovementSpeed: 0.7
-  Strength: 1
-  Dexterity: 1
-  LegacyDexterity: 0
-  Intelligence: 1
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
+  visualPrefab: {fileID: 919132149155446097, guid: 958b417b76b6a234185f9c8e730980e0, type: 3}
+  worldDropPrefab: {fileID: 2018649579838360181, guid: 1e3a533b2fe035a4bad03097e837c740, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
   IsEquippable: 1
   EquipSlot: 21
   Handedness: 0
   ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0.1
+  DefenceMax: 2
+  SwingSpeedMin: 0.01
+  SwingSpeedMax: 0.01
+  MovementSpeedMin: 0
+  MovementSpeedMax: 0
+  DurabilityMin: 5
+  DurabilityMax: 50
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
+  Strength: 1
+  Dexterity: 1
+  Intelligence: 1
   IsFood: 0
   FoodMaxHealthBonus: 0
   FoodMaxStaminaBonus: 0

@@ -18,7 +18,18 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: ff2632bfb23979d4eb8fa3238ac4a84a, type: 3}
   MaxStack: 1
   Description: A fast dagger lashed together from sharpened fangs.
-  PropertiesText: 
+  PropertiesText: 'Damage: 3 - 5
+
+    Swing Speed: 1.15 - 1.35
+
+    Move Speed:
+    1 - 1.05
+
+    Durability: 45 - 70
+
+    Strength: +1
+
+    Dexterity: +3'
   BaseValue: 10
   Weight: 0.9
   Rarity: 1
@@ -31,10 +42,10 @@ MonoBehaviour:
   MaxAffixCount: 2
   BonusAffixChance: 0.15
   ResistanceAffixChance: 0.1
-  AllowedAffixes: []
-  AllowedResistanceAffixes: []
-  visualPrefab: {fileID: 1390789890966726731, guid: d96ed3908aa9aed41a217c9f5643da8f, type: 3}
-  worldDropPrefab: {fileID: 2194581310374169441, guid: 400b1f870092fdd418a91806ef12e45d, type: 3}
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
+  visualPrefab: {fileID: 919132149155446097, guid: a81c04464ee0c234784dd0e35cfba8ce, type: 3}
+  worldDropPrefab: {fileID: 919132149155446097, guid: a81c04464ee0c234784dd0e35cfba8ce, type: 3}
   equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
   equipLocalEuler: {x: 0, y: -123, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}

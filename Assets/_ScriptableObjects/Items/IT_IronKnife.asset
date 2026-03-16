@@ -38,7 +38,17 @@ MonoBehaviour:
   Rarity: 2
   CraftTime: 6
   IsInstanceItem: 1
-  visualPrefab: {fileID: 1390789890966726731, guid: 25721ca276b8cde4ab70556a637554fb, type: 3}
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
+  visualPrefab: {fileID: 1573608888425451862, guid: 71317d61f3816b74aa5b741d945d4bc3, type: 3}
+  worldDropPrefab: {fileID: 1573608888425451862, guid: 71317d61f3816b74aa5b741d945d4bc3, type: 3}
   equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
   equipLocalEuler: {x: 0, y: -123, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
@@ -57,6 +67,10 @@ MonoBehaviour:
   MovementSpeedMax: 1.03
   DurabilityMin: 120
   DurabilityMax: 180
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 3
   Dexterity: 3
   Intelligence: 0

@@ -119,6 +119,71 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &79874470
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 79874472}
+  - component: {fileID: 79874471}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001 (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &79874471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 79874470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_002
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &79874472
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 79874470}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 78.8, y: 2, z: 52.9}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &591148833
 GameObject:
   m_ObjectHideFlags: 0
@@ -254,6 +319,201 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 721120156}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &791847791
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 791847793}
+  - component: {fileID: 791847792}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001 (5)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &791847792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791847791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_006
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &791847793
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791847791}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 115.5, y: 2, z: 135.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &951251655
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 951251657}
+  - component: {fileID: 951251656}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001 (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &951251656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 951251655}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_004
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &951251657
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 951251655}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 96.4, y: 2, z: 92.8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1053895880
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1053895882}
+  - component: {fileID: 1053895881}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001 (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1053895881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1053895880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_003
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &1053895882
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1053895880}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 16, y: 2, z: 83.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1341465321
 GameObject:
   m_ObjectHideFlags: 0
@@ -658,6 +918,71 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!1 &1921066259
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1921066261}
+  - component: {fileID: 1921066260}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001 (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1921066260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1921066259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_005
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &1921066261
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1921066259}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 146.9, y: 2, z: 130.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1949849987
 GameObject:
   m_ObjectHideFlags: 0
@@ -784,6 +1109,71 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 2cef64f22371d93429043111f642dd34, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1 &2131807632
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2131807634}
+  - component: {fileID: 2131807633}
+  m_Layer: 0
+  m_Name: SZ_EarthCaves_001
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2131807633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2131807632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_EarthCaves_001
+  activationRadius: 20
+  targetAliveCount: 4
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 8d7b66221fef4d46bf4c08fa5f2ef9bc, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 5
+  minSpawnSeparation: 1.5
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 10
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &2131807634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2131807632}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 165.99, y: 2, z: 20.84}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -794,3 +1184,9 @@ SceneRoots:
   - {fileID: 1341465323}
   - {fileID: 1707521446}
   - {fileID: 1949849990}
+  - {fileID: 2131807634}
+  - {fileID: 79874472}
+  - {fileID: 1053895882}
+  - {fileID: 951251657}
+  - {fileID: 1921066261}
+  - {fileID: 791847793}

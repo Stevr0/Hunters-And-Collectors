@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemId: IT_BlizzardEssence
   DisplayName: Blizzard Essence
   Category: 0
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 71c1deda94700ef419571240a9a6e0ca, type: 3}
   MaxStack: 25
   Description: A swirling mote of winter storm essence.
   PropertiesText: 
@@ -24,6 +24,15 @@ MonoBehaviour:
   Rarity: 4
   CraftTime: 0
   IsInstanceItem: 0
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
   visualPrefab: {fileID: 953913445220319471, guid: 698f87ec26c95454881757001b2df3df, type: 3}
   worldDropPrefab: {fileID: 953913445220319471, guid: 698f87ec26c95454881757001b2df3df, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -44,6 +53,10 @@ MonoBehaviour:
   MovementSpeedMax: 1
   DurabilityMin: 0
   DurabilityMax: 0
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 0
   Dexterity: 0
   Intelligence: 0

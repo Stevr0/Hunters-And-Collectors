@@ -18,14 +18,34 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 7f3887cfc5ddfad43ae8425f21856eb0, type: 3}
   MaxStack: 1
   Description: A venom-laced spear built for hunting dangerous jungle prey.
-  PropertiesText: 
+  PropertiesText: 'Damage: 5 - 8
+
+    Swing Speed: 0.95 - 1.15
+
+    Move Speed:
+    0.99 - 1.02
+
+    Durability: 70 - 110
+
+    Strength: +2
+
+    Dexterity: +2'
   BaseValue: 22
   Weight: 1.8
   Rarity: 2
   CraftTime: 6
   IsInstanceItem: 1
-  visualPrefab: {fileID: 7281844234728093021, guid: b9f794c91b0d1c249b7ff1868cb5b349, type: 3}
-  worldDropPrefab: {fileID: 2194581310374169441, guid: 400b1f870092fdd418a91806ef12e45d, type: 3}
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
+  visualPrefab: {fileID: 3438638882291747531, guid: e41096105580b444793b8f683bbf87b7, type: 3}
+  worldDropPrefab: {fileID: 3279170995720472294, guid: a81dfd16a7665754191fcbce448c453e, type: 3}
   equipLocalPosition: {x: -0.026, y: -0.2, z: 0}
   equipLocalEuler: {x: 0, y: 0, z: -15}
   equipLocalScale: {x: 1, y: 1, z: 1}
@@ -44,6 +64,10 @@ MonoBehaviour:
   MovementSpeedMax: 1.02
   DurabilityMin: 70
   DurabilityMax: 110
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 2
   Dexterity: 2
   Intelligence: 0

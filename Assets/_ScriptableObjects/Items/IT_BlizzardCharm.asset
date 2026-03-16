@@ -15,15 +15,35 @@ MonoBehaviour:
   ItemId: IT_BlizzardCharm
   DisplayName: Blizzard Charm
   Category: 2
-  Icon: {fileID: 21300000, guid: 5cf93782a34f2494a8bb93ca57d33904, type: 3}
+  Icon: {fileID: 21300000, guid: 212ed04742deb6245b62a9fbf2010106, type: 3}
   MaxStack: 1
   Description: A premium charm carrying the chill of a bound blizzard.
-  PropertiesText: 
+  PropertiesText: 'Defence: 0.2 - 0.7
+
+    Swing Speed: 1 - 1
+
+    Move Speed:
+    1 - 1.03
+
+    Durability: 35 - 65
+
+    Dexterity: +1
+
+    Intelligence: +4'
   BaseValue: 38
   Weight: 0.3
   Rarity: 4
   CraftTime: 8
   IsInstanceItem: 1
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
   visualPrefab: {fileID: 0}
   worldDropPrefab: {fileID: 2147834026543980358, guid: 8f0f5cff7620c7740aee864ad631e8b3, type: 3}
   equipLocalPosition: {x: 0, y: 0, z: 0}
@@ -44,6 +64,10 @@ MonoBehaviour:
   MovementSpeedMax: 1.03
   DurabilityMin: 35
   DurabilityMax: 65
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 0
   Dexterity: 1
   Intelligence: 4

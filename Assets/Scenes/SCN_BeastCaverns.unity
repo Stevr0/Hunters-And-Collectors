@@ -119,6 +119,266 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &45641528
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 45641530}
+  - component: {fileID: 45641529}
+  m_Layer: 0
+  m_Name: SZ_Beastman (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &45641529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 45641528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_003
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &45641530
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 45641528}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 13.7, y: 0, z: 85.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &408369969
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 408369971}
+  - component: {fileID: 408369970}
+  m_Layer: 0
+  m_Name: SZ_Beastman (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &408369970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 408369969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_005
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &408369971
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 408369969}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 128.9, y: 0, z: 99.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &517833687
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 517833689}
+  - component: {fileID: 517833688}
+  m_Layer: 0
+  m_Name: SZ_Beastman (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &517833688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517833687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: 2
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &517833689
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517833687}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 28.4, y: 0, z: 20.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &521170237
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 521170239}
+  - component: {fileID: 521170238}
+  m_Layer: 0
+  m_Name: SZ_Beastman (5)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &521170238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521170237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_006
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &521170239
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521170237}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 31.1, y: 0, z: 108.9}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &591148833
 GameObject:
   m_ObjectHideFlags: 0
@@ -254,6 +514,71 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 721120156}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &966569024
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 966569026}
+  - component: {fileID: 966569025}
+  m_Layer: 0
+  m_Name: SZ_Beastman (6)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &966569025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966569024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_007
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &966569026
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966569024}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 26.1, y: 0, z: 125.4}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &982746431
 GameObject:
   m_ObjectHideFlags: 0
@@ -708,6 +1033,71 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1419246237}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1424121129
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1424121131}
+  - component: {fileID: 1424121130}
+  m_Layer: 0
+  m_Name: SZ_Beastman (7)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1424121130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1424121129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_008
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &1424121131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1424121129}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 172.5, y: 0, z: 167}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1425767298
 GameObject:
   m_ObjectHideFlags: 0
@@ -753,6 +1143,71 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Bootstrap.SceneSpawnPoint
   spawnId: FromVillage_BeastCaverns
+--- !u!1 &1587164679
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1587164681}
+  - component: {fileID: 1587164680}
+  m_Layer: 0
+  m_Name: SZ_Beastman (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1587164680
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587164679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 800fab65ec1bceb4ebe37e11205e5fc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorSpawnZone
+  zoneId: SZ_Beastman_004
+  activationRadius: 30
+  targetAliveCount: 3
+  spawnTable: []
+  rosterOverride: {fileID: 11400000, guid: 97da52291f3d41aca4b3c791607512cd, type: 2}
+  rosterTagOverride: 
+  useSceneRoster: 1
+  includeEliteEntries: 1
+  includeBossEntries: 0
+  useNightEntries: 0
+  spawnScatterRadius: 2
+  minSpawnSeparation: 1
+  useRaycastToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  enableRespawn: 1
+  respawnDelaySeconds: 30
+  maxSpawnAttemptsPerCycle: 10
+  drawGizmos: 1
+  verboseLogs: 0
+--- !u!4 &1587164681
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587164679}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 176.3, y: 0, z: 43.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1707521442
 GameObject:
   m_ObjectHideFlags: 0
@@ -860,3 +1315,10 @@ SceneRoots:
   - {fileID: 1341465323}
   - {fileID: 1707521446}
   - {fileID: 1121564096}
+  - {fileID: 517833689}
+  - {fileID: 45641530}
+  - {fileID: 1587164681}
+  - {fileID: 408369971}
+  - {fileID: 521170239}
+  - {fileID: 966569026}
+  - {fileID: 1424121131}

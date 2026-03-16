@@ -22,23 +22,33 @@ MonoBehaviour:
 
     Damage: 14.4 - 23.4
 
-    Swing Speed:
-    0.95 - 1.15
+    Swing Speed: 0.95
+    - 1.15
 
     Move Speed: 0.95 - 1
 
     Durability: 240 - 360
 
-    Strength:
-    +7
+    Strength: +7
 
-    Dexterity: +3'
+    Dexterity:
+    +3'
   BaseValue: 20
   Weight: 2
   Rarity: 4
   CraftTime: 12
   IsInstanceItem: 1
+  CombatFamily: 0
+  ItemStatBias: 0
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 0
+  BonusAffixChance: -1
+  ResistanceAffixChance: -1
+  AllowedAffixes: 
+  AllowedResistanceAffixes: 
   visualPrefab: {fileID: 2819201088932385300, guid: a23984ec82e1e54489bc1b3c7d09cccb, type: 3}
+  worldDropPrefab: {fileID: 2819201088932385300, guid: a23984ec82e1e54489bc1b3c7d09cccb, type: 3}
   equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
   equipLocalEuler: {x: 0, y: -123, z: 0}
   equipLocalScale: {x: 1, y: 1, z: 1}
@@ -57,6 +67,10 @@ MonoBehaviour:
   MovementSpeedMax: 1
   DurabilityMin: 240
   DurabilityMax: 360
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
   Strength: 7
   Dexterity: 3
   Intelligence: 0
