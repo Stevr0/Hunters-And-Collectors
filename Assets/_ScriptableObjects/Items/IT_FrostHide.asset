@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Frost Hide
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 40
   Description: Cold-resistant hide taken from the Lost Lands.
   PropertiesText: 
   BaseValue: 11
   Weight: 1
-  Rarity: 2
+  Rarity: 3
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 4243029077377111302, guid: f76d2dfc56e101744bcb2b40fe976e39, type: 3}

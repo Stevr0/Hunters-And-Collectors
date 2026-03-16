@@ -36,6 +36,25 @@ namespace HuntersAndCollectors.Networking.DTO
             public float RolledDefence;
             public float RolledSwingSpeed;
             public float RolledMovementSpeed;
+            public float RolledCastSpeed;
+            public int RolledBlockValue;
+            public int DamageBonus;
+            public int DefenceBonus;
+            public float AttackSpeedBonus;
+            public float CastSpeedBonus;
+            public float CritChanceBonus;
+            public int BlockValueBonus;
+            public int StatusPowerBonus;
+            public int TrapPowerBonus;
+            public int PhysicalResist;
+            public int FireResist;
+            public int FrostResist;
+            public int PoisonResist;
+            public int LightningResist;
+            public byte AffixA;
+            public byte AffixB;
+            public byte AffixC;
+            public byte ResistanceAffix;
 
             public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
             {
@@ -61,6 +80,25 @@ namespace HuntersAndCollectors.Networking.DTO
                 serializer.SerializeValue(ref RolledDefence);
                 serializer.SerializeValue(ref RolledSwingSpeed);
                 serializer.SerializeValue(ref RolledMovementSpeed);
+                serializer.SerializeValue(ref RolledCastSpeed);
+                serializer.SerializeValue(ref RolledBlockValue);
+                serializer.SerializeValue(ref DamageBonus);
+                serializer.SerializeValue(ref DefenceBonus);
+                serializer.SerializeValue(ref AttackSpeedBonus);
+                serializer.SerializeValue(ref CastSpeedBonus);
+                serializer.SerializeValue(ref CritChanceBonus);
+                serializer.SerializeValue(ref BlockValueBonus);
+                serializer.SerializeValue(ref StatusPowerBonus);
+                serializer.SerializeValue(ref TrapPowerBonus);
+                serializer.SerializeValue(ref PhysicalResist);
+                serializer.SerializeValue(ref FireResist);
+                serializer.SerializeValue(ref FrostResist);
+                serializer.SerializeValue(ref PoisonResist);
+                serializer.SerializeValue(ref LightningResist);
+                serializer.SerializeValue(ref AffixA);
+                serializer.SerializeValue(ref AffixB);
+                serializer.SerializeValue(ref AffixC);
+                serializer.SerializeValue(ref ResistanceAffix);
             }
         }
 

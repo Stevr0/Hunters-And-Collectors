@@ -10,11 +10,16 @@ namespace HuntersAndCollectors.Stats
     /// </summary>
     public struct EffectiveStats
     {
-        // Combat/movement totals.
+        // Combat and support totals.
         public float MoveSpeedMult;
         public float Damage;
         public float Defence;
         public float SwingSpeed;
+        public float CastSpeed;
+        public float CritChance;
+        public int BlockValue;
+        public int StatusPower;
+        public int TrapPower;
 
         // Attribute totals (base + equipped item bonuses).
         public int Strength;
@@ -25,6 +30,13 @@ namespace HuntersAndCollectors.Stats
         public int MaxHealth;
         public int MaxStamina;
         public int MaxMana;
+
+        // First-pass resistances.
+        public int PhysicalResist;
+        public int FireResist;
+        public int FrostResist;
+        public int PoisonResist;
+        public int LightningResist;
 
         // Optional debug field for active weapon skill mapping.
         public string ActiveCombatSkillId;

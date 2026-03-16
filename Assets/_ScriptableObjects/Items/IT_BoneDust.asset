@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Bone Dust
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 60
   Description: Fine bone powder gathered from shattered dead.
   PropertiesText: 
-  BaseValue: 6
+  BaseValue: 7
   Weight: 0.2
-  Rarity: 1
+  Rarity: 2
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 4243029077377111302, guid: ee00be5f99680744eb036bb23662850f, type: 3}

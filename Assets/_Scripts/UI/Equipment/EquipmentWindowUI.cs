@@ -276,18 +276,45 @@ namespace HuntersAndCollectors.UI
                 RolledDamage = sourceSlot.RolledDamage,
                 RolledDefence = sourceSlot.RolledDefence,
                 RolledSwingSpeed = sourceSlot.RolledSwingSpeed,
-                RolledMovementSpeed = sourceSlot.RolledMovementSpeed
+                RolledMovementSpeed = sourceSlot.RolledMovementSpeed,
+                RolledCastSpeed = sourceSlot.RolledCastSpeed,
+                RolledBlockValue = sourceSlot.RolledBlockValue,
+                DamageBonus = sourceSlot.DamageBonus,
+                DefenceBonus = sourceSlot.DefenceBonus,
+                AttackSpeedBonus = sourceSlot.AttackSpeedBonus,
+                CastSpeedBonus = sourceSlot.CastSpeedBonus,
+                CritChance = sourceSlot.CritChanceBonus,
+                CritChanceBonus = sourceSlot.CritChanceBonus,
+                BlockValueBonus = sourceSlot.BlockValueBonus,
+                StatusPower = sourceSlot.StatusPowerBonus,
+                StatusPowerBonus = sourceSlot.StatusPowerBonus,
+                TrapPower = sourceSlot.TrapPowerBonus,
+                TrapPowerBonus = sourceSlot.TrapPowerBonus,
+                PhysicalResist = sourceSlot.PhysicalResist,
+                FireResist = sourceSlot.FireResist,
+                FrostResist = sourceSlot.FrostResist,
+                PoisonResist = sourceSlot.PoisonResist,
+                LightningResist = sourceSlot.LightningResist,
+                AffixA = (ItemAffixId)sourceSlot.AffixA,
+                AffixB = (ItemAffixId)sourceSlot.AffixB,
+                AffixC = (ItemAffixId)sourceSlot.AffixC,
+                ResistanceAffix = (ResistanceAffixId)sourceSlot.ResistanceAffix
             };
 
             if (itemDatabase != null && itemDatabase.TryGet(itemId, out ItemDef def) && def != null)
             {
                 tooltip.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
                 tooltip.Description = def.Description;
-                tooltip.Damage = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDamage > 0f ? sourceSlot.RolledDamage : def.Damage;
-                tooltip.Defence = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDefence > 0f ? sourceSlot.RolledDefence : def.Defence;
+                tooltip.ItemTier = def.ItemTier;
+                tooltip.CombatFamily = def.CombatFamily;
+                tooltip.ItemStatBias = def.ItemStatBias;
+                tooltip.Damage = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDamage > 0f ? sourceSlot.RolledDamage + sourceSlot.DamageBonus : def.Damage + sourceSlot.DamageBonus;
+                tooltip.Defence = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledDefence > 0f ? sourceSlot.RolledDefence + sourceSlot.DefenceBonus : def.Defence + sourceSlot.DefenceBonus;
                 tooltip.AttackBonus = def.AttackBonus;
-                tooltip.SwingSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledSwingSpeed > 0f ? sourceSlot.RolledSwingSpeed : def.SwingSpeed;
+                tooltip.SwingSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledSwingSpeed > 0f ? sourceSlot.RolledSwingSpeed + sourceSlot.AttackSpeedBonus : def.SwingSpeed + sourceSlot.AttackSpeedBonus;
                 tooltip.MoveSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledMovementSpeed > 0f ? sourceSlot.RolledMovementSpeed : def.MovementSpeed;
+                tooltip.CastSpeed = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledCastSpeed > 0f ? sourceSlot.RolledCastSpeed + sourceSlot.CastSpeedBonus : def.CastSpeed + sourceSlot.CastSpeedBonus;
+                tooltip.BlockValue = sourceSlot.ContentType == InventorySlotContentType.Instance && sourceSlot.RolledBlockValue > 0 ? sourceSlot.RolledBlockValue + sourceSlot.BlockValueBonus : def.BlockValue + sourceSlot.BlockValueBonus;
                 tooltip.Strength = Mathf.Max(0, def.Strength) + sourceSlot.BonusStrength;
                 tooltip.Dexterity = Mathf.Max(0, def.Dexterity) + sourceSlot.BonusDexterity;
                 tooltip.Intelligence = Mathf.Max(0, def.Intelligence) + sourceSlot.BonusIntelligence;
@@ -319,14 +346,43 @@ namespace HuntersAndCollectors.UI
         }
         private ItemTooltipData BuildTooltipData(EquipSlot slot, string itemId)
         {
+            ItemInstanceData instanceData = equipmentNet != null ? equipmentNet.GetEquippedInstanceData(slot) : default;
             ItemTooltipData data = new ItemTooltipData
             {
                 ItemId = itemId,
                 Durability = equipmentNet != null ? equipmentNet.GetEquippedDurability(slot) : 0,
-                BonusStrength = equipmentNet != null ? equipmentNet.GetEquippedBonusStrength(slot) : 0,
-                BonusDexterity = equipmentNet != null ? equipmentNet.GetEquippedBonusDexterity(slot) : 0,
-                BonusIntelligence = equipmentNet != null ? equipmentNet.GetEquippedBonusIntelligence(slot) : 0,
-                CraftedBy = equipmentNet != null ? equipmentNet.GetEquippedCraftedBy(slot) : string.Empty
+                MaxDurability = instanceData.MaxDurability,
+                BonusStrength = instanceData.BonusStrength,
+                BonusDexterity = instanceData.BonusDexterity,
+                BonusIntelligence = instanceData.BonusIntelligence,
+                CraftedBy = instanceData.CraftedBy.ToString(),
+                InstanceId = instanceData.InstanceId,
+                RolledDamage = instanceData.RolledDamage,
+                RolledDefence = instanceData.RolledDefence,
+                RolledSwingSpeed = instanceData.RolledSwingSpeed,
+                RolledMovementSpeed = instanceData.RolledMovementSpeed,
+                RolledCastSpeed = instanceData.RolledCastSpeed,
+                RolledBlockValue = instanceData.RolledBlockValue,
+                DamageBonus = instanceData.DamageBonus,
+                DefenceBonus = instanceData.DefenceBonus,
+                AttackSpeedBonus = instanceData.AttackSpeedBonus,
+                CastSpeedBonus = instanceData.CastSpeedBonus,
+                CritChance = instanceData.CritChanceBonus,
+                CritChanceBonus = instanceData.CritChanceBonus,
+                BlockValueBonus = instanceData.BlockValueBonus,
+                StatusPower = instanceData.StatusPowerBonus,
+                StatusPowerBonus = instanceData.StatusPowerBonus,
+                TrapPower = instanceData.TrapPowerBonus,
+                TrapPowerBonus = instanceData.TrapPowerBonus,
+                PhysicalResist = instanceData.PhysicalResist,
+                FireResist = instanceData.FireResist,
+                FrostResist = instanceData.FrostResist,
+                PoisonResist = instanceData.PoisonResist,
+                LightningResist = instanceData.LightningResist,
+                AffixA = instanceData.AffixA,
+                AffixB = instanceData.AffixB,
+                AffixC = instanceData.AffixC,
+                ResistanceAffix = instanceData.ResistanceAffix
             };
 
             if (string.IsNullOrWhiteSpace(itemId))
@@ -344,18 +400,25 @@ namespace HuntersAndCollectors.UI
 
             data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
             data.Description = def.Description;
-            data.Damage = def.Damage;
-            data.Defence = def.Defence;
+            data.ItemTier = def.ItemTier;
+            data.CombatFamily = def.CombatFamily;
+            data.ItemStatBias = def.ItemStatBias;
+            data.Damage = instanceData.RolledDamage > 0f ? instanceData.RolledDamage + instanceData.DamageBonus : def.Damage + instanceData.DamageBonus;
+            data.Defence = instanceData.RolledDefence > 0f ? instanceData.RolledDefence + instanceData.DefenceBonus : def.Defence + instanceData.DefenceBonus;
             data.AttackBonus = def.AttackBonus;
-            data.SwingSpeed = def.SwingSpeed;
-            data.MoveSpeed = def.MovementSpeed;
-
+            data.SwingSpeed = instanceData.RolledSwingSpeed > 0f ? instanceData.RolledSwingSpeed + instanceData.AttackSpeedBonus : def.SwingSpeed + instanceData.AttackSpeedBonus;
+            data.MoveSpeed = instanceData.RolledMovementSpeed > 0f ? instanceData.RolledMovementSpeed : def.MovementSpeed;
+            data.CastSpeed = instanceData.RolledCastSpeed > 0f ? instanceData.RolledCastSpeed + instanceData.CastSpeedBonus : def.CastSpeed + instanceData.CastSpeedBonus;
+            data.BlockValue = instanceData.RolledBlockValue > 0 ? instanceData.RolledBlockValue + instanceData.BlockValueBonus : def.BlockValue + instanceData.BlockValueBonus;
             data.Strength = Mathf.Max(0, def.Strength) + data.BonusStrength;
             data.Dexterity = Mathf.Max(0, def.Dexterity) + data.BonusDexterity;
             data.Intelligence = Mathf.Max(0, def.Intelligence) + data.BonusIntelligence;
+            if (data.MaxDurability <= 0)
+                data.MaxDurability = Mathf.Max(0, def.MaxDurability);
 
             return data;
         }
+
         private Sprite ResolveIcon(string itemId)
         {
             if (string.IsNullOrWhiteSpace(itemId))
@@ -487,6 +550,14 @@ namespace HuntersAndCollectors.UI
         }
     }
 }
+
+
+
+
+
+
+
+
 
 
 

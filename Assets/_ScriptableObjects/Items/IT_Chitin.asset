@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Chitin
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 75
   Description: Hard shell fragments harvested from insects and spiders.
   PropertiesText: 
-  BaseValue: 6
+  BaseValue: 5
   Weight: 0.7
   Rarity: 1
   CraftTime: 0

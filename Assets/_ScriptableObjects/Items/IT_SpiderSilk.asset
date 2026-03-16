@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Spider Silk
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 60
   Description: Sticky silk threads spun by cavern and crypt spiders.
   PropertiesText: 
-  BaseValue: 6
+  BaseValue: 8
   Weight: 0.2
-  Rarity: 1
+  Rarity: 2
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 2147834026543980358, guid: 513e29247e91f474bb66d4fe3a069a9a, type: 3}

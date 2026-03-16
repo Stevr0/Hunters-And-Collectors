@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Crystal Shard
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 60
   Description: A glittering shard chipped from deep-earth crystal seams.
   PropertiesText: 
-  BaseValue: 10
+  BaseValue: 9
   Weight: 0.5
   Rarity: 2
   CraftTime: 0

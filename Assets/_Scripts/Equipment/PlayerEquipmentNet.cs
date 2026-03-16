@@ -95,6 +95,17 @@ namespace HuntersAndCollectors.Players
         private readonly NetworkVariable<FixedString64Bytes> shouldersCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<FixedString64Bytes> beltCraftedBy = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // Full replicated crafted-instance payload per equipped slot.
+        private readonly NetworkVariable<ItemInstanceData> mainHandInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> offHandInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> headInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> chestInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> legsInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> feetInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> glovesInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> shouldersInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<ItemInstanceData> beltInstanceData = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         public event Action OnEquipmentChanged;
 
         public NetworkVariable<FixedString64Bytes> MainHandNetVar => mainHand;
@@ -206,6 +217,7 @@ namespace HuntersAndCollectors.Players
         public int GetEquippedBonusDexterity(EquipSlot slot) => GetEquippedBonusData(slot).BonusDexterity;
         public int GetEquippedBonusIntelligence(EquipSlot slot) => GetEquippedBonusData(slot).BonusIntelligence;
         public string GetEquippedCraftedBy(EquipSlot slot) => GetEquippedBonusData(slot).CraftedBy.ToString();
+        public ItemInstanceData GetEquippedInstanceData(EquipSlot slot) => GetEquippedBonusData(slot);
 
         /// <summary>
         /// SERVER: exports authoritative equipment state for persistence.
@@ -422,6 +434,16 @@ namespace HuntersAndCollectors.Players
             shouldersCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
             beltCraftedBy.OnValueChanged += OnAnyCraftedByChanged;
 
+            mainHandInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            offHandInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            headInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            chestInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            legsInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            feetInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            glovesInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            shouldersInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+            beltInstanceData.OnValueChanged += OnAnyInstanceDataChanged;
+
             if (IsServer)
                 ServerValidateReferenceAssignments();
 
@@ -489,6 +511,16 @@ namespace HuntersAndCollectors.Players
             glovesCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
             shouldersCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
             beltCraftedBy.OnValueChanged -= OnAnyCraftedByChanged;
+
+            mainHandInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            offHandInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            headInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            chestInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            legsInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            feetInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            glovesInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            shouldersInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
+            beltInstanceData.OnValueChanged -= OnAnyInstanceDataChanged;
         }
 
         private void OnAnySlotChanged(FixedString64Bytes prev, FixedString64Bytes next)
@@ -510,6 +542,11 @@ namespace HuntersAndCollectors.Players
         }
 
         private void OnAnyCraftedByChanged(FixedString64Bytes prev, FixedString64Bytes next)
+        {
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private void OnAnyInstanceDataChanged(ItemInstanceData previous, ItemInstanceData next)
         {
             OnEquipmentChanged?.Invoke();
         }
@@ -944,7 +981,31 @@ namespace HuntersAndCollectors.Players
                 bonusStrength = bonus.BonusStrength,
                 bonusDexterity = bonus.BonusDexterity,
                 bonusIntelligence = bonus.BonusIntelligence,
-                craftedBy = bonus.CraftedBy.ToString()
+                craftedBy = bonus.CraftedBy.ToString(),
+                instanceId = bonus.InstanceId,
+                rolledDamage = bonus.RolledDamage,
+                rolledDefence = bonus.RolledDefence,
+                rolledSwingSpeed = bonus.RolledSwingSpeed,
+                rolledMovementSpeed = bonus.RolledMovementSpeed,
+                rolledCastSpeed = bonus.RolledCastSpeed,
+                rolledBlockValue = bonus.RolledBlockValue,
+                damageBonus = bonus.DamageBonus,
+                defenceBonus = bonus.DefenceBonus,
+                attackSpeedBonus = bonus.AttackSpeedBonus,
+                castSpeedBonus = bonus.CastSpeedBonus,
+                critChanceBonus = bonus.CritChanceBonus,
+                blockValueBonus = bonus.BlockValueBonus,
+                statusPowerBonus = bonus.StatusPowerBonus,
+                trapPowerBonus = bonus.TrapPowerBonus,
+                physicalResist = bonus.PhysicalResist,
+                fireResist = bonus.FireResist,
+                frostResist = bonus.FrostResist,
+                poisonResist = bonus.PoisonResist,
+                lightningResist = bonus.LightningResist,
+                affixA = (byte)bonus.AffixA,
+                affixB = (byte)bonus.AffixB,
+                affixC = (byte)bonus.AffixC,
+                resistanceAffix = (byte)bonus.ResistanceAffix
             };
         }
 
@@ -1002,6 +1063,32 @@ namespace HuntersAndCollectors.Players
             data.BonusDexterity = saveSlot.bonusDexterity;
             data.BonusIntelligence = saveSlot.bonusIntelligence;
             data.CraftedBy = new FixedString64Bytes(saveSlot.craftedBy ?? string.Empty);
+            data.InstanceId = saveSlot.instanceId;
+            data.RolledDamage = saveSlot.rolledDamage;
+            data.RolledDefence = saveSlot.rolledDefence;
+            data.RolledSwingSpeed = saveSlot.rolledSwingSpeed;
+            data.RolledMovementSpeed = saveSlot.rolledMovementSpeed;
+            data.RolledCastSpeed = saveSlot.rolledCastSpeed;
+            data.RolledBlockValue = saveSlot.rolledBlockValue;
+            data.MaxDurability = maxDurability;
+            data.CurrentDurability = finalDurability;
+            data.DamageBonus = saveSlot.damageBonus;
+            data.DefenceBonus = saveSlot.defenceBonus;
+            data.AttackSpeedBonus = saveSlot.attackSpeedBonus;
+            data.CastSpeedBonus = saveSlot.castSpeedBonus;
+            data.CritChanceBonus = saveSlot.critChanceBonus;
+            data.BlockValueBonus = saveSlot.blockValueBonus;
+            data.StatusPowerBonus = saveSlot.statusPowerBonus;
+            data.TrapPowerBonus = saveSlot.trapPowerBonus;
+            data.PhysicalResist = saveSlot.physicalResist;
+            data.FireResist = saveSlot.fireResist;
+            data.FrostResist = saveSlot.frostResist;
+            data.PoisonResist = saveSlot.poisonResist;
+            data.LightningResist = saveSlot.lightningResist;
+            data.AffixA = (ItemAffixId)saveSlot.affixA;
+            data.AffixB = (ItemAffixId)saveSlot.affixB;
+            data.AffixC = (ItemAffixId)saveSlot.affixC;
+            data.ResistanceAffix = (ResistanceAffixId)saveSlot.resistanceAffix;
 
             SetSlot(slot, def.ItemId, finalDurability, data);
         }
@@ -1277,6 +1364,7 @@ namespace HuntersAndCollectors.Players
                     mainHandBonusDexterity.Value = instanceData.BonusDexterity;
                     mainHandBonusIntelligence.Value = instanceData.BonusIntelligence;
                     mainHandCraftedBy.Value = instanceData.CraftedBy;
+                    mainHandInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.OffHand:
                     if (clear)
@@ -1287,6 +1375,7 @@ namespace HuntersAndCollectors.Players
                     offHandBonusDexterity.Value = instanceData.BonusDexterity;
                     offHandBonusIntelligence.Value = instanceData.BonusIntelligence;
                     offHandCraftedBy.Value = instanceData.CraftedBy;
+                    offHandInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Helmet:
                     head.Value = fs;
@@ -1295,6 +1384,7 @@ namespace HuntersAndCollectors.Players
                     headBonusDexterity.Value = instanceData.BonusDexterity;
                     headBonusIntelligence.Value = instanceData.BonusIntelligence;
                     headCraftedBy.Value = instanceData.CraftedBy;
+                    headInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Chest:
                     chest.Value = fs;
@@ -1303,6 +1393,7 @@ namespace HuntersAndCollectors.Players
                     chestBonusDexterity.Value = instanceData.BonusDexterity;
                     chestBonusIntelligence.Value = instanceData.BonusIntelligence;
                     chestCraftedBy.Value = instanceData.CraftedBy;
+                    chestInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Legs:
                     legs.Value = fs;
@@ -1311,6 +1402,7 @@ namespace HuntersAndCollectors.Players
                     legsBonusDexterity.Value = instanceData.BonusDexterity;
                     legsBonusIntelligence.Value = instanceData.BonusIntelligence;
                     legsCraftedBy.Value = instanceData.CraftedBy;
+                    legsInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Boots:
                     feet.Value = fs;
@@ -1319,6 +1411,7 @@ namespace HuntersAndCollectors.Players
                     feetBonusDexterity.Value = instanceData.BonusDexterity;
                     feetBonusIntelligence.Value = instanceData.BonusIntelligence;
                     feetCraftedBy.Value = instanceData.CraftedBy;
+                    feetInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Gloves:
                     gloves.Value = fs;
@@ -1327,6 +1420,7 @@ namespace HuntersAndCollectors.Players
                     glovesBonusDexterity.Value = instanceData.BonusDexterity;
                     glovesBonusIntelligence.Value = instanceData.BonusIntelligence;
                     glovesCraftedBy.Value = instanceData.CraftedBy;
+                    glovesInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Shoulders:
                     shoulders.Value = fs;
@@ -1335,6 +1429,7 @@ namespace HuntersAndCollectors.Players
                     shouldersBonusDexterity.Value = instanceData.BonusDexterity;
                     shouldersBonusIntelligence.Value = instanceData.BonusIntelligence;
                     shouldersCraftedBy.Value = instanceData.CraftedBy;
+                    shouldersInstanceData.Value = instanceData;
                     break;
                 case EquipSlot.Belt:
                     belt.Value = fs;
@@ -1343,72 +1438,90 @@ namespace HuntersAndCollectors.Players
                     beltBonusDexterity.Value = instanceData.BonusDexterity;
                     beltBonusIntelligence.Value = instanceData.BonusIntelligence;
                     beltCraftedBy.Value = instanceData.CraftedBy;
+                    beltInstanceData.Value = instanceData;
                     break;
             }
         }
 
         private ItemInstanceData GetEquippedBonusData(EquipSlot slot)
         {
-            ItemInstanceData data = default;
-            switch (slot)
+            ItemInstanceData data = slot switch
             {
-                case EquipSlot.MainHand:
-                    data.BonusStrength = mainHandBonusStrength.Value;
-                    data.BonusDexterity = mainHandBonusDexterity.Value;
-                    data.BonusIntelligence = mainHandBonusIntelligence.Value;
-                    data.CraftedBy = mainHandCraftedBy.Value;
-                    return data;
-                case EquipSlot.OffHand:
-                    data.BonusStrength = offHandBonusStrength.Value;
-                    data.BonusDexterity = offHandBonusDexterity.Value;
-                    data.BonusIntelligence = offHandBonusIntelligence.Value;
-                    data.CraftedBy = offHandCraftedBy.Value;
-                    return data;
-                case EquipSlot.Helmet:
-                    data.BonusStrength = headBonusStrength.Value;
-                    data.BonusDexterity = headBonusDexterity.Value;
-                    data.BonusIntelligence = headBonusIntelligence.Value;
-                    data.CraftedBy = headCraftedBy.Value;
-                    return data;
-                case EquipSlot.Chest:
-                    data.BonusStrength = chestBonusStrength.Value;
-                    data.BonusDexterity = chestBonusDexterity.Value;
-                    data.BonusIntelligence = chestBonusIntelligence.Value;
-                    data.CraftedBy = chestCraftedBy.Value;
-                    return data;
-                case EquipSlot.Legs:
-                    data.BonusStrength = legsBonusStrength.Value;
-                    data.BonusDexterity = legsBonusDexterity.Value;
-                    data.BonusIntelligence = legsBonusIntelligence.Value;
-                    data.CraftedBy = legsCraftedBy.Value;
-                    return data;
-                case EquipSlot.Boots:
-                    data.BonusStrength = feetBonusStrength.Value;
-                    data.BonusDexterity = feetBonusDexterity.Value;
-                    data.BonusIntelligence = feetBonusIntelligence.Value;
-                    data.CraftedBy = feetCraftedBy.Value;
-                    return data;
-                case EquipSlot.Gloves:
-                    data.BonusStrength = glovesBonusStrength.Value;
-                    data.BonusDexterity = glovesBonusDexterity.Value;
-                    data.BonusIntelligence = glovesBonusIntelligence.Value;
-                    data.CraftedBy = glovesCraftedBy.Value;
-                    return data;
-                case EquipSlot.Shoulders:
-                    data.BonusStrength = shouldersBonusStrength.Value;
-                    data.BonusDexterity = shouldersBonusDexterity.Value;
-                    data.BonusIntelligence = shouldersBonusIntelligence.Value;
-                    data.CraftedBy = shouldersCraftedBy.Value;
-                    return data;
-                case EquipSlot.Belt:
-                    data.BonusStrength = beltBonusStrength.Value;
-                    data.BonusDexterity = beltBonusDexterity.Value;
-                    data.BonusIntelligence = beltBonusIntelligence.Value;
-                    data.CraftedBy = beltCraftedBy.Value;
-                    return data;
-                default:
-                    return default;
+                EquipSlot.MainHand => mainHandInstanceData.Value,
+                EquipSlot.OffHand => offHandInstanceData.Value,
+                EquipSlot.Helmet => headInstanceData.Value,
+                EquipSlot.Chest => chestInstanceData.Value,
+                EquipSlot.Legs => legsInstanceData.Value,
+                EquipSlot.Boots => feetInstanceData.Value,
+                EquipSlot.Gloves => glovesInstanceData.Value,
+                EquipSlot.Shoulders => shouldersInstanceData.Value,
+                EquipSlot.Belt => beltInstanceData.Value,
+                _ => default
+            };
+
+            // Backward-compatible fallback for older scene/runtime state that still only set the legacy bonus netvars.
+            if (data.BonusStrength == 0 && data.BonusDexterity == 0 && data.BonusIntelligence == 0 && data.CraftedBy.IsEmpty)
+            {
+                switch (slot)
+                {
+                    case EquipSlot.MainHand:
+                        data.BonusStrength = mainHandBonusStrength.Value;
+                        data.BonusDexterity = mainHandBonusDexterity.Value;
+                        data.BonusIntelligence = mainHandBonusIntelligence.Value;
+                        data.CraftedBy = mainHandCraftedBy.Value;
+                        break;
+                    case EquipSlot.OffHand:
+                        data.BonusStrength = offHandBonusStrength.Value;
+                        data.BonusDexterity = offHandBonusDexterity.Value;
+                        data.BonusIntelligence = offHandBonusIntelligence.Value;
+                        data.CraftedBy = offHandCraftedBy.Value;
+                        break;
+                    case EquipSlot.Helmet:
+                        data.BonusStrength = headBonusStrength.Value;
+                        data.BonusDexterity = headBonusDexterity.Value;
+                        data.BonusIntelligence = headBonusIntelligence.Value;
+                        data.CraftedBy = headCraftedBy.Value;
+                        break;
+                    case EquipSlot.Chest:
+                        data.BonusStrength = chestBonusStrength.Value;
+                        data.BonusDexterity = chestBonusDexterity.Value;
+                        data.BonusIntelligence = chestBonusIntelligence.Value;
+                        data.CraftedBy = chestCraftedBy.Value;
+                        break;
+                    case EquipSlot.Legs:
+                        data.BonusStrength = legsBonusStrength.Value;
+                        data.BonusDexterity = legsBonusDexterity.Value;
+                        data.BonusIntelligence = legsBonusIntelligence.Value;
+                        data.CraftedBy = legsCraftedBy.Value;
+                        break;
+                    case EquipSlot.Boots:
+                        data.BonusStrength = feetBonusStrength.Value;
+                        data.BonusDexterity = feetBonusDexterity.Value;
+                        data.BonusIntelligence = feetBonusIntelligence.Value;
+                        data.CraftedBy = feetCraftedBy.Value;
+                        break;
+                    case EquipSlot.Gloves:
+                        data.BonusStrength = glovesBonusStrength.Value;
+                        data.BonusDexterity = glovesBonusDexterity.Value;
+                        data.BonusIntelligence = glovesBonusIntelligence.Value;
+                        data.CraftedBy = glovesCraftedBy.Value;
+                        break;
+                    case EquipSlot.Shoulders:
+                        data.BonusStrength = shouldersBonusStrength.Value;
+                        data.BonusDexterity = shouldersBonusDexterity.Value;
+                        data.BonusIntelligence = shouldersBonusIntelligence.Value;
+                        data.CraftedBy = shouldersCraftedBy.Value;
+                        break;
+                    case EquipSlot.Belt:
+                        data.BonusStrength = beltBonusStrength.Value;
+                        data.BonusDexterity = beltBonusDexterity.Value;
+                        data.BonusIntelligence = beltBonusIntelligence.Value;
+                        data.CraftedBy = beltCraftedBy.Value;
+                        break;
+                }
             }
+
+            return data;
         }
 
         private void SetSlotDurability(EquipSlot slot, int durability)
@@ -1416,15 +1529,42 @@ namespace HuntersAndCollectors.Players
             int finalDurability = Mathf.Max(0, durability);
             switch (slot)
             {
-                case EquipSlot.MainHand: mainHandDurability.Value = finalDurability; break;
-                case EquipSlot.OffHand: offHandDurability.Value = finalDurability; break;
-                case EquipSlot.Helmet: headDurability.Value = finalDurability; break;
-                case EquipSlot.Chest: chestDurability.Value = finalDurability; break;
-                case EquipSlot.Legs: legsDurability.Value = finalDurability; break;
-                case EquipSlot.Boots: feetDurability.Value = finalDurability; break;
-                case EquipSlot.Gloves: glovesDurability.Value = finalDurability; break;
-                case EquipSlot.Shoulders: shouldersDurability.Value = finalDurability; break;
-                case EquipSlot.Belt: beltDurability.Value = finalDurability; break;
+                case EquipSlot.MainHand:
+                    mainHandDurability.Value = finalDurability;
+                    { var data = mainHandInstanceData.Value; data.CurrentDurability = finalDurability; mainHandInstanceData.Value = data; }
+                    break;
+                case EquipSlot.OffHand:
+                    offHandDurability.Value = finalDurability;
+                    { var data = offHandInstanceData.Value; data.CurrentDurability = finalDurability; offHandInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Helmet:
+                    headDurability.Value = finalDurability;
+                    { var data = headInstanceData.Value; data.CurrentDurability = finalDurability; headInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Chest:
+                    chestDurability.Value = finalDurability;
+                    { var data = chestInstanceData.Value; data.CurrentDurability = finalDurability; chestInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Legs:
+                    legsDurability.Value = finalDurability;
+                    { var data = legsInstanceData.Value; data.CurrentDurability = finalDurability; legsInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Boots:
+                    feetDurability.Value = finalDurability;
+                    { var data = feetInstanceData.Value; data.CurrentDurability = finalDurability; feetInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Gloves:
+                    glovesDurability.Value = finalDurability;
+                    { var data = glovesInstanceData.Value; data.CurrentDurability = finalDurability; glovesInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Shoulders:
+                    shouldersDurability.Value = finalDurability;
+                    { var data = shouldersInstanceData.Value; data.CurrentDurability = finalDurability; shouldersInstanceData.Value = data; }
+                    break;
+                case EquipSlot.Belt:
+                    beltDurability.Value = finalDurability;
+                    { var data = beltInstanceData.Value; data.CurrentDurability = finalDurability; beltInstanceData.Value = data; }
+                    break;
             }
         }
 
@@ -1545,6 +1685,15 @@ namespace HuntersAndCollectors.Players
         }
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

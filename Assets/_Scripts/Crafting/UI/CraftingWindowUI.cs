@@ -7,6 +7,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 
 namespace HuntersAndCollectors.Crafting.UI
 {
@@ -21,7 +22,7 @@ namespace HuntersAndCollectors.Crafting.UI
     ///
     /// UI Requirements in Unity:
     /// - Root panel GameObject assigned (to show/hide).
-    /// - 3 tab buttons (Tools/Equipment/Building).
+    /// - 4 tab buttons (Tools/Equipment/Building/Consumables).
     /// - A container transform for recipe buttons.
     /// - A "recipe details" panel (icon, name, description, properties, ingredients grid, craft button).
     ///
@@ -39,6 +40,7 @@ namespace HuntersAndCollectors.Crafting.UI
         [SerializeField] private Button toolsButton;
         [SerializeField] private Button equipmentButton;
         [SerializeField] private Button buildingButton;
+        [SerializeField] private Button consumablesButton;
 
         [Header("Recipe List")]
         [SerializeField] private Transform recipeListRoot;
@@ -77,10 +79,16 @@ namespace HuntersAndCollectors.Crafting.UI
             if (root == null) root = gameObject;
             if (startHidden) root.SetActive(false);
 
+            // Backward-compatible scene repair:
+            // older scene instances predate the serialized consumables button field,
+            // so we resolve it by name when the inspector reference is missing.
+            TryResolveMissingTabButtons();
+
             // Tabs
             if (toolsButton != null) toolsButton.onClick.AddListener(() => SelectCategory(CraftingCategory.Tools));
             if (equipmentButton != null) equipmentButton.onClick.AddListener(() => SelectCategory(CraftingCategory.Equipment));
             if (buildingButton != null) buildingButton.onClick.AddListener(() => SelectCategory(CraftingCategory.Building));
+            if (consumablesButton != null) consumablesButton.onClick.AddListener(() => SelectCategory(CraftingCategory.Consumables));
 
             // Craft
             if (craftButton != null) craftButton.onClick.AddListener(OnCraftClicked);
@@ -510,6 +518,29 @@ namespace HuntersAndCollectors.Crafting.UI
                     return;
                 }
             }
+        }
+
+        private void TryResolveMissingTabButtons()
+        {
+            if (consumablesButton != null)
+                return;
+
+            Button[] buttons = GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                Button candidate = buttons[i];
+                if (candidate == null)
+                    continue;
+
+                if (candidate.name.IndexOf("consum", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    consumablesButton = candidate;
+                    break;
+                }
+            }
+
+            if (consumablesButton == null)
+                Debug.LogWarning("[CraftingWindowUI] Consumables tab button is not assigned and could not be auto-resolved.", this);
         }
     }
 }

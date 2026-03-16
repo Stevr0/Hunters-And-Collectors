@@ -7,7 +7,7 @@ namespace HuntersAndCollectors.Persistence
 {
     public static class SavePaths
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
 
         public static string Root => Path.Combine(Application.persistentDataPath, "HuntersAndCollectors", "Saves");
         public static string Players => Path.Combine(Root, "Players");

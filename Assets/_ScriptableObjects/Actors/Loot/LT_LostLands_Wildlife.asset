@@ -12,43 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
   m_Name: LT_LostLands_Wildlife
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
-  entries: []
-  guaranteedDrops:
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: T
-    maxQuantity: _
-    dropChance01: F
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  weightedDrops:
+  entries:
+  - item: {fileID: 11400000, guid: 62c9040b3e1c4b19816bd12f0cf888c7, type: 2}
+    minQuantity: 1
+    maxQuantity: 2
+    dropChance01: 0.65
   - item: {fileID: 11400000, guid: 2db298b29337446192b95fb5f84c7f07, type: 2}
     minQuantity: 1
     maxQuantity: 2
     dropChance01: 0.55
-    weight: 1
   - item: {fileID: 11400000, guid: 05d03016ed244da9a513739f9deddf17, type: 2}
     minQuantity: 1
-    maxQuantity: 2
-    dropChance01: 0.55
-    weight: 2
-  weightedRollsMin: 2
-  weightedRollsMax: 2
+    maxQuantity: 1
+    dropChance01: 0.25
+  - item: {fileID: 11400000, guid: 75b3760d492c41cc8fae2b70c8de470e, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.12
+  guaranteedDrops: []
+  weightedDrops: []
+  weightedRollsMin: 0
+  weightedRollsMax: 0
   coinDrop:
-  coinItem: {fileID: 0}
-  minQuantity: 0
-  maxQuantity: 0
-  dropChance01: 0
+    coinItem: {fileID: 0}
+    minQuantity: 0
+    maxQuantity: 0
+    dropChance01: 0

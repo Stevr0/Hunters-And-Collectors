@@ -6,7 +6,7 @@ namespace HuntersAndCollectors.Persistence
     [Serializable]
     public sealed class PlayerSaveData
     {
-        public int schemaVersion = 2;
+        public int schemaVersion = 3;
         public string playerKey = string.Empty;
         public WalletSaveData wallet = new();
         public List<SkillSaveData> skills = new();
@@ -57,18 +57,37 @@ namespace HuntersAndCollectors.Persistence
         public float rolledDefence;
         public float rolledSwingSpeed;
         public float rolledMovementSpeed;
+        public float rolledCastSpeed;
+        public int rolledBlockValue;
         public int maxDurability;
         public int currentDurability;
         public int bonusStrength;
         public int bonusDexterity;
         public int bonusIntelligence;
         public string craftedBy = string.Empty;
+        public int damageBonus;
+        public int defenceBonus;
+        public float attackSpeedBonus;
+        public float castSpeedBonus;
+        public float critChanceBonus;
+        public int blockValueBonus;
+        public int statusPowerBonus;
+        public int trapPowerBonus;
+        public int physicalResist;
+        public int fireResist;
+        public int frostResist;
+        public int poisonResist;
+        public int lightningResist;
+        public byte affixA;
+        public byte affixB;
+        public byte affixC;
+        public byte resistanceAffix;
     }
 
     [Serializable]
     public sealed class ShardSaveData
     {
-        public int schemaVersion = 2;
+        public int schemaVersion = 3;
         public string shardKey = string.Empty;
         public List<ShelterSaveData> shelters = new();
         public List<PlacedBuildingSaveData> placedBuildings = new();
@@ -112,6 +131,30 @@ namespace HuntersAndCollectors.Persistence
         public int bonusDexterity;
         public int bonusIntelligence;
         public string craftedBy = string.Empty;
+        public long instanceId;
+        public float rolledDamage;
+        public float rolledDefence;
+        public float rolledSwingSpeed;
+        public float rolledMovementSpeed;
+        public float rolledCastSpeed;
+        public int rolledBlockValue;
+        public int damageBonus;
+        public int defenceBonus;
+        public float attackSpeedBonus;
+        public float castSpeedBonus;
+        public float critChanceBonus;
+        public int blockValueBonus;
+        public int statusPowerBonus;
+        public int trapPowerBonus;
+        public int physicalResist;
+        public int fireResist;
+        public int frostResist;
+        public int poisonResist;
+        public int lightningResist;
+        public byte affixA;
+        public byte affixB;
+        public byte affixC;
+        public byte resistanceAffix;
     }
 
     [Serializable]
@@ -222,5 +265,3 @@ namespace HuntersAndCollectors.Persistence
         public string ParseStatus { get; }
     }
 }
-
-

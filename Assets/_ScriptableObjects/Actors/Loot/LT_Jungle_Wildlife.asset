@@ -12,48 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
   m_Name: LT_Jungle_Wildlife
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
-  entries: []
-  guaranteedDrops:
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: T
-    maxQuantity: _
-    dropChance01: R
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  weightedDrops:
-  - item: {fileID: 11400000, guid: 850b7a31d33147829f3502093c461ae4, type: 2}
-    minQuantity: 1
-    maxQuantity: 2
-    dropChance01: 0.6
-    weight: 2
-  - item: {fileID: 11400000, guid: 14be2c7be6a54adca80ea4fbd93927b9, type: 2}
-    minQuantity: 1
-    maxQuantity: 2
-    dropChance01: 0.55
-    weight: 2
+  entries:
+  - item: {fileID: 11400000, guid: 2db298b29337446192b95fb5f84c7f07, type: 2}
+    minQuantity: 2
+    maxQuantity: 3
+    dropChance01: 0.75
   - item: {fileID: 11400000, guid: 7a92a5911e29498e85f0dc018c894f04, type: 2}
     minQuantity: 1
-    maxQuantity: 2
+    maxQuantity: 1
     dropChance01: 0.35
-    weight: 1
-  weightedRollsMin: 2
-  weightedRollsMax: 2
+  - item: {fileID: 11400000, guid: 14be2c7be6a54adca80ea4fbd93927b9, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.18
+  - item: {fileID: 11400000, guid: 850b7a31d33147829f3502093c461ae4, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.25
+  guaranteedDrops: []
+  weightedDrops: []
+  weightedRollsMin: 0
+  weightedRollsMax: 0
   coinDrop:
-  coinItem: {fileID: 0}
-  minQuantity: 0
-  maxQuantity: 0
-  dropChance01: 0
+    coinItem: {fileID: 0}
+    minQuantity: 0
+    maxQuantity: 0
+    dropChance01: 0

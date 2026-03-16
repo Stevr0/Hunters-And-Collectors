@@ -225,8 +225,7 @@ namespace HuntersAndCollectors.Crafting
             FixedString64Bytes craftedBy = ResolveCrafterName();
             for (int i = 0; i < quantity; i++)
             {
-                ItemInstance instance = RollCraftedInstance(recipe.OutputItem, skillLevel, recipeId, attemptIndex, i);
-                ItemInstanceData data = BuildInstanceData(instance, craftedBy);
+                ItemInstance instance = RollCraftedInstance(recipe.OutputItem, skillLevel, recipeId, attemptIndex, i, craftedBy, out ItemInstanceData data);
 
                 if (!inventoryNet.ServerTryAddItemInstance(instance, data))
                 {
@@ -239,7 +238,7 @@ namespace HuntersAndCollectors.Crafting
             return true;
         }
 
-        private ItemInstance RollCraftedInstance(ItemDef outputItem, int skillLevel, string recipeId, int attemptIndex, int outputOrdinal)
+        private ItemInstance RollCraftedInstance(ItemDef outputItem, int skillLevel, string recipeId, int attemptIndex, int outputOrdinal, FixedString64Bytes craftedBy, out ItemInstanceData data)
         {
             // One coherent craft profile score keeps stats feeling consistently weak/average/strong.
             // Skill shifts the score distribution without removing variance entirely.
@@ -281,14 +280,11 @@ namespace HuntersAndCollectors.Crafting
             float rolledDefence = RollAroundProfile(outputItem.ResolveDefenceMin(), outputItem.ResolveDefenceMax());
             float rolledSwing = RollAroundProfile(outputItem.ResolveSwingSpeedMin(), outputItem.ResolveSwingSpeedMax());
             float rolledMove = RollAroundProfile(outputItem.ResolveMovementSpeedMin(), outputItem.ResolveMovementSpeedMax());
+            float rolledCastSpeed = RollAroundProfile(outputItem.ResolveCastSpeedMin(), outputItem.ResolveCastSpeedMax());
+            int rolledBlockValue = RollDurability(outputItem.ResolveBlockValueMin(), outputItem.ResolveBlockValueMax());
             int rolledMaxDurability = RollDurability(outputItem.ResolveDurabilityMin(), outputItem.ResolveDurabilityMax());
 
-            if (debugCraftTrace)
-            {
-                Debug.Log($"[Craft][SERVER] InstanceRoll itemId={outputItem.ItemId} skill={skillLevel} profile={profileScore:0.000} dmg={rolledDamage:0.##} def={rolledDefence:0.##} swing={rolledSwing:0.##} move={rolledMove:0.##} maxDur={rolledMaxDurability}");
-            }
-
-            return new ItemInstance
+            ItemInstance instance = new ItemInstance
             {
                 InstanceId = ComposeInstanceId(recipeId, attemptIndex, outputOrdinal),
                 ItemId = outputItem.ItemId,
@@ -296,28 +292,22 @@ namespace HuntersAndCollectors.Crafting
                 RolledDefence = rolledDefence,
                 RolledSwingSpeed = rolledSwing,
                 RolledMovementSpeed = rolledMove,
+                RolledCastSpeed = rolledCastSpeed,
+                RolledBlockValue = rolledBlockValue,
                 MaxDurability = rolledMaxDurability,
                 CurrentDurability = rolledMaxDurability
             };
-        }
 
-        private ItemInstanceData BuildInstanceData(in ItemInstance instance, FixedString64Bytes craftedBy)
-        {
-            // Keep bonus fields at zero for now. Existing systems still support them if needed.
-            return new ItemInstanceData
+            data = ItemInstanceUtility.CreateFromInstance(instance, craftedBy);
+            CraftedCombatRollService.ApplyCraftedModifiers(outputItem, profileScore, skill01, rng, ref instance, ref data);
+            ItemInstanceUtility.MirrorRuntimeFields(ref data, instance);
+
+            if (debugCraftTrace)
             {
-                BonusStrength = 0,
-                BonusDexterity = 0,
-                BonusIntelligence = 0,
-                CraftedBy = craftedBy,
-                InstanceId = instance.InstanceId,
-                RolledDamage = instance.RolledDamage,
-                RolledDefence = instance.RolledDefence,
-                RolledSwingSpeed = instance.RolledSwingSpeed,
-                RolledMovementSpeed = instance.RolledMovementSpeed,
-                MaxDurability = instance.MaxDurability,
-                CurrentDurability = instance.CurrentDurability
-            };
+                Debug.Log($"[Craft][SERVER] InstanceRoll itemId={outputItem.ItemId} skill={skillLevel} tier={outputItem.ItemTier} profile={profileScore:0.000} dmg={instance.RolledDamage:0.##} def={instance.RolledDefence:0.##} swing={instance.RolledSwingSpeed:0.##} move={instance.RolledMovementSpeed:0.##} cast={instance.RolledCastSpeed:0.##} block={instance.RolledBlockValue} maxDur={instance.MaxDurability} affixes={data.AffixA}/{data.AffixB}/{data.AffixC} resist={data.ResistanceAffix}");
+            }
+
+            return instance;
         }
 
         private System.Random BuildRng(string recipeId, int attemptIndex, int outputOrdinal)
@@ -638,6 +628,8 @@ namespace HuntersAndCollectors.Crafting
                 CraftingCategory.Tools => SkillId.ToolCrafting,
                 CraftingCategory.Equipment => SkillId.EquipmentCrafting,
                 CraftingCategory.Building => SkillId.BuildingCrafting,
+                // Consumables currently share the general hand-crafting progression track.
+                CraftingCategory.Consumables => SkillId.ToolCrafting,
                 _ => string.Empty
             };
         }

@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Serpent Scale
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 60
   Description: A scale plated with natural venom resistance.
   PropertiesText: 
-  BaseValue: 9
+  BaseValue: 8
   Weight: 0.4
   Rarity: 2
   CraftTime: 0

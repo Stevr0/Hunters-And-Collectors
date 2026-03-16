@@ -12,48 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
   m_Name: LT_BeastCaverns_Critter
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
-  entries: []
-  guaranteedDrops:
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: T
-    maxQuantity: _
-    dropChance01: C
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  weightedDrops:
-  - item: {fileID: 11400000, guid: a50b61f949954c8e94730c465ed15035, type: 2}
-    minQuantity: 1
-    maxQuantity: 2
-    dropChance01: 0.65
-    weight: 2
+  entries:
   - item: {fileID: 11400000, guid: 88d5ccbad17b47a58282f4f7268557ca, type: 2}
     minQuantity: 1
     maxQuantity: 2
-    dropChance01: 0.75
-    weight: 2
+    dropChance01: 0.65
+  - item: {fileID: 11400000, guid: 0ab9e5d244ff44aa8c7acb1d06c51047, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.35
+  - item: {fileID: 11400000, guid: 1148ed5ce4114b03b00ef351a25f9a40, type: 2}
+    minQuantity: 1
+    maxQuantity: 1
+    dropChance01: 0.2
   - item: {fileID: 11400000, guid: bf9ae06c99d34e4cb3beddfd547d67f0, type: 2}
     minQuantity: 1
     maxQuantity: 1
-    dropChance01: 0.3
-    weight: 1
-  weightedRollsMin: 2
-  weightedRollsMax: 2
+    dropChance01: 0.12
+  guaranteedDrops: []
+  weightedDrops: []
+  weightedRollsMin: 0
+  weightedRollsMax: 0
   coinDrop:
-  coinItem: {fileID: 0}
-  minQuantity: 0
-  maxQuantity: 0
-  dropChance01: 0
+    coinItem: {fileID: 0}
+    minQuantity: 0
+    maxQuantity: 0
+    dropChance01: 0

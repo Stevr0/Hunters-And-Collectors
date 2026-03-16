@@ -1,4 +1,4 @@
-﻿using HuntersAndCollectors.Items;
+using HuntersAndCollectors.Items;
 using HuntersAndCollectors.Players;
 using HuntersAndCollectors.Skills;
 using UnityEngine;
@@ -57,10 +57,20 @@ namespace HuntersAndCollectors.Stats
             float equipDefence = 0f;
             float equipMoveMult = 1f;
             float mainHandSwing = 1f;
+            float equipCastSpeed = 0f;
+            float equipCritChance = 0f;
 
             int equipStr = 0;
             int equipDex = 0;
             int equipInt = 0;
+            int equipBlock = 0;
+            int equipStatusPower = 0;
+            int equipTrapPower = 0;
+            int physicalResist = 0;
+            int fireResist = 0;
+            int frostResist = 0;
+            int poisonResist = 0;
+            int lightningResist = 0;
 
             ItemDef mainHandDef = null;
 
@@ -76,18 +86,30 @@ namespace HuntersAndCollectors.Stats
                     if (!TryResolveItemDef(itemId, equipment, itemDatabase, out ItemDef def) || def == null)
                         continue;
 
-                    equipDamage += def.Damage;
-                    equipDefence += def.Defence;
-                    equipMoveMult *= def.MovementSpeed <= 0f ? 1f : def.MovementSpeed;
+                    ItemInstanceData instanceData = equipment.GetEquippedInstanceData(slot);
 
-                    equipStr += Mathf.Max(0, def.Strength) + Mathf.Max(0, equipment.GetEquippedBonusStrength(slot));
-                    equipDex += Mathf.Max(0, def.Dexterity) + Mathf.Max(0, equipment.GetEquippedBonusDexterity(slot));
-                    equipInt += Mathf.Max(0, def.Intelligence) + Mathf.Max(0, equipment.GetEquippedBonusIntelligence(slot));
+                    equipDamage += ResolveDamage(def, instanceData);
+                    equipDefence += ResolveDefence(def, instanceData);
+                    equipMoveMult *= ResolveMoveSpeed(def, instanceData);
+                    equipCastSpeed += ResolveCastSpeed(def, instanceData);
+                    equipCritChance += Mathf.Max(0f, instanceData.CritChanceBonus);
+                    equipBlock += ResolveBlockValue(def, instanceData);
+                    equipStatusPower += Mathf.Max(0, instanceData.StatusPowerBonus);
+                    equipTrapPower += Mathf.Max(0, instanceData.TrapPowerBonus);
+                    physicalResist += Mathf.Max(0, instanceData.PhysicalResist);
+                    fireResist += Mathf.Max(0, instanceData.FireResist);
+                    frostResist += Mathf.Max(0, instanceData.FrostResist);
+                    poisonResist += Mathf.Max(0, instanceData.PoisonResist);
+                    lightningResist += Mathf.Max(0, instanceData.LightningResist);
+
+                    equipStr += Mathf.Max(0, def.Strength) + Mathf.Max(0, instanceData.BonusStrength);
+                    equipDex += Mathf.Max(0, def.Dexterity) + Mathf.Max(0, instanceData.BonusDexterity);
+                    equipInt += Mathf.Max(0, def.Intelligence) + Mathf.Max(0, instanceData.BonusIntelligence);
 
                     if (slot == EquipSlot.MainHand)
                     {
                         mainHandDef = def;
-                        mainHandSwing = def.SwingSpeed <= 0f ? 1f : def.SwingSpeed;
+                        mainHandSwing = ResolveSwingSpeed(def, instanceData);
                     }
                 }
             }
@@ -124,10 +146,56 @@ namespace HuntersAndCollectors.Stats
             result.Damage = (baseDamage + equipDamage) * damageSkillMult;
             result.Defence = baseDefence + equipDefence;
             result.MoveSpeedMult = baseMoveSpeedMult * equipMoveMult * moveSkillMult;
-            result.SwingSpeed = baseSwingSpeed * mainHandSwing * swingSkillMult;
+            result.SwingSpeed = (baseSwingSpeed * mainHandSwing * swingSkillMult) + 0f;
+            result.CastSpeed = equipCastSpeed;
+            result.CritChance = equipCritChance;
+            result.BlockValue = equipBlock;
+            result.StatusPower = equipStatusPower;
+            result.TrapPower = equipTrapPower;
+            result.PhysicalResist = physicalResist;
+            result.FireResist = fireResist;
+            result.FrostResist = frostResist;
+            result.PoisonResist = poisonResist;
+            result.LightningResist = lightningResist;
 
             result.ActiveCombatSkillId = activeCombatSkillId;
             return result;
+        }
+
+        private static float ResolveDamage(ItemDef def, ItemInstanceData instanceData)
+        {
+            float baseValue = instanceData.RolledDamage > 0f ? instanceData.RolledDamage : def.Damage;
+            return Mathf.Max(0f, baseValue + instanceData.DamageBonus);
+        }
+
+        private static float ResolveDefence(ItemDef def, ItemInstanceData instanceData)
+        {
+            float baseValue = instanceData.RolledDefence > 0f ? instanceData.RolledDefence : def.Defence;
+            return Mathf.Max(0f, baseValue + instanceData.DefenceBonus);
+        }
+
+        private static float ResolveSwingSpeed(ItemDef def, ItemInstanceData instanceData)
+        {
+            float baseValue = instanceData.RolledSwingSpeed > 0f ? instanceData.RolledSwingSpeed : Mathf.Max(0.01f, def.SwingSpeed);
+            return Mathf.Max(0.01f, baseValue + instanceData.AttackSpeedBonus);
+        }
+
+        private static float ResolveMoveSpeed(ItemDef def, ItemInstanceData instanceData)
+        {
+            float baseValue = instanceData.RolledMovementSpeed > 0f ? instanceData.RolledMovementSpeed : def.MovementSpeed;
+            return baseValue <= 0f ? 1f : baseValue;
+        }
+
+        private static float ResolveCastSpeed(ItemDef def, ItemInstanceData instanceData)
+        {
+            float baseValue = instanceData.RolledCastSpeed > 0f ? instanceData.RolledCastSpeed : def.CastSpeed;
+            return Mathf.Max(0f, baseValue + instanceData.CastSpeedBonus);
+        }
+
+        private static int ResolveBlockValue(ItemDef def, ItemInstanceData instanceData)
+        {
+            int baseValue = instanceData.RolledBlockValue > 0 ? instanceData.RolledBlockValue : def.BlockValue;
+            return Mathf.Max(0, baseValue + instanceData.BlockValueBonus);
         }
 
         private static bool TryResolveItemDef(string itemId, PlayerEquipmentNet equipment, ItemDatabase itemDatabase, out ItemDef def)
@@ -179,8 +247,3 @@ namespace HuntersAndCollectors.Stats
         }
     }
 }
-
-
-
-
-

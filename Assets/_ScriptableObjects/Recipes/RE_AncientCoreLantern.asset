@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 918f060a3f312fe48a5328d6e6631c81, type: 3}
+  m_Name: RE_AncientCoreLantern
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Crafting.RecipeDef
+  RecipeId: CR_AncientCoreLantern
+  Category: 1
+  OutputItem: {fileID: 11400000, guid: 9624a6b00d9b480d9aec30314bfd1393, type: 2}
+  OutputQuantity: 1
+  Ingredients:
+  - Item: {fileID: 11400000, guid: 5c860f3d6b8c4feaa061c5dd7dcbdf73, type: 2}
+    Quantity: 1
+  - Item: {fileID: 11400000, guid: b06e4d9aad974f0eb0c060d5300d74d5, type: 2}
+    Quantity: 2
+  - Item: {fileID: 11400000, guid: b5b9e311348865e49bd49ed9b02b261d, type: 2}
+    Quantity: 1

@@ -108,6 +108,8 @@ namespace HuntersAndCollectors.Inventory
                         RolledDefence = 0f,
                         RolledSwingSpeed = 0f,
                         RolledMovementSpeed = 0f,
+                        RolledCastSpeed = 0f,
+                        RolledBlockValue = 0,
                         MaxDurability = durability > 0 ? durability : def.ResolveDurabilityMax(),
                         CurrentDurability = durability > 0 ? durability : def.ResolveDurabilityMax()
                     };
@@ -361,6 +363,8 @@ namespace HuntersAndCollectors.Inventory
                         RolledDefence = 0f,
                         RolledSwingSpeed = 0f,
                         RolledMovementSpeed = 0f,
+                        RolledCastSpeed = 0f,
+                        RolledBlockValue = 0,
                         MaxDurability = durability > 0 ? durability : def.ResolveDurabilityMax(),
                         CurrentDurability = durability > 0 ? durability : def.ResolveDurabilityMax()
                     };
@@ -423,6 +427,10 @@ namespace HuntersAndCollectors.Inventory
                 data.RolledSwingSpeed = instance.RolledSwingSpeed;
             if (data.RolledMovementSpeed <= 0f)
                 data.RolledMovementSpeed = instance.RolledMovementSpeed;
+            if (data.RolledCastSpeed <= 0f)
+                data.RolledCastSpeed = instance.RolledCastSpeed;
+            if (data.RolledBlockValue <= 0)
+                data.RolledBlockValue = instance.RolledBlockValue;
 
             data.MaxDurability = instance.MaxDurability;
             data.CurrentDurability = instance.CurrentDurability;
@@ -472,7 +480,7 @@ namespace HuntersAndCollectors.Inventory
             if (!allowInstance)
                 return default;
 
-            ItemInstanceData data;
+            ItemInstanceData data = default;
             data.BonusStrength = bonusStrength;
             data.BonusDexterity = bonusDexterity;
             data.BonusIntelligence = bonusIntelligence;
@@ -483,6 +491,8 @@ namespace HuntersAndCollectors.Inventory
             data.RolledDefence = 0f;
             data.RolledSwingSpeed = 0f;
             data.RolledMovementSpeed = 0f;
+            data.RolledCastSpeed = 0f;
+            data.RolledBlockValue = 0;
             data.MaxDurability = durability > 0 ? durability : def.ResolveDurabilityMax();
             data.CurrentDurability = durability > 0 ? durability : def.ResolveDurabilityMax();
             return data;

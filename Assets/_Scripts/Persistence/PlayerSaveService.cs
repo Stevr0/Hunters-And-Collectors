@@ -50,11 +50,18 @@ namespace HuntersAndCollectors.Persistence
             }
             else
             {
-                // v1 -> v2 migration is supported. Any other schema is archived.
+                // v1 -> v2 -> v3 migration is supported. Any other schema is archived.
                 if (saveData.schemaVersion == 1)
                 {
                     migratedFromOldSchema = true;
                     MigrateV1ToV2(saveData);
+                    MigrateV2ToV3(saveData);
+                    saveData.schemaVersion = SavePaths.CurrentSchemaVersion;
+                }
+                else if (saveData.schemaVersion == 2)
+                {
+                    migratedFromOldSchema = true;
+                    MigrateV2ToV3(saveData);
                     saveData.schemaVersion = SavePaths.CurrentSchemaVersion;
                 }
                 else if (saveData.schemaVersion != SavePaths.CurrentSchemaVersion)
@@ -182,12 +189,31 @@ namespace HuntersAndCollectors.Persistence
                         rolledDefence = slot.Instance.RolledDefence,
                         rolledSwingSpeed = slot.Instance.RolledSwingSpeed,
                         rolledMovementSpeed = slot.Instance.RolledMovementSpeed,
+                        rolledCastSpeed = slot.Instance.RolledCastSpeed,
+                        rolledBlockValue = slot.Instance.RolledBlockValue,
                         maxDurability = slot.Instance.MaxDurability,
                         currentDurability = slot.Instance.CurrentDurability,
                         bonusStrength = slot.InstanceData.BonusStrength,
                         bonusDexterity = slot.InstanceData.BonusDexterity,
                         bonusIntelligence = slot.InstanceData.BonusIntelligence,
-                        craftedBy = slot.InstanceData.CraftedBy.ToString()
+                        craftedBy = slot.InstanceData.CraftedBy.ToString(),
+                        damageBonus = slot.InstanceData.DamageBonus,
+                        defenceBonus = slot.InstanceData.DefenceBonus,
+                        attackSpeedBonus = slot.InstanceData.AttackSpeedBonus,
+                        castSpeedBonus = slot.InstanceData.CastSpeedBonus,
+                        critChanceBonus = slot.InstanceData.CritChanceBonus,
+                        blockValueBonus = slot.InstanceData.BlockValueBonus,
+                        statusPowerBonus = slot.InstanceData.StatusPowerBonus,
+                        trapPowerBonus = slot.InstanceData.TrapPowerBonus,
+                        physicalResist = slot.InstanceData.PhysicalResist,
+                        fireResist = slot.InstanceData.FireResist,
+                        frostResist = slot.InstanceData.FrostResist,
+                        poisonResist = slot.InstanceData.PoisonResist,
+                        lightningResist = slot.InstanceData.LightningResist,
+                        affixA = (byte)slot.InstanceData.AffixA,
+                        affixB = (byte)slot.InstanceData.AffixB,
+                        affixC = (byte)slot.InstanceData.AffixC,
+                        resistanceAffix = (byte)slot.InstanceData.ResistanceAffix
                     });
                 }
                 else
@@ -365,12 +391,31 @@ namespace HuntersAndCollectors.Persistence
                     slot.rolledDefence = 0f;
                     slot.rolledSwingSpeed = 0f;
                     slot.rolledMovementSpeed = 0f;
+                    slot.rolledCastSpeed = 0f;
+                    slot.rolledBlockValue = 0;
                     slot.maxDurability = 0;
                     slot.currentDurability = 0;
                     slot.bonusStrength = 0;
                     slot.bonusDexterity = 0;
                     slot.bonusIntelligence = 0;
                     slot.craftedBy = string.Empty;
+                    slot.damageBonus = 0;
+                    slot.defenceBonus = 0;
+                    slot.attackSpeedBonus = 0f;
+                    slot.castSpeedBonus = 0f;
+                    slot.critChanceBonus = 0f;
+                    slot.blockValueBonus = 0;
+                    slot.statusPowerBonus = 0;
+                    slot.trapPowerBonus = 0;
+                    slot.physicalResist = 0;
+                    slot.fireResist = 0;
+                    slot.frostResist = 0;
+                    slot.poisonResist = 0;
+                    slot.lightningResist = 0;
+                    slot.affixA = 0;
+                    slot.affixB = 0;
+                    slot.affixC = 0;
+                    slot.resistanceAffix = 0;
                 }
             }
 
@@ -510,6 +555,25 @@ namespace HuntersAndCollectors.Persistence
             if (slotData.bonusDexterity < 0) slotData.bonusDexterity = 0;
             if (slotData.bonusIntelligence < 0) slotData.bonusIntelligence = 0;
             slotData.craftedBy ??= string.Empty;
+            slotData.rolledDamage = Mathf.Max(0f, slotData.rolledDamage);
+            slotData.rolledDefence = Mathf.Max(0f, slotData.rolledDefence);
+            slotData.rolledSwingSpeed = Mathf.Max(0f, slotData.rolledSwingSpeed);
+            slotData.rolledMovementSpeed = Mathf.Max(0f, slotData.rolledMovementSpeed);
+            slotData.rolledCastSpeed = Mathf.Max(0f, slotData.rolledCastSpeed);
+            slotData.rolledBlockValue = Mathf.Max(0, slotData.rolledBlockValue);
+            slotData.damageBonus = Mathf.Max(0, slotData.damageBonus);
+            slotData.defenceBonus = Mathf.Max(0, slotData.defenceBonus);
+            slotData.attackSpeedBonus = Mathf.Max(0f, slotData.attackSpeedBonus);
+            slotData.castSpeedBonus = Mathf.Max(0f, slotData.castSpeedBonus);
+            slotData.critChanceBonus = Mathf.Max(0f, slotData.critChanceBonus);
+            slotData.blockValueBonus = Mathf.Max(0, slotData.blockValueBonus);
+            slotData.statusPowerBonus = Mathf.Max(0, slotData.statusPowerBonus);
+            slotData.trapPowerBonus = Mathf.Max(0, slotData.trapPowerBonus);
+            slotData.physicalResist = Mathf.Max(0, slotData.physicalResist);
+            slotData.fireResist = Mathf.Max(0, slotData.fireResist);
+            slotData.frostResist = Mathf.Max(0, slotData.frostResist);
+            slotData.poisonResist = Mathf.Max(0, slotData.poisonResist);
+            slotData.lightningResist = Mathf.Max(0, slotData.lightningResist);
         }
 
         private static void MigrateV1ToV2(PlayerSaveData data)
@@ -529,14 +593,100 @@ namespace HuntersAndCollectors.Persistence
                 slot.rolledDamage = 0f;
                 slot.rolledDefence = 0f;
                 slot.rolledSwingSpeed = 0f;
-                slot.rolledMovementSpeed = 0f;
-                slot.maxDurability = 0;
-                slot.currentDurability = 0;
-                slot.bonusStrength = 0;
-                slot.bonusDexterity = 0;
-                slot.bonusIntelligence = 0;
-                slot.craftedBy = string.Empty;
+                    slot.rolledMovementSpeed = 0f;
+                    slot.rolledCastSpeed = 0f;
+                    slot.rolledBlockValue = 0;
+                    slot.maxDurability = 0;
+                    slot.currentDurability = 0;
+                    slot.bonusStrength = 0;
+                    slot.bonusDexterity = 0;
+                    slot.bonusIntelligence = 0;
+                    slot.craftedBy = string.Empty;
+                    slot.damageBonus = 0;
+                    slot.defenceBonus = 0;
+                    slot.attackSpeedBonus = 0f;
+                    slot.castSpeedBonus = 0f;
+                    slot.critChanceBonus = 0f;
+                    slot.blockValueBonus = 0;
+                    slot.statusPowerBonus = 0;
+                    slot.trapPowerBonus = 0;
+                    slot.physicalResist = 0;
+                    slot.fireResist = 0;
+                    slot.frostResist = 0;
+                    slot.poisonResist = 0;
+                    slot.lightningResist = 0;
+                    slot.affixA = 0;
+                    slot.affixB = 0;
+                    slot.affixC = 0;
+                    slot.resistanceAffix = 0;
             }
+        }
+
+        private static void MigrateV2ToV3(PlayerSaveData data)
+        {
+            if (data == null)
+                return;
+
+            if (data.inventory?.slots != null)
+            {
+                for (int i = 0; i < data.inventory.slots.Count; i++)
+                    InitializeV3Fields(data.inventory.slots[i]);
+            }
+
+            if (data.equipment == null)
+                data.equipment = new PlayerEquipmentSaveData();
+
+            InitializeV3Fields(data.equipment.helmet);
+            InitializeV3Fields(data.equipment.chest);
+            InitializeV3Fields(data.equipment.legs);
+            InitializeV3Fields(data.equipment.boots);
+            InitializeV3Fields(data.equipment.gloves);
+            InitializeV3Fields(data.equipment.shoulders);
+            InitializeV3Fields(data.equipment.belt);
+        }
+
+        private static void InitializeV3Fields(InventorySlotSaveData slot)
+        {
+            if (slot == null)
+                return;
+
+            slot.rolledCastSpeed = Mathf.Max(0f, slot.rolledCastSpeed);
+            slot.rolledBlockValue = Mathf.Max(0, slot.rolledBlockValue);
+            slot.damageBonus = Mathf.Max(0, slot.damageBonus);
+            slot.defenceBonus = Mathf.Max(0, slot.defenceBonus);
+            slot.attackSpeedBonus = Mathf.Max(0f, slot.attackSpeedBonus);
+            slot.castSpeedBonus = Mathf.Max(0f, slot.castSpeedBonus);
+            slot.critChanceBonus = Mathf.Max(0f, slot.critChanceBonus);
+            slot.blockValueBonus = Mathf.Max(0, slot.blockValueBonus);
+            slot.statusPowerBonus = Mathf.Max(0, slot.statusPowerBonus);
+            slot.trapPowerBonus = Mathf.Max(0, slot.trapPowerBonus);
+            slot.physicalResist = Mathf.Max(0, slot.physicalResist);
+            slot.fireResist = Mathf.Max(0, slot.fireResist);
+            slot.frostResist = Mathf.Max(0, slot.frostResist);
+            slot.poisonResist = Mathf.Max(0, slot.poisonResist);
+            slot.lightningResist = Mathf.Max(0, slot.lightningResist);
+        }
+
+        private static void InitializeV3Fields(EquipmentSlotSaveData slot)
+        {
+            if (slot == null)
+                return;
+
+            slot.rolledCastSpeed = Mathf.Max(0f, slot.rolledCastSpeed);
+            slot.rolledBlockValue = Mathf.Max(0, slot.rolledBlockValue);
+            slot.damageBonus = Mathf.Max(0, slot.damageBonus);
+            slot.defenceBonus = Mathf.Max(0, slot.defenceBonus);
+            slot.attackSpeedBonus = Mathf.Max(0f, slot.attackSpeedBonus);
+            slot.castSpeedBonus = Mathf.Max(0f, slot.castSpeedBonus);
+            slot.critChanceBonus = Mathf.Max(0f, slot.critChanceBonus);
+            slot.blockValueBonus = Mathf.Max(0, slot.blockValueBonus);
+            slot.statusPowerBonus = Mathf.Max(0, slot.statusPowerBonus);
+            slot.trapPowerBonus = Mathf.Max(0, slot.trapPowerBonus);
+            slot.physicalResist = Mathf.Max(0, slot.physicalResist);
+            slot.fireResist = Mathf.Max(0, slot.fireResist);
+            slot.frostResist = Mathf.Max(0, slot.frostResist);
+            slot.poisonResist = Mathf.Max(0, slot.poisonResist);
+            slot.lightningResist = Mathf.Max(0, slot.lightningResist);
         }
 
         private void ApplyToRuntime(PlayerNetworkRoot playerRoot, PlayerSaveData data)
@@ -679,6 +829,11 @@ namespace HuntersAndCollectors.Persistence
         }
     }
 }
+
+
+
+
+
 
 
 

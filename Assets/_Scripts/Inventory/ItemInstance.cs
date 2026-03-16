@@ -1,4 +1,5 @@
 using System;
+using HuntersAndCollectors.Items;
 
 namespace HuntersAndCollectors.Inventory
 {
@@ -23,6 +24,8 @@ namespace HuntersAndCollectors.Inventory
         public float RolledDefence;
         public float RolledSwingSpeed;
         public float RolledMovementSpeed;
+        public float RolledCastSpeed;
+        public int RolledBlockValue;
 
         // Durability is instance state (rolled max + mutable current).
         public int MaxDurability;

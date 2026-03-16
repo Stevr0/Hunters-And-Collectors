@@ -59,7 +59,7 @@ MonoBehaviour:
   interactionRadius: 2.4
   aiProfile: {fileID: 11400000, guid: b915002666d540c78956b71f86a9b5b9, type: 2}
   defaultBehaviourMode: 2
-  lootTable: {fileID: 11400000, guid: f3f0e27fc93f48a99b876d8169d7f774, type: 2}
+  lootTable: {fileID: 11400000, guid: 546a50cbc65e41eda673e7213960402c, type: 2}
   coinDropMin: 0
   coinDropMax: 0
   xpReward: 60

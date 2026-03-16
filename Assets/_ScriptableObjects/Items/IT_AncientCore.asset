@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Ancient Core
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 40
   Description: A pulsing core left behind by ancient guardians.
   PropertiesText: 
-  BaseValue: 18
+  BaseValue: 14
   Weight: 0.7
   Rarity: 3
   CraftTime: 0

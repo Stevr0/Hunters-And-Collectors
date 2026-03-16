@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_IceCrystalFocus
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: IT_IceCrystalFocus
+  DisplayName: Ice Crystal Focus
+  Category: 2
+  Icon: {fileID: 21300000, guid: c67f6060700f79d4f842b3632c073ff9, type: 3}
+  MaxStack: 1
+  Description: An icy focus that steadies the hand and sharpens concentration.
+  PropertiesText: 
+  BaseValue: 28
+  Weight: 1.1
+  Rarity: 3
+  CraftTime: 7
+  IsInstanceItem: 1
+  CombatFamily: 9
+  ItemStatBias: 3
+  ItemTier: 4
+  MinAffixCount: 2
+  MaxAffixCount: 3
+  BonusAffixChance: 0.35
+  ResistanceAffixChance: 0.35
+  AllowedAffixes: []
+  AllowedResistanceAffixes: []
+  visualPrefab: {fileID: 0}
+  worldDropPrefab: {fileID: 2194581310374169441, guid: 400b1f870092fdd418a91806ef12e45d, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 1
+  EquipSlot: 11
+  Handedness: 2
+  ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0.35
+  DefenceMax: 1
+  SwingSpeedMin: 1
+  SwingSpeedMax: 1.03
+  MovementSpeedMin: 1
+  MovementSpeedMax: 1.02
+  DurabilityMin: 55
+  DurabilityMax: 90
+  CastSpeedMin: 0.08
+  CastSpeedMax: 0.18
+  BlockValueMin: 0
+  BlockValueMax: 0
+  Strength: 0
+  Dexterity: 1
+  Intelligence: 3
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

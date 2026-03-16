@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Blizzard Essence
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 25
   Description: A swirling mote of winter storm essence.
   PropertiesText: 
-  BaseValue: 16
+  BaseValue: 18
   Weight: 0.1
-  Rarity: 3
+  Rarity: 4
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 953913445220319471, guid: 698f87ec26c95454881757001b2df3df, type: 3}

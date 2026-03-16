@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_BeastHeartTonic
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: IT_BeastHeartTonic
+  DisplayName: Beast Heart Tonic
+  Category: 3
+  Icon: {fileID: 21300000, guid: f6926d0f42f7acf4e8272843cb3abc46, type: 3}
+  MaxStack: 20
+  Description: A potent tonic that fortifies the body with primal vitality.
+  PropertiesText: 
+  BaseValue: 18
+  Weight: 0.5
+  Rarity: 2
+  CraftTime: 5
+  IsInstanceItem: 0
+  visualPrefab: {fileID: 953913445220319471, guid: 8769c51edc2f64f4080f5b8a7c2db5b3, type: 3}
+  worldDropPrefab: {fileID: 953913445220319471, guid: 8769c51edc2f64f4080f5b8a7c2db5b3, type: 3}
+  equipLocalPosition: {x: 0, y: 0, z: 0}
+  equipLocalEuler: {x: 0, y: 0, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 0
+  EquipSlot: 0
+  Handedness: 0
+  ToolTags: 
+  HarvestPower: 0
+  DamageMin: 0
+  DamageMax: 0
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 1
+  SwingSpeedMax: 1
+  MovementSpeedMin: 1
+  MovementSpeedMax: 1
+  DurabilityMin: 0
+  DurabilityMax: 0
+  Strength: 0
+  Dexterity: 0
+  Intelligence: 0
+  IsFood: 1
+  FoodMaxHealthBonus: 24
+  FoodMaxStaminaBonus: 12
+  FoodHealthRegenBonus: 2
+  FoodStaminaRegenBonus: 1
+  FoodDurationSeconds: 600
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

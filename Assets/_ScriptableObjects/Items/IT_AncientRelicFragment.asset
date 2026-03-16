@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Ancient Relic Fragment
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 40
   Description: A broken fragment from lost relics and tomb wards.
   PropertiesText: 
-  BaseValue: 14
+  BaseValue: 12
   Weight: 0.4
   Rarity: 3
   CraftTime: 0

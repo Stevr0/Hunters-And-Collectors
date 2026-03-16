@@ -19,7 +19,7 @@ MonoBehaviour:
   MaxStack: 99
   Description: Fresh meat carved from slain beasts.
   PropertiesText: 
-  BaseValue: 3
+  BaseValue: 2
   Weight: 1
   Rarity: 0
   CraftTime: 0

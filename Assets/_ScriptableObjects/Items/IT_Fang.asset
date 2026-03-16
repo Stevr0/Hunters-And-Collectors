@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Fang
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 75
   Description: A sharp trophy from predatory creatures.
   PropertiesText: 
-  BaseValue: 5
+  BaseValue: 4
   Weight: 0.4
   Rarity: 1
   CraftTime: 0

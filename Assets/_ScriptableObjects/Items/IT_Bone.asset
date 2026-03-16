@@ -19,7 +19,7 @@ MonoBehaviour:
   MaxStack: 99
   Description: Common bone fragments from undead and beasts.
   PropertiesText: 
-  BaseValue: 3
+  BaseValue: 2
   Weight: 0.8
   Rarity: 0
   CraftTime: 0

@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Venom Sac
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 75
   Description: A delicate organ that still holds dangerous venom.
   PropertiesText: 
-  BaseValue: 8
+  BaseValue: 6
   Weight: 0.2
-  Rarity: 2
+  Rarity: 1
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 2147834026543980358, guid: 513e29247e91f474bb66d4fe3a069a9a, type: 3}

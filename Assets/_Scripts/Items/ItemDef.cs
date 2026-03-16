@@ -70,6 +70,40 @@ namespace HuntersAndCollectors.Items
         [Tooltip("If true, crafted output for this item should become a non-stackable runtime instance rather than a simple stack item.")]
         public bool IsInstanceItem = false;
 
+        [Header("Combat Identity")]
+        [Tooltip("Family used to bias server-side crafted combat rolls and tooltip grouping.")]
+        public CombatItemFamily CombatFamily = CombatItemFamily.None;
+
+        [Tooltip("Broad build identity bias. The game remains classless; this only steers item rolls.")]
+        public ItemStatBias ItemStatBias = ItemStatBias.None;
+
+        [Tooltip("Content tier used for first-pass affix and resistance budgets.")]
+        [Min(1)]
+        public int ItemTier = 1;
+
+        [Header("Affix Authoring")]
+        [Tooltip("Minimum number of normal affixes this item can roll when crafted as an instance. 0 uses the tier defaults.")]
+        [Min(0)]
+        public int MinAffixCount = 0;
+
+        [Tooltip("Maximum number of normal affixes this item can roll when crafted as an instance. 0 uses the tier defaults.")]
+        [Min(0)]
+        public int MaxAffixCount = 0;
+
+        [Tooltip("Optional authored chance for an extra normal affix beyond the minimum budget. Negative means use tier defaults.")]
+        [Range(-1f, 1f)]
+        public float BonusAffixChance = -1f;
+
+        [Tooltip("Optional authored chance for a resistance affix. Negative means use tier defaults.")]
+        [Range(-1f, 1f)]
+        public float ResistanceAffixChance = -1f;
+
+        [Tooltip("Optional explicit affix pool override. Leave empty to use the combat-family defaults.")]
+        public ItemAffixId[] AllowedAffixes;
+
+        [Tooltip("Optional explicit resistance pool override. Leave empty to use the default resistance pool.")]
+        public ResistanceAffixId[] AllowedResistanceAffixes;
+
         [Header("Equip Visual")]
         [Tooltip("Optional visual prefab spawned when this item is equipped. Visual only. Should not contain a NetworkObject.")]
         [SerializeField] private GameObject visualPrefab;
@@ -152,6 +186,22 @@ namespace HuntersAndCollectors.Items
         [Tooltip("Maximum roll value for durability.")]
         [Min(0)]
         public int DurabilityMax = 0;
+
+        [Tooltip("If this item becomes an instance item, server rolls cast speed support in this range during crafting.")]
+        [Min(0f)]
+        public float CastSpeedMin = 0f;
+
+        [Tooltip("Maximum roll value for cast speed support.")]
+        [Min(0f)]
+        public float CastSpeedMax = 0f;
+
+        [Tooltip("If this item becomes an instance item, server rolls block value in this range during crafting.")]
+        [Min(0)]
+        public int BlockValueMin = 0;
+
+        [Tooltip("Maximum roll value for block value.")]
+        [Min(0)]
+        public int BlockValueMax = 0;
 
         [Header("Attributes")]
         [Tooltip("Flat strength bonus provided by this item type or rolled instance.")]
@@ -237,6 +287,12 @@ namespace HuntersAndCollectors.Items
 
                 if (DurabilityMax > 0)
                     sb.AppendLine($"Durability: {DurabilityMin} - {DurabilityMax}");
+
+                if (CastSpeedMax > 0f)
+                    sb.AppendLine($"Cast Speed: {CastSpeedMin:0.##} - {CastSpeedMax:0.##}");
+
+                if (BlockValueMax > 0)
+                    sb.AppendLine($"Block Value: {BlockValueMin} - {BlockValueMax}");
             }
 
             if (Strength != 0)
@@ -277,6 +333,8 @@ namespace HuntersAndCollectors.Items
         public float SwingSpeed => SwingSpeedMin;
         public float MovementSpeed => MovementSpeedMin;
         public int MaxDurability => DurabilityMax;
+        public float CastSpeed => CastSpeedMin;
+        public int BlockValue => BlockValueMin;
 
         public float ResolveDamageMin() => DamageMin;
         public float ResolveDamageMax() => DamageMax;
@@ -288,6 +346,10 @@ namespace HuntersAndCollectors.Items
         public float ResolveMovementSpeedMax() => MovementSpeedMax;
         public int ResolveDurabilityMin() => DurabilityMin;
         public int ResolveDurabilityMax() => DurabilityMax;
+        public float ResolveCastSpeedMin() => CastSpeedMin;
+        public float ResolveCastSpeedMax() => CastSpeedMax;
+        public int ResolveBlockValueMin() => BlockValueMin;
+        public int ResolveBlockValueMax() => BlockValueMax;
         public string BuildPropertiesText(bool appendManualPropertiesText) => BuildPropertiesText();
 
 #if UNITY_EDITOR
@@ -355,6 +417,27 @@ namespace HuntersAndCollectors.Items
 
             if (DurabilityMax < DurabilityMin)
                 DurabilityMax = DurabilityMin;
+
+            if (CastSpeedMin < 0f)
+                CastSpeedMin = 0f;
+
+            if (CastSpeedMax < CastSpeedMin)
+                CastSpeedMax = CastSpeedMin;
+
+            if (BlockValueMin < 0)
+                BlockValueMin = 0;
+
+            if (BlockValueMax < BlockValueMin)
+                BlockValueMax = BlockValueMin;
+
+            if (ItemTier < 1)
+                ItemTier = 1;
+
+            if (MinAffixCount < 0)
+                MinAffixCount = 0;
+
+            if (MaxAffixCount < MinAffixCount)
+                MaxAffixCount = MinAffixCount;
 
             if (StructureMaxHealth < 1)
                 StructureMaxHealth = 1;

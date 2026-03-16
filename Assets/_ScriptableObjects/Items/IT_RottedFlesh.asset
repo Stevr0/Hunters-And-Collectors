@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Rotted Flesh
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 75
   Description: Corrupted flesh steeped in mire rot.
   PropertiesText: 
-  BaseValue: 4
+  BaseValue: 3
   Weight: 0.8
   Rarity: 1
   CraftTime: 0

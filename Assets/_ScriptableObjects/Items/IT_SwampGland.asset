@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Swamp Gland
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 60
   Description: A toxic gland with value to poison brewers.
   PropertiesText: 
-  BaseValue: 9
+  BaseValue: 8
   Weight: 0.3
   Rarity: 2
   CraftTime: 0

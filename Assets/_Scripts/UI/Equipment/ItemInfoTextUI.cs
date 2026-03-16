@@ -62,7 +62,6 @@ namespace HuntersAndCollectors.UI
                 return;
             }
 
-            // If source payload did not include ItemDef-resolved fields, resolve here.
             if (string.IsNullOrWhiteSpace(tooltipData.DisplayName))
                 EnrichFromItemDef(ref tooltipData);
 
@@ -89,12 +88,19 @@ namespace HuntersAndCollectors.UI
 
             data.DisplayName = string.IsNullOrWhiteSpace(def.DisplayName) ? def.ItemId : def.DisplayName;
             data.Description = def.Description;
-            data.Damage = data.RolledDamage > 0f ? data.RolledDamage : def.Damage;
-            data.Defence = data.RolledDefence > 0f ? data.RolledDefence : def.Defence;
+            data.ItemTier = def.ItemTier;
+            data.CombatFamily = def.CombatFamily;
+            data.ItemStatBias = def.ItemStatBias;
+            data.Damage = data.RolledDamage > 0f ? data.RolledDamage + data.DamageBonus : def.Damage + data.DamageBonus;
+            data.Defence = data.RolledDefence > 0f ? data.RolledDefence + data.DefenceBonus : def.Defence + data.DefenceBonus;
             data.AttackBonus = def.AttackBonus;
-            data.SwingSpeed = data.RolledSwingSpeed > 0f ? data.RolledSwingSpeed : def.SwingSpeed;
+            data.SwingSpeed = data.RolledSwingSpeed > 0f ? data.RolledSwingSpeed + data.AttackSpeedBonus : def.SwingSpeed + data.AttackSpeedBonus;
             data.MoveSpeed = data.RolledMovementSpeed > 0f ? data.RolledMovementSpeed : def.MovementSpeed;
-
+            data.CastSpeed = data.RolledCastSpeed > 0f ? data.RolledCastSpeed + data.CastSpeedBonus : def.CastSpeed + data.CastSpeedBonus;
+            data.BlockValue = data.RolledBlockValue > 0 ? data.RolledBlockValue + data.BlockValueBonus : def.BlockValue + data.BlockValueBonus;
+            data.CritChance = data.CritChanceBonus;
+            data.StatusPower = data.StatusPowerBonus;
+            data.TrapPower = data.TrapPowerBonus;
             data.Strength = Mathf.Max(0, def.Strength) + data.BonusStrength;
             data.Dexterity = Mathf.Max(0, def.Dexterity) + data.BonusDexterity;
             data.Intelligence = Mathf.Max(0, def.Intelligence) + data.BonusIntelligence;
@@ -138,15 +144,19 @@ namespace HuntersAndCollectors.UI
 
         private static string BuildInfoText(ItemTooltipData data)
         {
-            var sb = new StringBuilder(384);
+            var sb = new StringBuilder(640);
 
             string title = string.IsNullOrWhiteSpace(data.DisplayName) ? data.ItemId : data.DisplayName;
             sb.AppendLine(title);
 
+            if (data.ItemTier > 0)
+                sb.Append("Tier ").Append(data.ItemTier).AppendLine();
+
+            if (data.CombatFamily != CombatItemFamily.None || data.ItemStatBias != ItemStatBias.None)
+                sb.Append(data.CombatFamily).Append(" / ").Append(data.ItemStatBias).AppendLine();
+
             if (!string.IsNullOrWhiteSpace(data.CraftedBy))
-            {
                 sb.Append("Crafted by: ").AppendLine(data.CraftedBy);
-            }
 
             if (!string.IsNullOrWhiteSpace(data.Description))
             {
@@ -160,7 +170,6 @@ namespace HuntersAndCollectors.UI
             AppendAttributeLine(sb, "Dexterity", data.Dexterity, data.BonusDexterity);
             AppendAttributeLine(sb, "Intelligence", data.Intelligence, data.BonusIntelligence);
 
-
             sb.AppendLine();
             sb.AppendLine("Combat:");
             sb.Append("Damage: ").AppendLine(data.Damage.ToString("0.##"));
@@ -168,13 +177,28 @@ namespace HuntersAndCollectors.UI
             sb.Append("Attack Bonus: ").AppendLine(data.AttackBonus.ToString());
             sb.Append("Swing Speed: ").AppendLine(data.SwingSpeed.ToString("0.##"));
             sb.Append("Move Speed: ").AppendLine(data.MoveSpeed.ToString("0.##"));
+            if (data.CastSpeed > 0f)
+                sb.Append("Cast Speed: ").AppendLine(data.CastSpeed.ToString("0.##"));
+            if (data.BlockValue > 0)
+                sb.Append("Block Value: ").AppendLine(data.BlockValue.ToString());
+            if (data.CritChance > 0f)
+                sb.Append("Crit Chance: ").AppendLine((data.CritChance * 100f).ToString("0.#") + "%");
+            if (data.StatusPower > 0)
+                sb.Append("Status Power: ").AppendLine(data.StatusPower.ToString());
+            if (data.TrapPower > 0)
+                sb.Append("Trap Power: ").AppendLine(data.TrapPower.ToString());
+
+            AppendAffixLine(sb, data.AffixA, data);
+            AppendAffixLine(sb, data.AffixB, data);
+            AppendAffixLine(sb, data.AffixC, data);
+            AppendResistanceLine(sb, data);
 
             if (data.Durability > 0)
             {
                 if (data.MaxDurability > 0)
-                    sb.Append("Durability: ").Append(data.Durability.ToString()).Append("/").Append(data.MaxDurability.ToString());
+                    sb.Append("Durability: ").Append(data.Durability.ToString()).Append("/").AppendLine(data.MaxDurability.ToString());
                 else
-                    sb.Append("Durability: ").Append(data.Durability.ToString());
+                    sb.Append("Durability: ").AppendLine(data.Durability.ToString());
             }
 
             return sb.ToString().TrimEnd();
@@ -187,8 +211,53 @@ namespace HuntersAndCollectors.UI
                 sb.Append(" (+").Append(bonus).Append(')');
             sb.AppendLine();
         }
+
+        private static void AppendAffixLine(StringBuilder sb, ItemAffixId affixId, ItemTooltipData data)
+        {
+            if (affixId == ItemAffixId.None)
+                return;
+
+            string label = CombatItemCatalog.GetAffixDisplayName(affixId);
+            if (string.IsNullOrWhiteSpace(label))
+                return;
+
+            string value = affixId switch
+            {
+                ItemAffixId.Strong => $"+{data.BonusStrength} Strength",
+                ItemAffixId.Keen => $"+{data.BonusDexterity} Dexterity",
+                ItemAffixId.Wise => $"+{data.BonusIntelligence} Intelligence",
+                ItemAffixId.Brutal => $"+{data.DamageBonus} Damage",
+                ItemAffixId.Guarded => $"+{data.DefenceBonus} Defence",
+                ItemAffixId.Swift => $"+{(data.AttackSpeedBonus * 100f):0.#}% Attack Speed",
+                ItemAffixId.Focused => $"+{(data.CastSpeedBonus * 100f):0.#}% Cast Speed",
+                ItemAffixId.Warding => $"+{data.BlockValueBonus} Block Value",
+                ItemAffixId.Venomous => $"+{data.StatusPowerBonus} Status Power",
+                ItemAffixId.Trapper => $"+{data.TrapPowerBonus} Trap Power",
+                _ => string.Empty
+            };
+
+            if (!string.IsNullOrWhiteSpace(value))
+                sb.Append(label).Append(": ").AppendLine(value);
+        }
+
+        private static void AppendResistanceLine(StringBuilder sb, ItemTooltipData data)
+        {
+            if (data.ResistanceAffix == ResistanceAffixId.None)
+                return;
+
+            string label = CombatItemCatalog.GetResistanceDisplayName(data.ResistanceAffix);
+            int value = data.ResistanceAffix switch
+            {
+                ResistanceAffixId.Ironward => data.PhysicalResist,
+                ResistanceAffixId.Emberward => data.FireResist,
+                ResistanceAffixId.Frostward => data.FrostResist,
+                ResistanceAffixId.Venomward => data.PoisonResist,
+                ResistanceAffixId.Stormward => data.LightningResist,
+                _ => 0
+            };
+
+            if (value > 0)
+                sb.Append(label).Append(": +").Append(value).AppendLine(" Resist");
+        }
     }
 }
-
-
-

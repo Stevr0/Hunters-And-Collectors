@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Frozen Bone
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 40
   Description: An ice-bound bone that never fully thawed.
   PropertiesText: 
-  BaseValue: 7
+  BaseValue: 9
   Weight: 0.8
-  Rarity: 1
+  Rarity: 3
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 4243029077377111302, guid: ee00be5f99680744eb036bb23662850f, type: 3}

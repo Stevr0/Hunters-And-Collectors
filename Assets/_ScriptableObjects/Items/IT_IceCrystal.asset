@@ -16,12 +16,12 @@ MonoBehaviour:
   DisplayName: Ice Crystal
   Category: 0
   Icon: {fileID: 0}
-  MaxStack: 99
+  MaxStack: 40
   Description: A shard of condensed frost magic.
   PropertiesText: 
-  BaseValue: 11
+  BaseValue: 12
   Weight: 0.4
-  Rarity: 2
+  Rarity: 3
   CraftTime: 0
   IsInstanceItem: 0
   visualPrefab: {fileID: 2147834026543980358, guid: dbe5b0d4a2a43954fa4d0ed995323731, type: 3}

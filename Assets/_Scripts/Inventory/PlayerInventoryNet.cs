@@ -421,6 +421,8 @@ namespace HuntersAndCollectors.Inventory
                     RolledDefence = def.ResolveDefenceMin(),
                     RolledSwingSpeed = def.ResolveSwingSpeedMin(),
                     RolledMovementSpeed = def.ResolveMovementSpeedMin(),
+                    RolledCastSpeed = def.ResolveCastSpeedMin(),
+                    RolledBlockValue = def.ResolveBlockValueMin(),
                     MaxDurability = finalMax,
                     CurrentDurability = finalCurrent
                 };
@@ -436,6 +438,8 @@ namespace HuntersAndCollectors.Inventory
                     RolledDefence = instance.RolledDefence,
                     RolledSwingSpeed = instance.RolledSwingSpeed,
                     RolledMovementSpeed = instance.RolledMovementSpeed,
+                    RolledCastSpeed = instance.RolledCastSpeed,
+                    RolledBlockValue = instance.RolledBlockValue,
                     MaxDurability = instance.MaxDurability,
                     CurrentDurability = instance.CurrentDurability
                 };
@@ -612,6 +616,8 @@ namespace HuntersAndCollectors.Inventory
                             RolledDefence = slot.rolledDefence > 0f ? slot.rolledDefence : def.ResolveDefenceMin(),
                             RolledSwingSpeed = slot.rolledSwingSpeed > 0f ? slot.rolledSwingSpeed : def.ResolveSwingSpeedMin(),
                             RolledMovementSpeed = slot.rolledMovementSpeed > 0f ? slot.rolledMovementSpeed : def.ResolveMovementSpeedMin(),
+                            RolledCastSpeed = slot.rolledCastSpeed > 0f ? slot.rolledCastSpeed : def.ResolveCastSpeedMin(),
+                            RolledBlockValue = slot.rolledBlockValue > 0 ? slot.rolledBlockValue : def.ResolveBlockValueMin(),
                             MaxDurability = maxDurability,
                             CurrentDurability = Mathf.Clamp(currentDurability, 1, Mathf.Max(1, maxDurability))
                         };
@@ -627,8 +633,27 @@ namespace HuntersAndCollectors.Inventory
                             RolledDefence = instance.RolledDefence,
                             RolledSwingSpeed = instance.RolledSwingSpeed,
                             RolledMovementSpeed = instance.RolledMovementSpeed,
+                            RolledCastSpeed = instance.RolledCastSpeed,
+                            RolledBlockValue = instance.RolledBlockValue,
                             MaxDurability = instance.MaxDurability,
-                            CurrentDurability = instance.CurrentDurability
+                            CurrentDurability = instance.CurrentDurability,
+                            DamageBonus = slot.damageBonus,
+                            DefenceBonus = slot.defenceBonus,
+                            AttackSpeedBonus = slot.attackSpeedBonus,
+                            CastSpeedBonus = slot.castSpeedBonus,
+                            CritChanceBonus = slot.critChanceBonus,
+                            BlockValueBonus = slot.blockValueBonus,
+                            StatusPowerBonus = slot.statusPowerBonus,
+                            TrapPowerBonus = slot.trapPowerBonus,
+                            PhysicalResist = slot.physicalResist,
+                            FireResist = slot.fireResist,
+                            FrostResist = slot.frostResist,
+                            PoisonResist = slot.poisonResist,
+                            LightningResist = slot.lightningResist,
+                            AffixA = (ItemAffixId)slot.affixA,
+                            AffixB = (ItemAffixId)slot.affixB,
+                            AffixC = (ItemAffixId)slot.affixC,
+                            ResistanceAffix = (ResistanceAffixId)slot.resistanceAffix
                         };
 
                         grid.Slots[i] = new InventorySlot
@@ -1093,7 +1118,26 @@ namespace HuntersAndCollectors.Inventory
                         RolledDamage = 0f,
                         RolledDefence = 0f,
                         RolledSwingSpeed = 0f,
-                        RolledMovementSpeed = 0f
+                        RolledMovementSpeed = 0f,
+                        RolledCastSpeed = 0f,
+                        RolledBlockValue = 0,
+                        DamageBonus = 0,
+                        DefenceBonus = 0,
+                        AttackSpeedBonus = 0f,
+                        CastSpeedBonus = 0f,
+                        CritChanceBonus = 0f,
+                        BlockValueBonus = 0,
+                        StatusPowerBonus = 0,
+                        TrapPowerBonus = 0,
+                        PhysicalResist = 0,
+                        FireResist = 0,
+                        FrostResist = 0,
+                        PoisonResist = 0,
+                        LightningResist = 0,
+                        AffixA = 0,
+                        AffixB = 0,
+                        AffixC = 0,
+                        ResistanceAffix = 0
                     };
                     continue;
                 }
@@ -1116,7 +1160,26 @@ namespace HuntersAndCollectors.Inventory
                         RolledDamage = s.Instance.RolledDamage,
                         RolledDefence = s.Instance.RolledDefence,
                         RolledSwingSpeed = s.Instance.RolledSwingSpeed,
-                        RolledMovementSpeed = s.Instance.RolledMovementSpeed
+                        RolledMovementSpeed = s.Instance.RolledMovementSpeed,
+                        RolledCastSpeed = s.Instance.RolledCastSpeed,
+                        RolledBlockValue = s.Instance.RolledBlockValue,
+                        DamageBonus = s.InstanceData.DamageBonus,
+                        DefenceBonus = s.InstanceData.DefenceBonus,
+                        AttackSpeedBonus = s.InstanceData.AttackSpeedBonus,
+                        CastSpeedBonus = s.InstanceData.CastSpeedBonus,
+                        CritChanceBonus = s.InstanceData.CritChanceBonus,
+                        BlockValueBonus = s.InstanceData.BlockValueBonus,
+                        StatusPowerBonus = s.InstanceData.StatusPowerBonus,
+                        TrapPowerBonus = s.InstanceData.TrapPowerBonus,
+                        PhysicalResist = s.InstanceData.PhysicalResist,
+                        FireResist = s.InstanceData.FireResist,
+                        FrostResist = s.InstanceData.FrostResist,
+                        PoisonResist = s.InstanceData.PoisonResist,
+                        LightningResist = s.InstanceData.LightningResist,
+                        AffixA = (byte)s.InstanceData.AffixA,
+                        AffixB = (byte)s.InstanceData.AffixB,
+                        AffixC = (byte)s.InstanceData.AffixC,
+                        ResistanceAffix = (byte)s.InstanceData.ResistanceAffix
                     };
                     continue;
                 }
@@ -1145,7 +1208,26 @@ namespace HuntersAndCollectors.Inventory
                     RolledDamage = s.InstanceData.RolledDamage,
                     RolledDefence = s.InstanceData.RolledDefence,
                     RolledSwingSpeed = s.InstanceData.RolledSwingSpeed,
-                    RolledMovementSpeed = s.InstanceData.RolledMovementSpeed
+                    RolledMovementSpeed = s.InstanceData.RolledMovementSpeed,
+                    RolledCastSpeed = s.InstanceData.RolledCastSpeed,
+                    RolledBlockValue = s.InstanceData.RolledBlockValue,
+                    DamageBonus = s.InstanceData.DamageBonus,
+                    DefenceBonus = s.InstanceData.DefenceBonus,
+                    AttackSpeedBonus = s.InstanceData.AttackSpeedBonus,
+                    CastSpeedBonus = s.InstanceData.CastSpeedBonus,
+                    CritChanceBonus = s.InstanceData.CritChanceBonus,
+                    BlockValueBonus = s.InstanceData.BlockValueBonus,
+                    StatusPowerBonus = s.InstanceData.StatusPowerBonus,
+                    TrapPowerBonus = s.InstanceData.TrapPowerBonus,
+                    PhysicalResist = s.InstanceData.PhysicalResist,
+                    FireResist = s.InstanceData.FireResist,
+                    FrostResist = s.InstanceData.FrostResist,
+                    PoisonResist = s.InstanceData.PoisonResist,
+                    LightningResist = s.InstanceData.LightningResist,
+                    AffixA = (byte)s.InstanceData.AffixA,
+                    AffixB = (byte)s.InstanceData.AffixB,
+                    AffixC = (byte)s.InstanceData.AffixC,
+                    ResistanceAffix = (byte)s.InstanceData.ResistanceAffix
                 };
             }
 

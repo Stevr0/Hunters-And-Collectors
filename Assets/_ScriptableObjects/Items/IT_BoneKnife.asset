@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d859de4dced51ad44b21eed74c5ad852, type: 3}
+  m_Name: IT_BoneKnife
+  m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Items.ItemDef
+  ItemId: IT_BoneKnife
+  DisplayName: Bone Knife
+  Category: 1
+  Icon: {fileID: 21300000, guid: ff2632bfb23979d4eb8fa3238ac4a84a, type: 3}
+  MaxStack: 1
+  Description: A carved bone blade suited to light work and precise cuts.
+  PropertiesText: 
+  BaseValue: 7
+  Weight: 1
+  Rarity: 1
+  CraftTime: 3
+  IsInstanceItem: 1
+  CombatFamily: 5
+  ItemStatBias: 2
+  ItemTier: 1
+  MinAffixCount: 0
+  MaxAffixCount: 1
+  BonusAffixChance: 0
+  ResistanceAffixChance: 0.05
+  AllowedAffixes: []
+  AllowedResistanceAffixes: []
+  visualPrefab: {fileID: 1390789890966726731, guid: d96ed3908aa9aed41a217c9f5643da8f, type: 3}
+  worldDropPrefab: {fileID: 2194581310374169441, guid: 400b1f870092fdd418a91806ef12e45d, type: 3}
+  equipLocalPosition: {x: -0.026, y: -0.463, z: 0}
+  equipLocalEuler: {x: 0, y: -123, z: 0}
+  equipLocalScale: {x: 1, y: 1, z: 1}
+  IsEquippable: 1
+  EquipSlot: 10
+  Handedness: 1
+  ToolTags: 03000000
+  HarvestPower: 1
+  DamageMin: 2
+  DamageMax: 4
+  DefenceMin: 0
+  DefenceMax: 0
+  SwingSpeedMin: 1.05
+  SwingSpeedMax: 1.25
+  MovementSpeedMin: 0.99
+  MovementSpeedMax: 1.03
+  DurabilityMin: 35
+  DurabilityMax: 55
+  CastSpeedMin: 0
+  CastSpeedMax: 0
+  BlockValueMin: 0
+  BlockValueMax: 0
+  Strength: 1
+  Dexterity: 2
+  Intelligence: 0
+  IsFood: 0
+  FoodMaxHealthBonus: 0
+  FoodMaxStaminaBonus: 0
+  FoodHealthRegenBonus: 0
+  FoodStaminaRegenBonus: 0
+  FoodDurationSeconds: 0
+  IsPlaceable: 0
+  PlaceablePrefab: {fileID: 0}
+  GhostPrefab: {fileID: 0}
+  PlacementOffset: {x: 0, y: 0, z: 0}
+  AllowYawRotation: 1
+  StructureMaxHealth: 100
+  DestroyOnZeroHealth: 1

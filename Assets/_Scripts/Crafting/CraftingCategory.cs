@@ -9,6 +9,7 @@ namespace HuntersAndCollectors.Crafting
     {
         Tools = 0,
         Equipment = 1,
-        Building = 2
+        Building = 2,
+        Consumables = 3,
     }
 }

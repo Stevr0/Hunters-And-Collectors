@@ -586,8 +586,12 @@ namespace HuntersAndCollectors.Combat
                 return;
 
             weaponLabel = itemId;
-            damage = Mathf.Max(1, Mathf.RoundToInt(def.Damage));
-            swingSpeed = Mathf.Max(0.01f, def.SwingSpeed);
+            ItemInstanceData instanceData = equipmentNet.GetEquippedInstanceData(EquipSlot.MainHand);
+            float rolledDamage = instanceData.RolledDamage > 0f ? instanceData.RolledDamage : def.Damage;
+            float rolledSwingSpeed = instanceData.RolledSwingSpeed > 0f ? instanceData.RolledSwingSpeed : def.SwingSpeed;
+
+            damage = Mathf.Max(1, Mathf.RoundToInt(rolledDamage + instanceData.DamageBonus));
+            swingSpeed = Mathf.Max(0.01f, rolledSwingSpeed + instanceData.AttackSpeedBonus);
 
             style = def.Handedness == Handedness.BothHands
                 ? PlayerCombatAnimNet.AttackStyle.TwoHand
@@ -767,6 +771,7 @@ namespace HuntersAndCollectors.Combat
         }
     }
 }
+
 
 
 

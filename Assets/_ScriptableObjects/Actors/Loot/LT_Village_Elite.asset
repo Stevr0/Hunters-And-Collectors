@@ -12,48 +12,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e76c9dfde3d12a04194095d1655ccf1a, type: 3}
   m_Name: LT_Village_Elite
   m_EditorClassIdentifier: Assembly-CSharp::HuntersAndCollectors.Actors.ActorLootTableDef
-  entries: []
-  guaranteedDrops:
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: T
-    maxQuantity: _
-    dropChance01: H
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  - item: {fileID: 11400000, guid: , type: 2}
-    minQuantity: 
-    maxQuantity: 
-    dropChance01: 
-  weightedDrops:
+  entries:
+  - item: {fileID: 11400000, guid: 850b7a31d33147829f3502093c461ae4, type: 2}
+    minQuantity: 1
+    maxQuantity: 3
+    dropChance01: 0.65
   - item: {fileID: 11400000, guid: 24026d7e28e34e5aaf497925f4ca4466, type: 2}
     minQuantity: 1
     maxQuantity: 2
-    dropChance01: 0.75
-    weight: 2
+    dropChance01: 0.5
   - item: {fileID: 11400000, guid: ddb96df31e154d708f8b8a85e7f56d84, type: 2}
     minQuantity: 1
     maxQuantity: 1
-    dropChance01: 0.45
-    weight: 1
-  - item: {fileID: 11400000, guid: ae1ad622fa984f0cbddc956d7275319e, type: 2}
-    minQuantity: 1
-    maxQuantity: 1
-    dropChance01: 0.2
-    weight: 1
-  weightedRollsMin: 2
-  weightedRollsMax: 2
+    dropChance01: 0.12
+  guaranteedDrops: []
+  weightedDrops: []
+  weightedRollsMin: 0
+  weightedRollsMax: 0
   coinDrop:
-  coinItem: {fileID: 11400000, guid: 095eb913c03dfd24399b0efe270d8c65, type: 2}
-  minQuantity: 1
-  maxQuantity: 6
-  dropChance01: 0.75
+    coinItem: {fileID: 11400000, guid: 095eb913c03dfd24399b0efe270d8c65, type: 2}
+    minQuantity: 12
+    maxQuantity: 28
+    dropChance01: 1
